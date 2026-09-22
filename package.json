@@ -1,7 +1,7 @@
 {
   "name": "oink",
   "private": true,
-  "sideEffects": false,
+  "sideEffects": ["./src/lib/browser-globals.ts", "**/*.css"],
   "type": "module",
   "scripts": {
     "dev": "vite dev",

@@ -1,3 +1,5 @@
+import { base64ToBytes, bytesToBase64 } from "../solana-bytes";
+
 export type KeystoreBlob = { ciphertext: string; nonce: string; cipher: "AES-256-GCM"; version: 1 };
 
 export async function seal(encKey: Uint8Array, entropy: Uint8Array, aad: Uint8Array): Promise<KeystoreBlob> {
@@ -20,8 +22,8 @@ export async function seal(encKey: Uint8Array, entropy: Uint8Array, aad: Uint8Ar
   );
 
   return {
-    ciphertext: Buffer.from(encrypted).toString("base64"),
-    nonce: Buffer.from(nonce).toString("base64"),
+    ciphertext: bytesToBase64(new Uint8Array(encrypted)),
+    nonce: bytesToBase64(nonce),
     cipher: "AES-256-GCM",
     version: 1,
   };
@@ -35,13 +37,13 @@ export async function open(encKey: Uint8Array, blob: KeystoreBlob, aad: Uint8Arr
     false,
     ["decrypt"],
   );
-  const nonce = Buffer.from(blob.nonce, "base64");
-  const ciphertext = Buffer.from(blob.ciphertext, "base64");
+  const nonce = base64ToBytes(blob.nonce);
+  const ciphertext = base64ToBytes(blob.ciphertext);
 
   const decrypted = await crypto.subtle.decrypt(
     {
       name: "AES-GCM",
-      iv: nonce,
+      iv: nonce as unknown as BufferSource,
       additionalData: aad as unknown as BufferSource,
     },
     cryptoKey,

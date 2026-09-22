@@ -2,6 +2,7 @@ import { Keypair, VersionedTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import nacl from "tweetnacl";
 import { keypairFromEntropy } from "../crypto/derive";
+import { base64ToBytes, bytesToBase64 } from "../solana-bytes";
 
 const AUTO_LOCK_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -48,10 +49,10 @@ export function signTransaction(transactionBase64: string): string {
     throw new Error("Wallet is locked.");
   }
   resetLockTimer();
-  const txBytes = Buffer.from(transactionBase64, "base64");
+  const txBytes = base64ToBytes(transactionBase64);
   const tx = VersionedTransaction.deserialize(txBytes);
   tx.sign([keypair]);
-  return Buffer.from(tx.serialize()).toString("base64");
+  return bytesToBase64(tx.serialize());
 }
 
 export function signMessage(message: string): string {

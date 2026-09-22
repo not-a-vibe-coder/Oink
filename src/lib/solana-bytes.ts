@@ -48,3 +48,10 @@ type ReadonlyUint8ArrayLike = {
   readonly [index: number]: number;
   [Symbol.iterator](): IterableIterator<number>;
 };
+
+/** Standard base64, matching Node's `Buffer#toString("base64")` byte for byte. */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
