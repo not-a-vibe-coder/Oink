@@ -73,13 +73,14 @@ export async function fetchTokenPrices(mints: string[]): Promise<Record<string, 
     });
 
     if (res.ok) {
-      const data = (await res.json()) as { data: Record<string, { price: string }> };
-      if (data && data.data) {
-        for (const [mint, info] of Object.entries(data.data)) {
-          if (info && info.price) {
-            priceCache.set(mint, { priceUsd: info.price, timestamp: now });
-            result[mint] = info.price;
-          }
+      // Price API v3 keys the response by mint at the top level and returns usdPrice as a
+      // number. v2 (`{ data: { [mint]: { price } } }`) was retired and now 404s.
+      const data = (await res.json()) as Record<string, { usdPrice?: number } | null>;
+      for (const [mint, info] of Object.entries(data ?? {})) {
+        if (info && typeof info.usdPrice === "number" && Number.isFinite(info.usdPrice)) {
+          const priceUsd = String(info.usdPrice);
+          priceCache.set(mint, { priceUsd, timestamp: now });
+          result[mint] = priceUsd;
         }
       }
     }

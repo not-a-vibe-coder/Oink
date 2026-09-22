@@ -54,7 +54,7 @@ export function getConfig(): Config {
     rpcUrl: optional("SOLANA_RPC_URL", "https://api.devnet.solana.com"),
     rpcFallbackUrl: optional("SOLANA_RPC_FALLBACK_URL", "https://api.devnet.solana.com"),
     jupiterApiUrl: optional("JUPITER_API_URL", "https://api.jup.ag/swap/v1"),
-    jupiterPriceApiUrl: optional("JUPITER_PRICE_API_URL", "https://api.jup.ag/price/v2"),
+    jupiterPriceApiUrl: optional("JUPITER_PRICE_API_URL", "https://api.jup.ag/price/v3"),
     jupiterApiKey: optional("JUPITER_API_KEY", ""),
     kmsKey: isProduction ? requiredSecret("OINK_KMS_KEY") : process.env.OINK_KMS_KEY,
     decoyKey: isProduction ? requiredSecret("OINK_DECOY_KEY") : process.env.OINK_DECOY_KEY,

@@ -37,8 +37,8 @@ SOLANA_RPC_URL=https://...               # a paid RPC; the public endpoint will 
 SOLANA_RPC_FALLBACK_URL=https://api.devnet.solana.com
 
 # Jupiter
-JUPITER_API_URL=https://api.jup.ag/swap/v6
-JUPITER_PRICE_API_URL=https://api.jup.ag/price/v2
+JUPITER_API_URL=https://api.jup.ag/swap/v1
+JUPITER_PRICE_API_URL=https://api.jup.ag/price/v3
 JUPITER_API_KEY=
 
 # --- SECRETS. 32 random bytes, base64. Rotating these has consequences. ---
