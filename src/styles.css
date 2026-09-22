@@ -1,0 +1,685 @@
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "./styles/app.css";
+@source "../src";
+
+/* ------------------------------------------------------------------------ */
+/*  Alwayzz Creative Agency Landing Page                                    */
+/*  Minimal, clean, black-and-white, tight negative letter-spacing          */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  --bg: #ffffff;
+  --text: #0a0a0a;
+  --muted: #6b6b6b;
+  --button-bg: #0a0a0a;
+  --button-text: #ffffff;
+  --border-soft: rgba(0, 0, 0, 0.08);
+  --green: #17c964;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------------ */
+/*  Keyframe Animations                                                     */
+/* ------------------------------------------------------------------------ */
+
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes line-pulse {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(1);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.85);
+  }
+}
+
+@keyframes line-pulse-top {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.85);
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/*  1. Navbar & Full-screen Drawer                                          */
+/* ------------------------------------------------------------------------ */
+
+.alwayzz-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  background: transparent;
+}
+
+.alwayzz-nav-inner {
+  width: 100%;
+  max-width: 1200px;
+  padding: 19px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alwayzz-logo {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 30px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: -0.08em;
+  color: var(--text);
+  display: inline-flex;
+  align-items: flex-start;
+  text-decoration: none;
+}
+
+.alwayzz-logo-reg {
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: normal;
+  vertical-align: super;
+  margin-left: 2px;
+  margin-top: 2px;
+}
+
+.alwayzz-menu-btn {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border-radius: 9999px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Inter", sans-serif;
+  padding: 9px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 101;
+}
+
+.alwayzz-menu-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.alwayzz-menu-btn:active {
+  transform: scale(0.97);
+}
+
+.alwayzz-menu-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alwayzz-menu-icon.is-open {
+  transform: rotate(180deg);
+}
+
+.alwayzz-drawer {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 120px 36px 48px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alwayzz-drawer.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.alwayzz-drawer-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  flex: 1;
+}
+
+.alwayzz-drawer-link {
+  font-size: 48px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.alwayzz-drawer-link:hover {
+  color: var(--muted);
+  transform: translateX(6px);
+}
+
+.alwayzz-drawer-footer {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
+
+/* ------------------------------------------------------------------------ */
+/*  2. Hero Section                                                         */
+/* ------------------------------------------------------------------------ */
+
+.alwayzz-hero {
+  min-height: 850px;
+  padding: 160px 36px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.alwayzz-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260626_041422_4a459e05-abce-4150-9fb7-4ededc423cd1.png&w=1280&q=85");
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Decorative Curved Lines */
+.lines-left-container {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 80%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lines-right-container {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 80%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lines-top-container {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.curved-line-left {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 100%;
+  border-top: 2.5px solid #FCFAF8;
+  border-bottom: 2.5px solid #FCFAF8;
+  border-right: 2.5px solid #FCFAF8;
+  border-left: none;
+  border-top-right-radius: 80%;
+  border-bottom-right-radius: 80%;
+  animation: line-pulse 5s ease-in-out infinite;
+}
+
+.curved-line-right {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 100%;
+  border-top: 2.5px solid #FCFAF8;
+  border-bottom: 2.5px solid #FCFAF8;
+  border-left: 2.5px solid #FCFAF8;
+  border-right: none;
+  border-top-left-radius: 80%;
+  border-bottom-left-radius: 80%;
+  animation: line-pulse 5s ease-in-out infinite;
+}
+
+.curved-line-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 2.5px solid #FCFAF8;
+  border-right: 2.5px solid #FCFAF8;
+  border-bottom: 2.5px solid #FCFAF8;
+  border-top: none;
+  border-bottom-left-radius: 80%;
+  border-bottom-right-radius: 80%;
+  animation: line-pulse-top 5s ease-in-out infinite;
+}
+
+/* Ticker Row */
+.alwayzz-ticker-wrap {
+  max-width: 500px;
+  width: 100%;
+  height: 36px;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 28px;
+  mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+.alwayzz-ticker-track {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  animation: marquee-left 30s linear infinite;
+}
+
+.alwayzz-ticker-item {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgb(251, 251, 251);
+  white-space: nowrap;
+  line-height: 1.5;
+  border: 1px solid var(--border-soft);
+}
+
+/* Hero Title & Subtitle */
+.alwayzz-hero-title {
+  max-width: 550px;
+  font-size: 82px;
+  line-height: 1.03;
+  letter-spacing: -0.07em;
+  font-weight: 600;
+  color: var(--text);
+  z-index: 2;
+  margin: 0 auto;
+  text-wrap: balance;
+}
+
+.serif-italic {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.08em;
+}
+
+.reg-mark {
+  font-family: "Inter", sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  font-style: normal;
+  vertical-align: super;
+  margin-left: 2px;
+}
+
+.alwayzz-hero-sub {
+  max-width: 476px;
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: center;
+  margin: 24px auto 0;
+  z-index: 2;
+  text-wrap: pretty;
+}
+
+/* CTA Row */
+.alwayzz-cta-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 36px;
+  z-index: 2;
+}
+
+.btn-view-plans {
+  height: 56px;
+  padding: 18px 30px;
+  border-radius: 9999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: "Inter", sans-serif;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-view-plans:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.btn-view-plans:active {
+  transform: scale(0.98);
+}
+
+.btn-chat {
+  background: #ffffff;
+  border: 4px solid rgb(248, 248, 248);
+  border-radius: 9999px;
+  padding: 8px 24px 8px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  text-decoration: none;
+}
+
+.btn-chat:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.btn-chat:active {
+  transform: scale(0.98);
+}
+
+.avatar-chat {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.chat-text-stack {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.chat-primary {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0a0a0a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.chat-secondary {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgb(152, 152, 152);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+.green-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(29, 204, 93);
+  display: inline-block;
+  flex: none;
+}
+
+/* Progressive Blur at Bottom of Hero */
+.alwayzz-blur-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 178px;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 40%, #ffffff 100%);
+}
+
+/* ------------------------------------------------------------------------ */
+/*  3. TrustedBy Section                                                    */
+/* ------------------------------------------------------------------------ */
+
+.alwayzz-trusted {
+  padding: 36px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.trusted-label {
+  max-width: 163px;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  flex: none;
+}
+
+.trusted-marquee-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+.trusted-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  width: max-content;
+  animation: marquee-left 30s linear infinite;
+}
+
+.brand-logo-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0a0a0a;
+  white-space: nowrap;
+}
+
+.brand-airbnb, .brand-phantom {
+  font-family: "Cedarville Cursive", cursive;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.brand-shopify, .brand-jupiter {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.brand-notion, .brand-gldx {
+  font-family: Georgia, serif;
+  font-weight: 500;
+}
+
+.brand-linear, .brand-tslax {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.brand-webflow, .brand-solana {
+  font-family: "Inter", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brand-figma, .brand-aaplx {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+}
+
+.brand-slack, .brand-pyth {
+  font-family: Georgia, serif;
+  font-weight: 700;
+}
+
+.brand-stripe, .brand-nvdax {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+}
+
+.brand-vercel, .brand-usdc {
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brand-framer, .brand-spyx {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------------ */
+/*  Responsive Breakpoints                                                  */
+/* ------------------------------------------------------------------------ */
+
+@media (max-width: 1200px) {
+  .alwayzz-hero {
+    padding: 140px 32px;
+  }
+  .alwayzz-hero-title {
+    font-size: clamp(60px, 8vw, 72px);
+  }
+  .alwayzz-nav-inner {
+    padding: 19px 32px;
+  }
+  .alwayzz-drawer-link {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 810px) {
+  .alwayzz-hero {
+    min-height: 760px;
+    padding: 120px 24px 96px;
+  }
+  .alwayzz-hero::before {
+    transform: rotate(90deg) scale(1.5);
+  }
+  .lines-left-container, .lines-right-container {
+    display: none;
+  }
+  .lines-top-container {
+    display: block;
+  }
+  .alwayzz-hero-title {
+    font-size: clamp(44px, 13vw, 52px);
+  }
+  .alwayzz-cta-row {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-view-plans, .btn-chat {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+  }
+  .alwayzz-trusted {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .trusted-label {
+    max-width: 100%;
+  }
+  .alwayzz-drawer-link {
+    font-size: 32px;
+  }
+  .alwayzz-nav-inner {
+    padding: 16px 20px;
+  }
+}

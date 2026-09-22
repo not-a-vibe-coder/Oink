@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Oink — Self-Custodial Solana Wallet & Tokenized Equities</title>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="The self-custodial Solana wallet where your tag is your account, onboarding needs no seed phrase, and inbound payments settle atomically into your elected stock portfolio.">
+
+  <!-- Google Fonts: Inter, Source Serif 4, Cedarville Cursive -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cedarville+Cursive&family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap">
+
+  <style>
+    /* ------------------------------------------------------------------------ */
+    /*  CSS Variables                                                           */
+    /* ------------------------------------------------------------------------ */
+    :root {
+      --bg: #ffffff;
+      --text: #0a0a0a;
+      --muted: #6b6b6b;
+      --button-bg: #0a0a0a;
+      --button-text: #ffffff;
+      --border-soft: rgba(0, 0, 0, 0.08);
+      --green: #17c964;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font-family: inherit;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    /* ------------------------------------------------------------------------ */
+    /*  Keyframe Animations                                                     */
+    /* ------------------------------------------------------------------------ */
+    @keyframes marquee-left {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    @keyframes line-pulse {
+      0% {
+        opacity: 0;
+        transform: translateY(-50%) scale(1);
+      }
+      15% {
+        opacity: 0.9;
+      }
+      70% {
+        opacity: 0.4;
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.85);
+      }
+    }
+
+    @keyframes line-pulse-top {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(1);
+      }
+      15% {
+        opacity: 0.9;
+      }
+      70% {
+        opacity: 0.4;
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.85);
+      }
+    }
+
+    /* ------------------------------------------------------------------------ */
+    /*  1. Navbar & Full-screen Drawer                                          */
+    /* ------------------------------------------------------------------------ */
+    .alwayzz-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .alwayzz-nav-inner {
+      width: 100%;
+      max-width: 1200px;
+      padding: 19px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .alwayzz-logo {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 30px;
+      font-weight: 600;
+      font-style: italic;
+      letter-spacing: -0.08em;
+      color: var(--text);
+      display: inline-flex;
+      align-items: flex-start;
+      text-decoration: none;
+    }
+
+    .alwayzz-logo-reg {
+      font-family: "Inter", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      font-style: normal;
+      letter-spacing: normal;
+      vertical-align: super;
+      margin-left: 2px;
+      margin-top: 2px;
+    }
+
+    .alwayzz-menu-btn {
+      background: var(--button-bg);
+      color: var(--button-text);
+      border-radius: 9999px;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: "Inter", sans-serif;
+      padding: 9px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      z-index: 101;
+    }
+
+    .alwayzz-menu-btn:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    .alwayzz-menu-btn:active {
+      transform: scale(0.97);
+    }
+
+    .alwayzz-menu-icon {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .alwayzz-menu-icon.is-open {
+      transform: rotate(180deg);
+    }
+
+    .alwayzz-drawer {
+      position: fixed;
+      inset: 0;
+      background: #ffffff;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 120px 36px 48px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .alwayzz-drawer.is-open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .alwayzz-drawer-links {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      flex: 1;
+    }
+
+    .alwayzz-drawer-link {
+      font-size: 48px;
+      font-weight: 500;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      text-decoration: none;
+      transition: transform 0.25s ease, color 0.25s ease;
+    }
+
+    .alwayzz-drawer-link:hover {
+      color: var(--muted);
+      transform: translateX(6px);
+    }
+
+    .alwayzz-drawer-footer {
+      text-align: center;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: -0.01em;
+    }
+
+    /* ------------------------------------------------------------------------ */
+    /*  2. Hero Section                                                         */
+    /* ------------------------------------------------------------------------ */
+    .alwayzz-hero {
+      min-height: 850px;
+      padding: 160px 36px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .alwayzz-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260626_041422_4a459e05-abce-4150-9fb7-4ededc423cd1.png&w=1280&q=85");
+      background-size: cover;
+      background-position: center;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Decorative Curved Lines */
+    .lines-left-container {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 80%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .lines-right-container {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 80%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .lines-top-container {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .curved-line-left {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 100%;
+      border-top: 2.5px solid #FCFAF8;
+      border-bottom: 2.5px solid #FCFAF8;
+      border-right: 2.5px solid #FCFAF8;
+      border-left: none;
+      border-top-right-radius: 80%;
+      border-bottom-right-radius: 80%;
+      animation: line-pulse 5s ease-in-out infinite;
+    }
+
+    .curved-line-right {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 100%;
+      border-top: 2.5px solid #FCFAF8;
+      border-bottom: 2.5px solid #FCFAF8;
+      border-left: 2.5px solid #FCFAF8;
+      border-right: none;
+      border-top-left-radius: 80%;
+      border-bottom-left-radius: 80%;
+      animation: line-pulse 5s ease-in-out infinite;
+    }
+
+    .curved-line-top {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 2.5px solid #FCFAF8;
+      border-right: 2.5px solid #FCFAF8;
+      border-bottom: 2.5px solid #FCFAF8;
+      border-top: none;
+      border-bottom-left-radius: 80%;
+      border-bottom-right-radius: 80%;
+      animation: line-pulse-top 5s ease-in-out infinite;
+    }
+
+    /* Ticker Row */
+    .alwayzz-ticker-wrap {
+      max-width: 500px;
+      width: 100%;
+      height: 36px;
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+      margin-bottom: 28px;
+      mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+    }
+
+    .alwayzz-ticker-track {
+      display: flex;
+      gap: 8px;
+      width: max-content;
+      animation: marquee-left 30s linear infinite;
+    }
+
+    .alwayzz-ticker-item {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgb(251, 251, 251);
+      white-space: nowrap;
+      line-height: 1.5;
+      border: 1px solid var(--border-soft);
+    }
+
+    /* Hero Title & Subtitle */
+    .alwayzz-hero-title {
+      max-width: 550px;
+      font-size: 82px;
+      line-height: 1.03;
+      letter-spacing: -0.07em;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 2;
+      margin: 0 auto;
+      text-wrap: balance;
+    }
+
+    .serif-italic {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-weight: 600;
+      letter-spacing: -0.08em;
+    }
+
+    .reg-mark {
+      font-family: "Inter", sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      font-style: normal;
+      vertical-align: super;
+      margin-left: 2px;
+    }
+
+    .alwayzz-hero-sub {
+      max-width: 476px;
+      font-size: 17px;
+      line-height: 1.45;
+      font-weight: 400;
+      color: var(--muted);
+      text-align: center;
+      margin: 24px auto 0;
+      z-index: 2;
+      text-wrap: pretty;
+    }
+
+    /* CTA Row */
+    .alwayzz-cta-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 36px;
+      z-index: 2;
+    }
+
+    .btn-view-plans {
+      height: 56px;
+      padding: 18px 30px;
+      border-radius: 9999px;
+      background: var(--button-bg);
+      color: var(--button-text);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: "Inter", sans-serif;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .btn-view-plans:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .btn-view-plans:active {
+      transform: scale(0.98);
+    }
+
+    .btn-chat {
+      background: #ffffff;
+      border: 4px solid rgb(248, 248, 248);
+      border-radius: 9999px;
+      padding: 8px 24px 8px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      text-decoration: none;
+    }
+
+    .btn-chat:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-chat:active {
+      transform: scale(0.98);
+    }
+
+    .avatar-chat {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: none;
+    }
+
+    .chat-text-stack {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .chat-primary {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0a0a0a;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .chat-secondary {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgb(152, 152, 152);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+    .green-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgb(29, 204, 93);
+      display: inline-block;
+      flex: none;
+    }
+
+    /* Progressive Blur at Bottom of Hero */
+    .alwayzz-blur-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 178px;
+      pointer-events: none;
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 40%, #ffffff 100%);
+    }
+
+    /* ------------------------------------------------------------------------ */
+    /*  3. TrustedBy Section                                                    */
+    /* ------------------------------------------------------------------------ */
+    .alwayzz-trusted {
+      padding: 36px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+    }
+
+    .trusted-label {
+      max-width: 163px;
+      width: 100%;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+      flex: none;
+    }
+
+    .trusted-marquee-wrap {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+    }
+
+    .trusted-marquee-track {
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      width: max-content;
+      animation: marquee-left 30s linear infinite;
+    }
+
+    .brand-logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0a0a0a;
+      white-space: nowrap;
+    }
+
+    .brand-airbnb, .brand-phantom {
+      font-family: "Cedarville Cursive", cursive;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .brand-shopify, .brand-jupiter {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-notion, .brand-gldx {
+      font-family: Georgia, serif;
+      font-weight: 500;
+    }
+
+    .brand-linear, .brand-tslax {
+      font-family: "Inter", sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-webflow, .brand-solana {
+      font-family: "Inter", sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-figma, .brand-aaplx {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 600;
+    }
+
+    .brand-slack, .brand-pyth {
+      font-family: Georgia, serif;
+      font-weight: 700;
+    }
+
+    .brand-stripe, .brand-nvdax {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 800;
+    }
+
+    .brand-vercel, .brand-usdc {
+      font-family: "Inter", sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-framer, .brand-spyx {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-weight: 600;
+    }
+
+    /* ------------------------------------------------------------------------ */
+    /*  Responsive Breakpoints                                                  */
+    /* ------------------------------------------------------------------------ */
+    @media (max-width: 1200px) {
+      .alwayzz-hero {
+        padding: 140px 32px;
+      }
+      .alwayzz-hero-title {
+        font-size: clamp(60px, 8vw, 72px);
+      }
+      .alwayzz-nav-inner {
+        padding: 19px 32px;
+      }
+      .alwayzz-drawer-link {
+        font-size: 40px;
+      }
+    }
+
+    @media (max-width: 810px) {
+      .alwayzz-hero {
+        min-height: 760px;
+        padding: 120px 24px 96px;
+      }
+      .alwayzz-hero::before {
+        transform: rotate(90deg) scale(1.5);
+      }
+      .lines-left-container, .lines-right-container {
+        display: none;
+      }
+      .lines-top-container {
+        display: block;
+      }
+      .alwayzz-hero-title {
+        font-size: clamp(44px, 13vw, 52px);
+      }
+      .alwayzz-cta-row {
+        flex-direction: column;
+        width: 100%;
+      }
+      .btn-view-plans, .btn-chat {
+        width: 100%;
+        max-width: 320px;
+        justify-content: center;
+      }
+      .alwayzz-trusted {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      .trusted-label {
+        max-width: 100%;
+      }
+      .alwayzz-drawer-link {
+        font-size: 32px;
+      }
+      .alwayzz-nav-inner {
+        padding: 16px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Navbar -->
+  <nav class="alwayzz-nav" aria-label="Main Navigation">
+    <div class="alwayzz-nav-inner">
+      <a href="/" class="alwayzz-logo" aria-label="Oink Home">
+        Oink<span class="alwayzz-logo-reg">®</span>
+      </a>
+
+      <button
+        type="button"
+        id="menu-btn"
+        class="alwayzz-menu-btn"
+        aria-expanded="false"
+        aria-controls="alwayzz-drawer"
+        aria-label="Open navigation menu"
+      >
+        <span>Menu</span>
+        <svg class="alwayzz-menu-icon" id="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Full-screen Drawer Overlay -->
+  <div id="alwayzz-drawer" class="alwayzz-drawer" aria-hidden="true">
+    <div class="alwayzz-drawer-links">
+      <a href="/create" class="alwayzz-drawer-link">Create Wallet</a>
+      <a href="/unlock" class="alwayzz-drawer-link">Unlock / Recover</a>
+      <a href="/app/election" class="alwayzz-drawer-link">Portfolio Elections</a>
+      <a href="#stocks" class="alwayzz-drawer-link">Tokenized Equities</a>
+      <a href="#security" class="alwayzz-drawer-link">Security &amp; Keys</a>
+      <a href="https://github.com" class="alwayzz-drawer-link">Documentation</a>
+    </div>
+    <div class="alwayzz-drawer-footer">
+      <p>© 2026 Oink. Self-custodial Solana wallet. Built for the Solana stocks hackathon.</p>
+    </div>
+  </div>
+
+  <!-- 2. Hero Section -->
+  <section class="alwayzz-hero" aria-label="Hero Section">
+    <!-- Decorative Curved Lines - Left Side (20 lines) -->
+    <div class="lines-left-container" aria-hidden="true" id="lines-left"></div>
+
+    <!-- Decorative Curved Lines - Right Side (20 lines) -->
+    <div class="lines-right-container" aria-hidden="true" id="lines-right"></div>
+
+    <!-- Decorative Curved Lines - Mobile Top Side (15 lines) -->
+    <div class="lines-top-container" aria-hidden="true" id="lines-top"></div>
+
+    <!-- Ticker Row -->
+    <div class="alwayzz-ticker-wrap" aria-label="Capabilities ticker">
+      <div class="alwayzz-ticker-track">
+        <span class="alwayzz-ticker-item">Tokenized Equities (xStocks)</span>
+        <span class="alwayzz-ticker-item">Atomic Jupiter Routing</span>
+        <span class="alwayzz-ticker-item">Human-Readable @tag</span>
+        <span class="alwayzz-ticker-item">Password + TOTP Keystore</span>
+        <span class="alwayzz-ticker-item">Zero Seed-Phrase Onboarding</span>
+        <span class="alwayzz-ticker-item">Portfolio Elections (SPYx, TSLAx)</span>
+        <span class="alwayzz-ticker-item">Non-Custodial on Solana</span>
+        <span class="alwayzz-ticker-item">Gas-Sponsored Transfers</span>
+
+        <span class="alwayzz-ticker-item">Tokenized Equities (xStocks)</span>
+        <span class="alwayzz-ticker-item">Atomic Jupiter Routing</span>
+        <span class="alwayzz-ticker-item">Human-Readable @tag</span>
+        <span class="alwayzz-ticker-item">Password + TOTP Keystore</span>
+        <span class="alwayzz-ticker-item">Zero Seed-Phrase Onboarding</span>
+        <span class="alwayzz-ticker-item">Portfolio Elections (SPYx, TSLAx)</span>
+        <span class="alwayzz-ticker-item">Non-Custodial on Solana</span>
+        <span class="alwayzz-ticker-item">Gas-Sponsored Transfers</span>
+
+        <span class="alwayzz-ticker-item">Tokenized Equities (xStocks)</span>
+        <span class="alwayzz-ticker-item">Atomic Jupiter Routing</span>
+        <span class="alwayzz-ticker-item">Human-Readable @tag</span>
+        <span class="alwayzz-ticker-item">Password + TOTP Keystore</span>
+        <span class="alwayzz-ticker-item">Zero Seed-Phrase Onboarding</span>
+        <span class="alwayzz-ticker-item">Portfolio Elections (SPYx, TSLAx)</span>
+        <span class="alwayzz-ticker-item">Non-Custodial on Solana</span>
+        <span class="alwayzz-ticker-item">Gas-Sponsored Transfers</span>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <h1 class="alwayzz-hero-title">
+      Settle into stocks <span class="serif-italic">oink</span><sup class="reg-mark">®</sup> on Solana.
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="alwayzz-hero-sub">
+      Hold a portfolio, not a currency. The self-custodial Solana wallet where your tag is your account, onboarding needs no seed phrase, and inbound payments settle atomically into your elected stock portfolio.
+    </p>
+
+    <!-- CTA Row -->
+    <div class="alwayzz-cta-row">
+      <a href="/create" class="btn-view-plans">
+        Create Wallet
+      </a>
+
+      <a href="/create" class="btn-chat" aria-label="Claim your tag on Oink, instant setup with no seed phrase">
+        <img
+          src="https://framerusercontent.com/images/hfneFL6CHBi5BnNvCeOaqU9HqE4.png"
+          alt="Oink Tag avatar"
+          class="avatar-chat"
+          width="40"
+          height="40"
+          loading="lazy"
+        >
+        <div class="chat-text-stack">
+          <span class="chat-primary">Claim your @tag</span>
+          <span class="chat-secondary">
+            <span class="green-dot" aria-hidden="true"></span>
+            No seed phrase required
+          </span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Progressive Blur at Bottom -->
+    <div class="alwayzz-blur-bottom" aria-hidden="true"></div>
+  </section>
+
+  <!-- 3. TrustedBy Section -->
+  <section class="alwayzz-trusted" aria-label="Ecosystem Partners">
+    <p class="trusted-label">
+      Settling atomically across Solana &amp; tokenized equities
+    </p>
+
+    <div class="trusted-marquee-wrap">
+      <div class="trusted-marquee-track">
+        <!-- Set 1 -->
+        <span class="brand-logo-text brand-solana">Solana</span>
+        <span class="brand-logo-text brand-jupiter">Jupiter</span>
+        <span class="brand-logo-text brand-usdc">Circle USDC</span>
+        <span class="brand-logo-text brand-spyx">SPYx</span>
+        <span class="brand-logo-text brand-nvdax">NVDAx</span>
+        <span class="brand-logo-text brand-tslax">TSLAx</span>
+        <span class="brand-logo-text brand-aaplx">AAPLx</span>
+        <span class="brand-logo-text brand-gldx">GLDx</span>
+        <span class="brand-logo-text brand-phantom">Phantom</span>
+        <span class="brand-logo-text brand-pyth">Pyth Network</span>
+
+        <!-- Set 2 (Seamless loop) -->
+        <span class="brand-logo-text brand-solana">Solana</span>
+        <span class="brand-logo-text brand-jupiter">Jupiter</span>
+        <span class="brand-logo-text brand-usdc">Circle USDC</span>
+        <span class="brand-logo-text brand-spyx">SPYx</span>
+        <span class="brand-logo-text brand-nvdax">NVDAx</span>
+        <span class="brand-logo-text brand-tslax">TSLAx</span>
+        <span class="brand-logo-text brand-aaplx">AAPLx</span>
+        <span class="brand-logo-text brand-gldx">GLDx</span>
+        <span class="brand-logo-text brand-phantom">Phantom</span>
+        <span class="brand-logo-text brand-pyth">Pyth Network</span>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Generate curved lines dynamically
+    const leftContainer = document.getElementById("lines-left");
+    const rightContainer = document.getElementById("lines-right");
+    const topContainer = document.getElementById("lines-top");
+
+    if (leftContainer && rightContainer && topContainer) {
+      // 20 Left & Right lines: width from 60px + 10px per line, delay i * 0.25s
+      for (let i = 0; i < 20; i++) {
+        const width = 60 + i * 10;
+        const delay = (i * 0.25).toFixed(2);
+
+        const leftLine = document.createElement("div");
+        leftLine.className = "curved-line-left";
+        leftLine.style.width = width + "px";
+        leftLine.style.animationDelay = delay + "s";
+        leftContainer.appendChild(leftLine);
+
+        const rightLine = document.createElement("div");
+        rightLine.className = "curved-line-right";
+        rightLine.style.width = width + "px";
+        rightLine.style.animationDelay = delay + "s";
+        rightContainer.appendChild(rightLine);
+      }
+
+      // 15 Mobile top lines: height 40px + 8px, delay i * 0.25s
+      for (let i = 0; i < 15; i++) {
+        const height = 40 + i * 8;
+        const width = 100 - i * 4;
+        const delay = (i * 0.25).toFixed(2);
+
+        const topLine = document.createElement("div");
+        topLine.className = "curved-line-top";
+        topLine.style.height = height + "px";
+        topLine.style.width = width + "%";
+        topLine.style.animationDelay = delay + "s";
+        topContainer.appendChild(topLine);
+      }
+    }
+
+    // Drawer toggle logic
+    const menuBtn = document.getElementById("menu-btn");
+    const menuIcon = document.getElementById("menu-icon");
+    const drawer = document.getElementById("alwayzz-drawer");
+    const drawerLinks = document.querySelectorAll(".alwayzz-drawer-link");
+
+    function setDrawer(isOpen) {
+      if (isOpen) {
+        drawer.classList.add("is-open");
+        menuIcon.classList.add("is-open");
+        menuBtn.setAttribute("aria-expanded", "true");
+        drawer.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      } else {
+        drawer.classList.remove("is-open");
+        menuIcon.classList.remove("is-open");
+        menuBtn.setAttribute("aria-expanded", "false");
+        drawer.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+      }
+    }
+
+    if (menuBtn && drawer && menuIcon) {
+      menuBtn.addEventListener("click", () => {
+        const isOpen = drawer.classList.contains("is-open");
+        setDrawer(!isOpen);
+      });
+
+      drawerLinks.forEach(link => {
+        link.addEventListener("click", () => setDrawer(false));
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") setDrawer(false);
+      });
+    }
+  </script>
+</body>
+</html>
