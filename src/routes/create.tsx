@@ -116,28 +116,33 @@ function CreateWalletPage() {
     let entropy: Uint8Array | null = null;
     let encKey: Uint8Array | null = null;
     let authKey: Uint8Array | null = null;
+    let at = "starting";
+    const mark = (label: string) => {
+      at = label;
+      setStage(label);
+    };
 
     try {
       if (!enrollment) throw new Error("missing enrollment");
 
       let mnemonic: string | null = null;
       if (imported) {
-        setStage("Reading your imported wallet");
+        mark("Reading your imported wallet");
         entropy = Uint8Array.from(imported.entropy);
       } else {
-        setStage("Generating your wallet");
+        mark("Generating your wallet");
         mnemonic = generateMnemonic();
         entropy = toEntropy(mnemonic);
       }
       const publicKey = keypairFromEntropy(entropy).publicKey.toBase58();
 
-      setStage("Hardening your password");
+      mark("Hardening your password");
       const salt = randomSalt();
       const derived = await deriveKeys(password, salt, KDF_V1, setProgress);
       encKey = derived.encKey;
       authKey = derived.authKey;
 
-      setStage("Encrypting your keys");
+      mark("Encrypting your keys");
       const keystore = await sealKeystore({
         encKey,
         entropy,
@@ -146,7 +151,7 @@ function CreateWalletPage() {
         salt,
       });
 
-      setStage("Claiming @" + tag);
+      mark("Claiming @" + tag);
       const result = await enrollComplete({
         data: {
           enrollmentId: enrollment.enrollmentId,
@@ -174,7 +179,11 @@ function CreateWalletPage() {
       // would be a second copy of the one thing that must exist in one place.
       setPhrase(mnemonic ? mnemonic.split(" ") : []);
       setStep(5);
-    } catch {
+    } catch (err) {
+      // Name and message only: the error object itself can hold references to the
+      // buffers above, and nothing near key material goes to the console (docs/02 §9).
+      const reason = err instanceof Error ? `${err.name}: ${err.message}` : typeof err;
+      console.error(`[oink:create] failed at "${at}" — ${reason}`);
       setCreateError("Something went wrong creating your wallet. Nothing was claimed — try again.");
     } finally {
       zero(encKey, authKey, entropy);
