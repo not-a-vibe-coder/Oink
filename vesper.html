@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vesper.ai — Operational AI Infrastructure</title>
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Deploy adaptive AI agents that learn, execute, and scale operational tasks across your business. Formally verified, self-healing, and mathematically constrained.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cg transform='rotate(-30 12 12)'%3E%3Ccircle cx='7.3' cy='3.2' r='1.45'/%3E%3Crect x='5.5' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Crect x='14.9' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Ccircle cx='16.7' cy='20.8' r='1.45'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900&family=Instrument+Serif:ital@1&display=swap">
+<style>
+/* 0. Black before anything else can paint */
+html, body { background: #000000 !important; color: #ffffff; }
+
+/* 1. Fonts (self-hosted with Google Fonts fallback) */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("inter.woff2") format("woff2"), url("/inter.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("instrument-serif-italic.woff2") format("woff2"), url("/instrument-serif-italic.woff2") format("woff2");
+}
+
+/* 2. Tokens (default / ~1440px) */
+:root {
+  --bg: #000000;
+  --text: #ffffff;
+  --muted: #9a9a9a;
+  --stat: #d8d8d8;
+  --border: rgba(255, 255, 255, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.12);
+
+  --logo: 15.5px;
+  --logo-mark: 22px;
+  --nav: 14px;
+  --nav-h: 40px;
+  --btn: 13.5px;
+  --btn-h: 40px;
+  --hero-btn-h: 42px;
+  --h1: 48px;
+  --lede: 15.5px;
+  --badge: 12.5px;
+  --stat-size: 13.5px;
+  --header-y: 22px;
+  --header-x: 40px;
+  --stats-x: 72px;
+  --stats-y: 36px;
+  --hero-gap: 85px;
+  --copy-max: 860px;
+  --lede-max: 470px;
+}
+
+/* 3. Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+html, body {
+  background: #000000;
+  background: var(--bg, #000000);
+  color: #ffffff;
+  color: var(--text, #ffffff);
+  min-height: 100%;
+}
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  position: relative;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+svg, video { display: block; }
+
+:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* 4. Layer 4 — grain */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* 5. Layer 2 — hero backdrop at full opacity with smooth bottom fade */
+.hero-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #000000;
+  animation: photo-in 1.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-photo video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+}
+.hero-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.2) 65%, #000000 100%);
+}
+.hero-photo.is-in { animation: none; opacity: 1; transform: none; clip-path: none; filter: none; }
+
+/* 6. Layer 3 — page frame */
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background: #000000;
+}
+
+.hero-viewport {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+/* 7. Header */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: var(--header-y) var(--header-x) 12px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  justify-self: start;
+  font-size: var(--logo);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+}
+.logo svg { width: var(--logo-mark); height: var(--logo-mark); flex: none; }
+.logo-suffix { font-weight: 400; }
+
+#site-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: center;
+}
+.nav-link {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  height: var(--nav-h);
+  padding: 0 18px;
+  border-radius: 7px;
+  border: 1px solid rgba(198, 198, 198, 0.55);
+  background: linear-gradient(105deg, #050505 0%, #2a2a2a 48%, #4a4a4a 100%);
+  color: #f3f3f3;
+  font-size: var(--nav);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+.nav-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.16) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+.nav-link:hover::before { transform: translateX(120%); }
+.nav-link:hover {
+  border-color: rgba(235, 235, 235, 0.9);
+  background: linear-gradient(105deg, #111111 0%, #3a3a3a 45%, #6a6a6a 100%);
+  box-shadow: 0 0 18px rgba(200, 210, 230, 0.18);
+}
+.header-cta { justify-self: end; }
+
+/* Burger — phone only */
+.burger {
+  display: none;
+  place-items: center;
+  gap: 5px;
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(8, 8, 8, 0.55);
+  cursor: pointer;
+  justify-self: end;
+  z-index: 60;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.burger:hover { border-color: rgba(255, 255, 255, 0.32); background: rgba(255, 255, 255, 0.05); }
+.burger span {
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: #ffffff;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+body.menu-open .burger span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+body.menu-open .burger span:nth-child(2) { opacity: 0; }
+body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* 8. Buttons — shared liquid-glass language */
+.btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-h);
+  padding: 0 16px;
+  border-radius: 6px;
+  font-size: var(--btn);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, color 0.35s ease, filter 0.35s ease;
+}
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.45) 48%, transparent 76%);
+  transform: translateX(-130%);
+  transition: transform 0.65s ease;
+}
+.btn:hover::after { transform: translateX(130%); }
+.btn:active { transform: scale(0.98); }
+
+.btn-solid {
+  background: linear-gradient(180deg, #ffffff 0%, #e7e7e7 48%, #cfcfcf 100%);
+  color: #111111;
+  border: 1px solid #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.btn-solid:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #f3f6ff 42%, #d5def2 100%);
+  border-color: #f2f6ff;
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 22px rgba(186, 208, 255, 0.35), 0 8px 18px rgba(255, 255, 255, 0.12);
+}
+
+.btn-ghost {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.45) 50%, rgba(160, 175, 200, 0.08));
+  color: #ffffff;
+  border: 1px solid rgba(198, 198, 198, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.btn-ghost:hover {
+  background: linear-gradient(135deg, rgba(210, 225, 255, 0.18), rgba(0, 0, 0, 0.35) 48%, rgba(180, 195, 220, 0.16));
+  border-color: rgba(220, 230, 255, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(170, 200, 255, 0.22);
+}
+
+.hero-actions .btn { height: var(--hero-btn-h); padding: 0 18px; }
+.hero-actions .btn-solid:hover {
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 26px rgba(186, 208, 255, 0.4), 0 8px 18px rgba(255, 255, 255, 0.14);
+}
+.hero-actions .btn-ghost {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.5) 46%, rgba(150, 170, 200, 0.1));
+  border: 1px solid rgba(198, 198, 198, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.hero-actions .btn-ghost:hover {
+  border-color: rgba(220, 230, 255, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 24px rgba(170, 200, 255, 0.28);
+}
+
+/* 9. Hero — bottom-anchored */
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px 24px var(--hero-gap);
+  min-height: 0;
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: var(--copy-max);
+  width: 100%;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #7d7d7d 0%, #2a2a2a 52%, #0a0a0a 100%);
+  color: #f2f2f2;
+  font-size: var(--badge);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.badge-star {
+  width: 18px;
+  height: 20px;
+  flex: none;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.45));
+  animation: in-star 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
+}
+
+.hero h1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
+  font-size: var(--h1);
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+  color: #ffffff;
+}
+.headline-line {
+  display: block;
+  overflow: hidden;
+  padding: 0.06em 0.15em 0.14em;
+}
+.headline-line > span { display: block; }
+.hero h1 em {
+  font-family: "Instrument Serif", "Times New Roman", Times, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.08em;
+  letter-spacing: -0.03em;
+  color: #9a9a9a;
+  animation: in-em 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.72s both;
+}
+
+.lede {
+  max-width: var(--lede-max);
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: var(--lede);
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+  animation-duration: 1.25s;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+/* 10. Stats footer */
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 var(--stats-x) var(--stats-y);
+  padding-bottom: max(var(--stats-y), env(safe-area-inset-bottom));
+  color: var(--stat);
+}
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: var(--stat-size);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+.stat-icon { width: 20px; height: 20px; flex: none; }
+.stat-icon-wide { width: 38px; height: 21px; flex: none; }
+
+/* 11. Full-screen menu backdrop — phone only */
+.menu-backdrop { display: none; }
+
+/* 12. Entrance motion */
+.appear {
+  opacity: 1;
+  animation-duration: 1.05s;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-delay: var(--d, 0.08s);
+}
+.appear--scale { animation-name: in-scale; }
+.appear--soft  { animation-name: in-soft; }
+.appear--mask  { animation-name: in-mask; }
+.appear--pop   { animation-name: in-pop; }
+.appear--btn   { animation-name: in-btn; }
+.appear--side  { animation-name: in-side; }
+.appear--stat  { animation-name: in-stat; }
+.appear.is-in { animation: none; opacity: 1; transform: none; clip-path: none; filter: none; }
+
+@keyframes in-scale { from { opacity: 0; transform: scale(0.84); } to { opacity: 1; transform: scale(1); } }
+@keyframes in-soft  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes in-mask  { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes in-pop {
+  0%   { opacity: 0; transform: scale(0.9); }
+  70%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes in-btn  { from { opacity: 0; transform: translateY(18px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes in-side { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes in-stat { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes in-star {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-50deg); }
+  65%  { opacity: 1; transform: scale(1.2) rotate(8deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes in-em {
+  from { opacity: 0.35; filter: blur(4px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+@keyframes photo-in {
+  from { opacity: 0; transform: scale(1.06); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  .appear, .hero-photo, .hero h1 em, .badge-star {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+    filter: none;
+  }
+}
+
+/* 13. Responsive typography & spacing */
+@media (min-width: 1280px) and (max-width: 1599px) {
+  :root { --h1: 54px; --lede: 16px; --header-x: 48px; --stats-x: 80px; --copy-max: 900px; }
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --logo: 17px; --logo-mark: 24px; --nav: 15px; --nav-h: 44px;
+    --btn: 15px; --btn-h: 44px; --hero-btn-h: 48px;
+    --h1: 64px; --lede: 18px; --badge: 13.5px; --stat-size: 15px;
+    --header-y: 28px; --header-x: 64px; --stats-x: 96px; --stats-y: 44px;
+    --copy-max: 980px; --lede-max: 540px;
+  }
+  .nav-link { padding: 0 20px; }
+  .badge { margin-bottom: 26px; }
+  .lede { margin-top: 22px; }
+  .hero-actions { margin-top: 30px; gap: 12px; }
+  .stat-icon { width: 22px; height: 22px; }
+  .stat-icon-wide { width: 45px; height: 24px; }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --logo: 18px; --logo-mark: 26px; --nav: 16px; --nav-h: 48px;
+    --btn: 16px; --btn-h: 48px; --hero-btn-h: 52px;
+    --h1: 76px; --lede: 20px; --badge: 14.5px; --stat-size: 16px;
+    --header-y: 32px; --header-x: 80px; --stats-x: 120px; --stats-y: 52px;
+    --copy-max: 1120px; --lede-max: 620px;
+  }
+  #site-nav { gap: 10px; }
+  .nav-link { padding: 0 22px; }
+  .btn, .hero-actions .btn { padding: 0 22px; }
+  .badge { padding: 10px 15px; }
+  .stat-icon-wide { width: 48px; height: 26px; }
+}
+
+@media (min-width: 2560px) {
+  :root { --h1: 88px; --lede: 22px; --header-x: 120px; --stats-x: 160px; --copy-max: 1280px; --lede-max: 680px; }
+}
+
+@media (min-width: 901px) and (max-width: 1279px) {
+  :root {
+    --logo: 15px; --nav: 13px; --nav-h: 36px;
+    --btn: 13px; --btn-h: 38px; --hero-btn-h: 40px;
+    --h1: 42px; --lede: 15px; --badge: 12px; --stat-size: 12.5px;
+    --header-y: 16px; --header-x: 28px; --stats-x: 36px; --stats-y: 28px;
+    --hero-gap: 64px; --copy-max: 760px; --lede-max: 440px;
+  }
+  .nav-link { padding: 0 14px; }
+  .badge { margin-bottom: 16px; }
+  .lede { margin-top: 14px; }
+  .hero-actions { margin-top: 20px; }
+}
+
+@media (min-width: 901px) and (max-height: 850px) {
+  :root { --header-y: 14px; --stats-y: 24px; --hero-gap: 48px; --h1: 40px; }
+  .badge { margin-bottom: 12px; }
+  .lede { margin-top: 12px; }
+  .hero-actions { margin-top: 16px; }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  :root {
+    --h1: 34px; --lede: 14px; --hero-gap: 32px; --stats-y: 18px;
+    --nav-h: 30px; --btn-h: 34px; --hero-btn-h: 36px;
+  }
+  .badge { margin-bottom: 8px; }
+}
+
+/* Desktop scroll behavior */
+@media (min-width: 901px) {
+  html, body { min-height: 100%; overflow-x: hidden; scroll-behavior: smooth; }
+  .page { min-height: 100vh; min-height: 100dvh; }
+}
+
+/* Phone */
+@media (max-width: 900px) {
+  html, body { height: auto; overflow-y: auto; }
+  :root {
+    --logo: 16px; --btn: 15px; --btn-h: 46px; --hero-btn-h: 48px;
+    --h1: 36px; --lede: 16.5px; --badge: 13.5px; --stat-size: 15px;
+    --header-y: 16px; --header-x: 18px; --stats-x: 20px; --stats-y: 28px;
+    --hero-gap: 36px;
+  }
+  .page { height: auto; overflow: visible; }
+
+  .header {
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    padding-top: max(var(--header-y), env(safe-area-inset-top));
+    padding-left: max(var(--header-x), env(safe-area-inset-left));
+    padding-right: max(var(--header-x), env(safe-area-inset-right));
+  }
+  .logo, .header-cta, .burger { z-index: 80; }
+  .burger { display: grid; }
+
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(8, 8, 8, 0.42);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.28s ease, visibility 0.28s ease, backdrop-filter 0.28s ease;
+  }
+  body.menu-open .menu-backdrop {
+    opacity: 1;
+    visibility: visible;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  #site-nav {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    padding: 96px 22px 32px;
+    padding-top: max(96px, calc(env(safe-area-inset-top) + 88px));
+    background: transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+  }
+  body.menu-open #site-nav { opacity: 1; visibility: visible; }
+  #site-nav .nav-link {
+    width: 100%;
+    height: 56px;
+    justify-content: center;
+    font-size: 19px;
+    border-radius: 10px;
+  }
+  body.menu-open { overflow: hidden; }
+
+  .hero { padding: 20px 20px 64px; align-items: flex-end; }
+  .hero-copy, .lede { max-width: 100%; }
+
+  .stats {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .stat { white-space: normal; }
+}
+
+@media (max-width: 560px) {
+  :root { --h1: 34px; --lede: 16px; --header-x: 16px; }
+  .hero-actions { flex-direction: column; width: 100%; }
+  .hero-actions .btn { width: 100%; }
+}
+
+/* ------------------------------------------------------------------------ */
+/*  14. Extended Architectural Design System & Corporate Sections           */
+/* ------------------------------------------------------------------------ */
+
+.section-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 var(--stats-x);
+  width: 100%;
+}
+
+.section-divider {
+  width: 100%;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+}
+
+.section-spacing {
+  padding: clamp(88px, 12vw, 150px) 0;
+  position: relative;
+  scroll-margin-top: 90px;
+}
+
+.section-header {
+  margin-bottom: clamp(44px, 5.5vw, 68px);
+  max-width: 780px;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+
+.eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  animation: pulse-subtle 2.5s infinite ease-in-out;
+}
+
+.section-title {
+  font-size: clamp(30px, 3.6vw, 46px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.section-desc {
+  margin-top: 18px;
+  font-size: clamp(15px, 1.3vw, 16.5px);
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+  max-width: 640px;
+}
+
+/* Grids based on Golden Ratio (1.618) and Rule of Thirds */
+.grid-golden {
+  display: grid;
+  grid-template-columns: 1fr 1.618fr;
+  gap: clamp(32px, 4vw, 56px);
+  align-items: start;
+}
+
+.grid-golden-rev {
+  display: grid;
+  grid-template-columns: 1.618fr 1fr;
+  gap: clamp(32px, 4vw, 56px);
+  align-items: start;
+}
+
+.grid-3-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(20px, 2.5vw, 32px);
+}
+
+.grid-4-col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* Institutional Liquid Glass Cards */
+.card-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), #08080a;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: clamp(24px, 3vw, 36px);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.card-glass:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.card-glass-featured {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), #0d0d12;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e5e5e5;
+}
+
+.card-metric {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(34px, 3.5vw, 44px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.card-metric-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.card-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.card-visual {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* 4-Stage Operational Pipeline */
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+
+.step-num {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11.5px;
+  color: #737373;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.step-title {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.step-desc {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* Interactive Agent Console */
+.console-window {
+  background: #060608;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.console-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.console-dots {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.console-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #27272a;
+}
+
+.console-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.console-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.console-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.console-btn:active {
+  transform: scale(0.97);
+}
+
+.console-body {
+  padding: 22px 24px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: #d4d4d8;
+  min-height: 290px;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #27272a transparent;
+}
+
+.log-line {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  animation: in-soft 0.35s ease both;
+}
+
+.log-time {
+  color: #52525b;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+
+.log-tag {
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  flex: none;
+}
+
+.tag-info { background: rgba(255, 255, 255, 0.08); color: #e4e4e7; }
+.tag-pass { background: rgba(16, 185, 129, 0.16); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+.tag-exec { background: rgba(59, 130, 246, 0.16); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); }
+.tag-verify { background: rgba(168, 85, 247, 0.16); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+.tag-commit { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+.tag-alert { background: rgba(239, 68, 68, 0.16); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+
+/* Pricing Component */
+.pricing-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 44px;
+}
+
+.toggle-btn {
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.toggle-btn.is-active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.discount-pill {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.pricing-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 28px 0;
+  padding: 0;
+}
+
+.pricing-feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #d4d4d8;
+}
+
+.pricing-feature svg {
+  width: 16px;
+  height: 16px;
+  color: #10b981;
+  flex: none;
+}
+
+/* FAQ Accordions */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.faq-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 24px 0;
+  transition: border-color 0.25s ease;
+}
+
+.faq-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: clamp(16px, 1.5vw, 19px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.25s ease;
+}
+
+.faq-trigger:hover {
+  color: #e4e4e7;
+}
+
+.faq-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #a1a1aa;
+}
+
+.faq-item.is-open .faq-icon {
+  transform: rotate(45deg);
+  color: #ffffff;
+}
+
+.faq-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+  opacity: 0;
+}
+
+.faq-item.is-open .faq-content {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 14px;
+}
+
+.faq-inner {
+  overflow: hidden;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--muted);
+  text-wrap: pretty;
+  padding-right: 48px;
+}
+
+/* Final Launchpad CTA Card */
+.cta-card {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  padding: clamp(48px, 7vw, 80px) clamp(24px, 5vw, 64px);
+  background: radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.08) 0%, rgba(10, 10, 12, 0.96) 65%), #060608;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.cta-input-group {
+  display: flex;
+  max-width: 480px;
+  margin: 32px auto 0;
+  gap: 8px;
+}
+
+.cta-input {
+  flex: 1;
+  height: 44px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0 16px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cta-input:focus {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 36px;
+  font-size: 11.5px;
+  color: #71717a;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.trust-badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Corporate Executive Footer */
+.corporate-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  background: #000000;
+  padding: 72px 0 48px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 2fr repeat(4, 1fr);
+  gap: 48px;
+  margin-bottom: 64px;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 320px;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-col-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.footer-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13.5px;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #ffffff;
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 32px;
+  font-size: 12.5px;
+  color: #71717a;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 12px;
+  color: #34d399;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-subtle 2s infinite ease-in-out;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+/* Responsive Overrides for Extended Sections */
+@media (max-width: 900px) {
+  .grid-golden, .grid-golden-rev, .grid-3-col, .grid-4-col {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+  .footer-brand {
+    grid-column: span 2;
+  }
+  .footer-bottom {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .cta-input-group {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer-top {
+    grid-template-columns: 1fr;
+  }
+  .footer-brand {
+    grid-column: span 1;
+  }
+}
+</style>
+</head>
+<body style="background:#000;color:#fff">
+
+<div class="grain" aria-hidden="true"></div>
+
+<div class="hero-photo" aria-hidden="true">
+  <video autoplay muted loop playsinline preload="auto" disablepictureinpicture>
+    <source src="hf_20260818_072341_50851634-bbc3-4c33-9acc-7647d4db44aa.mp4" type="video/mp4">
+  </video>
+</div>
+
+<div class="page">
+
+  <div class="menu-backdrop" id="menu-backdrop" aria-hidden="true"></div>
+
+  <div class="hero-viewport">
+    <header class="header">
+      <a class="logo appear appear--scale" style="--d:0.08s" href="#top" aria-label="Vesper.ai">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <g transform="rotate(-30 12 12)">
+            <circle cx="7.3" cy="3.2" r="1.45"/>
+            <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8"/>
+            <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8"/>
+            <circle cx="16.7" cy="20.8" r="1.45"/>
+          </g>
+        </svg>
+        <span>Vesper<span class="logo-suffix">.ai</span></span>
+      </a>
+
+      <nav id="site-nav" aria-label="Primary">
+        <a class="nav-link appear appear--scale" style="--d:0.16s" href="#benefits">Benefits</a>
+        <a class="nav-link appear appear--soft"  style="--d:0.28s" href="#how-it-works">How It Works</a>
+        <a class="nav-link appear appear--scale" style="--d:0.40s" href="#faqs">FAQs</a>
+        <a class="nav-link appear appear--soft"  style="--d:0.52s" href="#pricing">Pricing</a>
+      </nav>
+
+      <a class="btn btn-solid header-cta appear appear--scale" style="--d:0.34s" href="#start">Start for Free</a>
+
+      <button class="burger appear appear--scale" style="--d:0.34s" id="burger"
+              type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <main class="hero" id="top">
+      <div class="hero-copy">
+
+        <div class="badge appear appear--pop" style="--d:0.22s">
+          <svg class="badge-star" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true">
+            <path d="M12 2.6C12.55 2.6 12.88 3.15 13.08 4.7c.62 4.7 1.52 5.6 6.22 6.22 1.55.2 2.1.53 2.1 1.08s-.55.88-2.1 1.08c-4.7.62-5.6 1.52-6.22 6.22-.2 1.55-.53 2.1-1.08 2.1s-.88-.55-1.08-2.1c-.62-4.7-1.52-5.6-6.22-6.22C3.15 12.88 2.6 12.55 2.6 12s.55-.88 2.1-1.08c4.7-.62 5.6-1.52 6.22-6.22C11.12 3.15 11.45 2.6 12 2.6Z"/>
+          </svg>
+          <span>Operational AI Infrastructure</span>
+        </div>
+
+        <h1>
+          <span class="headline-line"><span class="appear appear--mask" style="--d:0.42s">Train <em>AI agents</em> on your</span></span>
+          <span class="headline-line"><span class="appear appear--mask" style="--d:0.62s">workflows in minutes.</span></span>
+        </h1>
+
+        <p class="lede appear appear--soft" style="--d:0.82s">Deploy adaptive AI agents that learn, execute, and scale operational tasks across your business.</p>
+
+        <div className="hero-actions" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:26px;">
+          <a class="btn btn-solid appear appear--btn"  style="--d:0.96s" href="#start">Start for Free</a>
+          <a class="btn btn-ghost appear appear--side" style="--d:1.10s" href="#demo">See it in action</a>
+        </div>
+
+      </div>
+    </main>
+
+    <div class="stats">
+
+      <div class="stat appear appear--stat" style="--d:1.12s">
+        <svg class="stat-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="pill-l" x1="3" y1="2" x2="14" y2="22" gradientUnits="userSpaceOnUse">
+              <stop offset="0.38" stop-color="#ffffff"/>
+              <stop offset="0.62" stop-color="#3a3a3a"/>
+            </linearGradient>
+            <linearGradient id="pill-r" x1="3" y1="2" x2="14" y2="22" gradientUnits="userSpaceOnUse">
+              <stop offset="0.38" stop-color="#3a3a3a"/>
+              <stop offset="0.62" stop-color="#ffffff"/>
+            </linearGradient>
+          </defs>
+          <rect x="3.4" y="2.6" width="7.2" height="18.8" rx="3.6" fill="url(#pill-l)"/>
+          <rect x="13.4" y="2.6" width="7.2" height="18.8" rx="3.6" fill="url(#pill-r)"/>
+          <rect x="9.2" y="10.9" width="5.6" height="2.2" rx="1.1" fill="#4a4a4a"/>
+        </svg>
+        <span>4.2M+ workflows automated</span>
+      </div>
+
+      <div class="stat appear appear--stat" style="--d:1.28s">
+        <svg class="stat-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2.4" y="2.4" width="19.2" height="19.2" rx="6.2" fill="#ffffff"/>
+          <path d="M12 7.1v7.4" stroke="#111111" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8.15 12.35L12 16.2l3.85-3.85" stroke="#111111" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>92% reduction in manual operations</span>
+      </div>
+
+      <div class="stat appear appear--stat" style="--d:1.44s">
+        <svg class="stat-icon-wide" viewBox="0 0 40 22" fill="none" aria-hidden="true">
+          <circle cx="10.2" cy="11" r="9.2" fill="#2b2b2b"/>
+          <path d="M6.7 4.2 L9.3 8.5 L5.2 8.0 Z" fill="#f4f4f4"/>
+          <path d="M13.7 4.2 L11.1 8.5 L15.2 8.0 Z" fill="#f4f4f4"/>
+          <ellipse cx="10.2" cy="12.1" rx="4.15" ry="3.7" fill="#f4f4f4"/>
+          <circle cx="8.9" cy="11.5" r="0.7" fill="#1a1a1a"/>
+          <circle cx="11.5" cy="11.5" r="0.7" fill="#1a1a1a"/>
+
+          <circle cx="20.2" cy="11" r="9.2" fill="#ffffff"/>
+          <circle cx="17.6" cy="9.8" r="1.7" fill="#111111"/>
+          <circle cx="22.8" cy="9.8" r="1.7" fill="#111111"/>
+          <ellipse cx="20.2" cy="12.6" rx="0.95" ry="0.65" fill="#111111"/>
+          <path d="M17.9 14.2c1.3 1.7 3.2 1.7 4.6 0" stroke="#111111" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+
+          <circle cx="30.2" cy="11" r="9.2" fill="#f26b1d"/>
+          <text x="30.2" y="15.1" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="12.5" text-anchor="middle" fill="#ffffff">e</text>
+        </svg>
+        <span>180+ operational teams onboarded</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 1: BENEFITS / ARCHITECTURAL PILLARS -->
+  <hr class="section-divider">
+  <section id="benefits" class="section-spacing">
+    <div class="section-container">
+      <div class="grid-golden">
+        <div>
+          <div class="section-eyebrow">
+            <span class="eyebrow-dot" aria-hidden="true"></span>
+            <span>Capability Architecture // 01</span>
+          </div>
+          <h2 class="section-title">Deterministic execution for non-negotiable operations.</h2>
+          <p class="section-desc">
+            Generative models hallucinate and fail silently. Enterprise operations cannot. Vesper compiles unstructured intents into formally verified Directed Acyclic Graphs (DAGs) with hardware-enforced mathematical rollbacks.
+          </p>
+          <div style="margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="card-badge">Zero Hallucinations</div>
+            <div class="card-badge">SOC2 Enclave Sealed</div>
+            <div class="card-badge">&lt;38ms P99 Latency</div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Benefit 1 -->
+          <div class="card-glass">
+            <div class="card-top">
+              <span class="card-badge">Formally Verified</span>
+              <span style="font-size: 12px; color: #71717a; font-family: monospace;">CORE-V1</span>
+            </div>
+            <div class="card-metric">0.00%</div>
+            <div class="card-metric-label">Arbitrary Model Drift Across 4.2M Runs</div>
+            <h3 class="card-title">Zero-Hallucination Execution Engine</h3>
+            <p class="card-desc">
+              Every autonomous task sequence is mapped to typed state-machines. Actions dispatch only when pre-conditions, rate quotas, and balance bounds pass rigorous formal verification.
+            </p>
+            <div class="card-visual">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-family: monospace; color: #a1a1aa;">
+                <span>INGEST -&gt; AST -&gt; INVARIANT CHECK</span>
+                <span style="color: #34d399;">PASSED (0.4ms)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Benefit 2 -->
+          <div class="card-glass">
+            <div class="card-top">
+              <span class="card-badge">Sub-Second RTT</span>
+              <span style="font-size: 12px; color: #71717a; font-family: monospace;">EDGE-ROUTING</span>
+            </div>
+            <div class="card-metric">&lt;38ms</div>
+            <div class="card-metric-label">Autonomous Dynamic Failover Latency</div>
+            <h3 class="card-title">Self-Healing Multi-System Routing</h3>
+            <p class="card-desc">
+              When downstream enterprise APIs (Salesforce, SAP, Stripe, Solana) experience latency spikes or schema drift, Vesper reroutes workloads across fallback rails with zero human intervention.
+            </p>
+            <div class="card-visual">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-family: monospace; color: #a1a1aa;">
+                <span>CIRCUIT-BREAKER: AUTO-HEAL</span>
+                <span style="color: #60a5fa;">ACTIVE // 99.994% SLA</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Benefit 3 -->
+          <div class="card-glass">
+            <div class="card-top">
+              <span class="card-badge">Ed25519 Sealed</span>
+              <span style="font-size: 12px; color: #71717a; font-family: monospace;">HSM-ATTESTED</span>
+            </div>
+            <div class="card-metric">100%</div>
+            <div class="card-metric-label">Provable Cryptographic Audit Lineage</div>
+            <h3 class="card-title">Hardware Enclave Key Custody</h3>
+            <p class="card-desc">
+              Every state transition, model inference, and external transaction is signed with ed25519 hardware enclave keys, creating an immutable merkle log for compliance, audit, and SOC2 reporting.
+            </p>
+            <div class="card-visual">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-family: monospace; color: #a1a1aa;">
+                <span>SIG: 0x8f2a...9b41</span>
+                <span style="color: #c084fc;">MERKLE-ANCHORED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: HOW IT WORKS / 4-STAGE PIPELINE -->
+  <hr class="section-divider">
+  <section id="how-it-works" class="section-spacing">
+    <div class="section-container">
+      <div class="section-header">
+        <div class="section-eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          <span>System Pipeline // 02</span>
+        </div>
+        <h2 class="section-title">From natural intent to verified execution in four deterministic phases.</h2>
+        <p class="section-desc">
+          How unstructured operational workflows convert into self-governing, fault-tolerant routines that run 24/7 with mathematical certainty.
+        </p>
+      </div>
+
+      <div class="grid-4-col">
+        <div class="card-glass pipeline-step">
+          <div class="step-num">PHASE // 01</div>
+          <h3 class="step-title">Ingest &amp; Mirror</h3>
+          <p class="step-desc">
+            Continuous state ingestion from databases, ERPs, CRM change data capture (CDC), and financial liquidity rails via authenticated TLS endpoints.
+          </p>
+          <div class="card-visual" style="margin-top: auto;">
+            <span style="font-size: 11px; font-family: monospace; color: #71717a;">WEBHOOK / CDC / RPC</span>
+          </div>
+        </div>
+
+        <div class="card-glass pipeline-step">
+          <div class="step-num">PHASE // 02</div>
+          <h3 class="step-title">Synthesize &amp; Validate</h3>
+          <p class="step-desc">
+            Adaptive model compiles instructions into a bounded Directed Acyclic Graph. Security policies, spending limits, and invariants are pre-checked.
+          </p>
+          <div class="card-visual" style="margin-top: auto;">
+            <span style="font-size: 11px; font-family: monospace; color: #71717a;">TYPED AST COMPILER</span>
+          </div>
+        </div>
+
+        <div class="card-glass pipeline-step">
+          <div class="step-num">PHASE // 03</div>
+          <h3 class="step-title">Parallel Dispatch</h3>
+          <p class="step-desc">
+            High-throughput action dispatcher executes atomic mutations across distributed workers with sub-second finality and hardware isolation.
+          </p>
+          <div class="card-visual" style="margin-top: auto;">
+            <span style="font-size: 11px; font-family: monospace; color: #71717a;">ED25519 DISPATCHER</span>
+          </div>
+        </div>
+
+        <div class="card-glass pipeline-step">
+          <div class="step-num">PHASE // 04</div>
+          <h3 class="step-title">Verify &amp; Settle</h3>
+          <p class="step-desc">
+            Mathematical assertions test resulting state against ground truth before committing. Any anomaly triggers automatic state rollback in under 12ms.
+          </p>
+          <div class="card-visual" style="margin-top: auto;">
+            <span style="font-size: 11px; font-family: monospace; color: #34d399;">INVARIANT ATTESTATION</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: LIVE INTERACTIVE AGENT CONSOLE -->
+  <hr class="section-divider">
+  <section id="console" class="section-spacing">
+    <div class="section-container">
+      <div class="section-header">
+        <div class="section-eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          <span>Runtime Simulator // 03</span>
+        </div>
+        <h2 class="section-title">Experience the autonomous agent runtime live.</h2>
+        <p class="section-desc">
+          Interact with the operational console. Trigger live synthetic workloads, inject upstream API disruptions, and witness real-time self-healing failover.
+        </p>
+      </div>
+
+      <div class="console-window">
+        <div class="console-titlebar">
+          <div class="console-dots">
+            <div class="console-dot"></div>
+            <div class="console-dot"></div>
+            <div class="console-dot"></div>
+            <span style="margin-left: 12px; font-family: monospace; font-size: 11px; color: #71717a;">
+              AGENT: ALPHA-09 // REGION: US-EAST-VERIFIED
+            </span>
+          </div>
+
+          <div class="console-controls">
+            <button type="button" class="console-btn" id="btn-run-sim" aria-label="Run simulated operational workflow">
+              <span>▶ Run Simulation</span>
+            </button>
+            <button type="button" class="console-btn" id="btn-inject-fault" aria-label="Inject synthetic API outage">
+              <span>⚡ Inject Fault</span>
+            </button>
+            <button type="button" class="console-btn" id="btn-reset-sim" aria-label="Reset telemetry logs">
+              <span>↺ Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.3);">
+          <button type="button" id="tab-btn-telemetry" style="padding: 8px 18px; background: rgba(255,255,255,0.06); color: #ffffff; border: 0; border-bottom: 2px solid #ffffff; font-size: 12px; font-family: monospace; cursor: pointer;">
+            LIVE TELEMETRY
+          </button>
+          <button type="button" id="tab-btn-graph" style="padding: 8px 18px; background: transparent; color: #71717a; border: 0; border-bottom: 2px solid transparent; font-size: 12px; font-family: monospace; cursor: pointer;">
+            DAG TOPOLOGY
+          </button>
+          <button type="button" id="tab-btn-audit" style="padding: 8px 18px; background: transparent; color: #71717a; border: 0; border-bottom: 2px solid transparent; font-size: 12px; font-family: monospace; cursor: pointer;">
+            AUDIT PROOF
+          </button>
+        </div>
+
+        <div class="console-body" id="console-logs-container" role="log" aria-live="polite">
+          <div class="log-line">
+            <span class="log-time">05:54:12.041</span>
+            <span class="log-tag tag-info">INGEST</span>
+            <span>Inbound webhook payload captured: event #wh_99281a (Treasury Rebalance)</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">05:54:12.059</span>
+            <span class="log-tag tag-pass">VERIFY</span>
+            <span>Pre-condition assertion satisfied: Max transfer threshold &lt;= $500,000.00</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">05:54:12.078</span>
+            <span class="log-tag tag-exec">PLAN</span>
+            <span>Compiled topological DAG: 4 action nodes with zero circular dependencies</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">05:54:12.096</span>
+            <span class="log-tag tag-exec">EXEC</span>
+            <span>Parallel atomic split dispatched: 60% USDC -&gt; 40% SPYx via Jupiter</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">05:54:12.119</span>
+            <span class="log-tag tag-verify">VERIFY</span>
+            <span>Post-execution invariant confirmed: Balance delta verified ($0.00 drift)</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">05:54:12.138</span>
+            <span class="log-tag tag-commit">COMMIT</span>
+            <span>State finalized and sealed with Ed25519 hardware key 0x8f2a...9b12 in 97ms</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; alignItems: center; padding: 12px 20px; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06); font-size: 11.5px; color: #71717a; font-family: monospace;">
+          <span>METRICS: 1,420 TPS · 38ms P99 · 0 FAILURES</span>
+          <span style="color: #34d399;">HEALTH: OPTIMAL</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: PRICING / UNIT ECONOMICS -->
+  <hr class="section-divider">
+  <section id="pricing" class="section-spacing">
+    <div class="section-container">
+      <div class="section-header" style="text-align: center; margin: 0 auto 40px;">
+        <div class="section-eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          <span>Infrastructure Capacity // 04</span>
+        </div>
+        <h2 class="section-title">Predictable compute. Zero hidden per-seat surprises.</h2>
+        <p class="section-desc" style="margin: 18px auto 0;">
+          No licensing penalties as your human organization scales. Pay transparently for verified autonomous workflow operations.
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: center;">
+        <div class="pricing-toggle-wrap">
+          <button type="button" class="toggle-btn" id="btn-pricing-monthly">
+            Monthly
+          </button>
+          <button type="button" class="toggle-btn is-active" id="btn-pricing-annual">
+            Annual Commitment <span class="discount-pill">Save 20%</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid-3-col">
+        <!-- Tier 1: Sandbox -->
+        <div class="card-glass">
+          <div class="card-badge" style="margin-bottom: 16px;">Core Sandbox</div>
+          <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;">
+            <span class="card-metric">$0</span>
+            <span style="color: #71717a; font-size: 14px;">/ month</span>
+          </div>
+          <p class="card-desc" style="min-height: 44px;">
+            For technical teams evaluating autonomous agent pipelines in staging environments.
+          </p>
+          <ul class="pricing-features">
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>10,000 verified workflow runs / mo</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>5 concurrent autonomous agents</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Community Slack &amp; Developer Docs</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Standard REST &amp; Webhook APIs</span>
+            </li>
+          </ul>
+          <a class="btn btn-ghost" style="width: 100%; margin-top: 16px;" href="#start">
+            Start Building Free
+          </a>
+        </div>
+
+        <!-- Tier 2: Enterprise Cloud (Featured) -->
+        <div class="card-glass card-glass-featured">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div class="card-badge" style="background: rgba(255,255,255,0.15); color: #fff;">
+              Enterprise Cloud
+            </div>
+            <span class="discount-pill" style="font-size: 10.5px;">MOST POPULAR</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;">
+            <span class="card-metric" id="pricing-val-cloud">$312</span>
+            <span style="color: #71717a; font-size: 14px;">/ month</span>
+          </div>
+          <p class="card-desc" style="min-height: 44px;">
+            For scaling platforms running mission-critical operations with sub-second failovers.
+          </p>
+          <ul class="pricing-features">
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>500,000 verified workflow runs / mo</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Unlimited concurrent agents</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>&lt;40ms Priority Edge Dispatch</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Automated Zero-Downtime Failover</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>99.99% Guaranteed SLA</span>
+            </li>
+          </ul>
+          <a class="btn btn-solid" style="width: 100%; margin-top: 16px;" href="#start">
+            Start 14-Day Free Trial
+          </a>
+        </div>
+
+        <!-- Tier 3: Institutional Dedicated -->
+        <div class="card-glass">
+          <div class="card-badge" style="margin-bottom: 16px;">Institutional Dedicated</div>
+          <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;">
+            <span class="card-metric">Custom</span>
+          </div>
+          <p class="card-desc" style="min-height: 44px;">
+            For financial institutions, sovereign funds, and health systems requiring air-gapped enclaves.
+          </p>
+          <ul class="pricing-features">
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Unlimited verified workflow throughput</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Dedicated AWS Nitro / Apple Silicon Enclaves</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Air-gapped on-premise VPC deployment</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Custom cryptographic signers &amp; HSM keys</span>
+            </li>
+            <li class="pricing-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>24/7 Dedicated Systems Engineering Pod</span>
+            </li>
+          </ul>
+          <a class="btn btn-ghost" style="width: 100%; margin-top: 16px;" href="#demo">
+            Contact Infrastructure Team
+          </a>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 32px; font-size: 12.5px; color: #71717a; font-family: monospace;">
+        Additional operations billed at $0.0004 per verified step. No idle or standby charges.
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: FAQS / DUE DILIGENCE -->
+  <hr class="section-divider">
+  <section id="faqs" class="section-spacing">
+    <div class="section-container" style="max-width: 920px;">
+      <div class="section-header">
+        <div class="section-eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          <span>Due Diligence // 05</span>
+        </div>
+        <h2 class="section-title">Frequently asked technical questions.</h2>
+        <p class="section-desc">
+          Architecture, security guarantees, integration requirements, and compliance.
+        </p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item is-open">
+          <button type="button" class="faq-trigger" aria-expanded="true">
+            <span>How does Vesper mathematically guarantee zero hallucinations in operations?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <div class="faq-content">
+            <div class="faq-inner">
+              <p>Vesper does not let large language models directly trigger external side-effects. Instead, the model outputs a candidate intent which our deterministic compiler parses into an Abstract Syntax Tree (AST) bounded by strict typed schemas. Actions only dispatch when pre-conditions, balance limits, and formal invariants pass mathematical proofs.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-trigger" aria-expanded="false">
+            <span>How do agents handle downstream API schema changes or vendor outages?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <div class="faq-content">
+            <div class="faq-inner">
+              <p>Vesper features an autonomous circuit breaker and dynamic failover mesh. When an integrated API (e.g. CRM, ERP, liquidity DEX) drops or times out, the agent intercepts the failure in under 18ms and routes tasks across fallback rails without state corruption.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-trigger" aria-expanded="false">
+            <span>Can Vesper agents be deployed into private VPCs or on-premise clusters?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <div class="faq-content">
+            <div class="faq-inner">
+              <p>Yes. For regulated financial institutions and healthcare enterprises, Vesper ships a lightweight, containerized daemon that runs in your isolated VPC (AWS, GCP, Azure) or air-gapped on-premise Kubernetes clusters with outbound-only mutual TLS.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-trigger" aria-expanded="false">
+            <span>What compliance standards and cryptographic guarantees are supported?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <div class="faq-content">
+            <div class="faq-inner">
+              <p>Every state transition and API call is cryptographically signed using Ed25519 hardware enclave keys, establishing an immutable merkle audit trail. Vesper maintains SOC2 Type II, ISO 27001 certifications, and zero-data retention policies.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-trigger" aria-expanded="false">
+            <span>How quickly can an enterprise engineering team deploy their first agent?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <div class="faq-content">
+            <div class="faq-inner">
+              <p>Most engineering teams deploy their first operational pipeline in less than 4 minutes using our TypeScript SDK or pre-built enterprise connectors. Agents can run in dry-run simulation mode before authorizing production execution.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: ENTERPRISE LAUNCHPAD CTA -->
+  <hr class="section-divider">
+  <section id="start" class="section-spacing">
+    <div class="section-container">
+      <div class="cta-card">
+        <div class="section-eyebrow" style="justify-content: center;">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          <span>Enterprise Launchpad</span>
+        </div>
+        <h2 class="section-title" style="font-size: clamp(34px, 4.2vw, 54px); max-width: 780px; margin: 0 auto;">
+          Deploy your first autonomous agent in under 4 minutes.
+        </h2>
+        <p class="section-desc" style="max-width: 600px; margin: 18px auto 0;">
+          Connect your enterprise APIs, set mathematical safety invariants, and scale mission-critical operations with sub-second finality.
+        </p>
+
+        <form class="cta-input-group" id="launchpad-form">
+          <input
+            type="email"
+            class="cta-input"
+            id="launchpad-email"
+            placeholder="Enter your enterprise email…"
+            aria-label="Enterprise email address"
+            autocomplete="email"
+            spellcheck="false"
+            required
+          >
+          <button type="submit" class="btn btn-solid" style="height: 44px; padding: 0 22px;">
+            Get API Access
+          </button>
+        </form>
+
+        <div id="launchpad-status" style="display: none; margin-top: 16px; font-size: 13.5px; font-weight: 500;" aria-live="polite"></div>
+
+        <div class="trust-badges">
+          <span class="trust-badge-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>SOC2 Type II</span>
+          </span>
+          <span class="trust-badge-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>ISO 27001</span>
+          </span>
+          <span class="trust-badge-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span>Zero-Data Retention</span>
+          </span>
+          <span class="trust-badge-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>99.994% Uptime SLA</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7: CORPORATE EXECUTIVE FOOTER -->
+  <footer class="corporate-footer">
+    <div class="section-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a class="logo" href="#top" aria-label="Vesper.ai">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <g transform="rotate(-30 12 12)">
+                <circle cx="7.3" cy="3.2" r="1.45"/>
+                <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8"/>
+                <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8"/>
+                <circle cx="16.7" cy="20.8" r="1.45"/>
+              </g>
+            </svg>
+            <span>Vesper<span class="logo-suffix">.ai</span></span>
+          </a>
+          <p class="footer-desc">
+            Operational AI Infrastructure for mission-critical enterprise workflows. Formally verified, self-healing, and mathematically constrained.
+          </p>
+          <div style="margin-top: 8px;">
+            <div class="status-badge">
+              <span class="status-pulse" aria-hidden="true"></span>
+              <span>All Systems Operational · 99.994% SLA</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Platform</div>
+          <a class="footer-link" href="#benefits">Agent Runtime</a>
+          <a class="footer-link" href="#benefits">Invariant Engine</a>
+          <a class="footer-link" href="#how-it-works">Dynamic Failover</a>
+          <a class="footer-link" href="#console">Edge Mesh</a>
+          <a class="footer-link" href="#pricing">Changelog</a>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Solutions</div>
+          <a class="footer-link" href="#benefits">Treasury Settlement</a>
+          <a class="footer-link" href="#benefits">Cloud Auto-Remediation</a>
+          <a class="footer-link" href="#benefits">Supply Chain Sync</a>
+          <a class="footer-link" href="#benefits">Customer Operations</a>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Resources</div>
+          <a class="footer-link" href="#benefits">Documentation</a>
+          <a class="footer-link" href="#benefits">API Reference</a>
+          <a class="footer-link" href="#how-it-works">Architecture Paper</a>
+          <a class="footer-link" href="#console">Security Whitepaper</a>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Company &amp; Legal</div>
+          <a class="footer-link" href="#top">About Vesper</a>
+          <a class="footer-link" href="#faqs">Security &amp; SOC2</a>
+          <a class="footer-link" href="#top">Privacy Policy</a>
+          <a class="footer-link" href="#top">Terms of Service</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 Vesper.ai, Inc. Operational AI Infrastructure. All rights reserved.</div>
+        <a href="#top" style="color: #71717a; text-decoration: none; font-size: 12px;">
+          Back to top ↑
+        </a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var body = document.body;
+  var animated = document.querySelectorAll(".appear, .hero-photo");
+
+  // 1. Each element settles itself when its own animation ends.
+  Array.prototype.forEach.call(animated, function (el) {
+    el.addEventListener("animationend", function handler(e) {
+      if (e.target !== el) return; // ignore children (badge star, headline em)
+      el.classList.add("is-in");
+      el.removeEventListener("animationend", handler);
+    });
+  });
+
+  // 2. Nothing actually animating two frames in? Settle everything
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      var live = false;
+      Array.prototype.forEach.call(animated, function (el) {
+        if (!el.getAnimations) return;
+        el.getAnimations().forEach(function (a) {
+          if (a.playState === "running" || a.playState === "finished") live = true;
+        });
+      });
+      if (!live) {
+        Array.prototype.forEach.call(animated, function (el) { el.classList.add("is-in"); });
+      }
+    });
+  });
+
+  // 3. Menu interactions
+  var burger = document.getElementById("burger");
+  var nav = document.getElementById("site-nav");
+  var backdrop = document.getElementById("menu-backdrop");
+
+  function setMenu(open) {
+    body.classList.toggle("menu-open", open);
+    if (burger) {
+      burger.setAttribute("aria-expanded", open ? "true" : "false");
+      burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    }
+  }
+
+  if (burger) {
+    burger.addEventListener("click", function () {
+      setMenu(!body.classList.contains("menu-open"));
+    });
+  }
+
+  if (nav) {
+    Array.prototype.forEach.call(nav.querySelectorAll("a"), function (link) {
+      link.addEventListener("click", function () { setMenu(false); });
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", function () { setMenu(false); });
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") setMenu(false);
+  });
+
+  var wide = window.matchMedia("(min-width: 901px)");
+  var onWide = function (e) { if (e.matches) setMenu(false); };
+  if (wide.addEventListener) wide.addEventListener("change", onWide);
+  else wide.addListener(onWide);
+
+  // 4. Interactive Console Simulation
+  var logsContainer = document.getElementById("console-logs-container");
+  var btnRunSim = document.getElementById("btn-run-sim");
+  var btnInjectFault = document.getElementById("btn-inject-fault");
+  var btnResetSim = document.getElementById("btn-reset-sim");
+  var tabTelemetry = document.getElementById("tab-btn-telemetry");
+  var tabGraph = document.getElementById("tab-btn-graph");
+  var tabAudit = document.getElementById("tab-btn-audit");
+
+  var defaultLogsHtml = logsContainer ? logsContainer.innerHTML : "";
+
+  function getTimestamp() {
+    return new Date().toISOString().substring(11, 23);
+  }
+
+  if (btnRunSim) {
+    btnRunSim.addEventListener("click", function () {
+      if (!logsContainer) return;
+      btnRunSim.disabled = true;
+      btnRunSim.querySelector("span").textContent = "Simulating…";
+      logsContainer.innerHTML = '<div class="log-line"><span class="log-time">' + getTimestamp() + '</span><span class="log-tag tag-info">INGEST</span><span>Triggering synthetic enterprise load test #sim_8819...</span></div>';
+
+      setTimeout(function () {
+        logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + getTimestamp() + '</span><span class="log-tag tag-pass">VERIFY</span><span>Role-based policy checked: Auth scope [OPERATIONS:EXECUTE] verified</span></div>';
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }, 280);
+
+      setTimeout(function () {
+        logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + getTimestamp() + '</span><span class="log-tag tag-exec">PLAN</span><span>Generated dynamic execution plan across 3 redundant node clusters</span></div>';
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }, 560);
+
+      setTimeout(function () {
+        logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + getTimestamp() + '</span><span class="log-tag tag-exec">EXEC</span><span>Parallel API settlement dispatched to Solana mainnet-beta</span></div>';
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }, 860);
+
+      setTimeout(function () {
+        logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + getTimestamp() + '</span><span class="log-tag tag-verify">VERIFY</span><span>Formal verification check passed: All cryptographic invariants valid</span></div>';
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }, 1160);
+
+      setTimeout(function () {
+        logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + getTimestamp() + '</span><span class="log-tag tag-commit">COMMIT</span><span>Execution finished with 0 error states in 41ms. Audit merkle leaf added.</span></div>';
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+        btnRunSim.disabled = false;
+        btnRunSim.querySelector("span").textContent = "▶ Run Simulation";
+      }, 1450);
+    });
+  }
+
+  if (btnInjectFault) {
+    btnInjectFault.addEventListener("click", function () {
+      if (!logsContainer) return;
+      var now = getTimestamp();
+      logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + now + '</span><span class="log-tag tag-alert">ALERT</span><span>Simulated upstream outage on primary endpoint us-east-node-01 (HTTP 504)</span></div>';
+      logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + now + '</span><span class="log-tag tag-exec">FAILOVER</span><span>Circuit breaker triggered: Dynamically rerouted traffic to us-west-redundant in 16ms</span></div>';
+      logsContainer.innerHTML += '<div class="log-line"><span class="log-time">' + now + '</span><span class="log-tag tag-pass">PASS</span><span>Autonomous state recovery confirmed. Invariant integrity 100% maintained.</span></div>';
+      logsContainer.scrollTop = logsContainer.scrollHeight;
+    });
+  }
+
+  if (btnResetSim) {
+    btnResetSim.addEventListener("click", function () {
+      if (logsContainer) logsContainer.innerHTML = defaultLogsHtml;
+    });
+  }
+
+  // 5. Pricing Toggle
+  var btnMonthly = document.getElementById("btn-pricing-monthly");
+  var btnAnnual = document.getElementById("btn-pricing-annual");
+  var pricingValCloud = document.getElementById("pricing-val-cloud");
+
+  if (btnMonthly && btnAnnual && pricingValCloud) {
+    btnMonthly.addEventListener("click", function () {
+      btnMonthly.classList.add("is-active");
+      btnAnnual.classList.remove("is-active");
+      pricingValCloud.textContent = "$390";
+    });
+    btnAnnual.addEventListener("click", function () {
+      btnAnnual.classList.add("is-active");
+      btnMonthly.classList.remove("is-active");
+      pricingValCloud.textContent = "$312";
+    });
+  }
+
+  // 6. FAQ Accordions
+  var faqItems = document.querySelectorAll(".faq-item");
+  Array.prototype.forEach.call(faqItems, function (item) {
+    var trigger = item.querySelector(".faq-trigger");
+    if (trigger) {
+      trigger.addEventListener("click", function () {
+        var isOpen = item.classList.contains("is-open");
+        Array.prototype.forEach.call(faqItems, function (other) {
+          other.classList.remove("is-open");
+          var otherTrigger = other.querySelector(".faq-trigger");
+          if (otherTrigger) otherTrigger.setAttribute("aria-expanded", "false");
+        });
+        if (!isOpen) {
+          item.classList.add("is-open");
+          trigger.setAttribute("aria-expanded", "true");
+        }
+      });
+    }
+  });
+
+  // 7. Launchpad Form
+  var launchpadForm = document.getElementById("launchpad-form");
+  var launchpadEmail = document.getElementById("launchpad-email");
+  var launchpadStatus = document.getElementById("launchpad-status");
+
+  if (launchpadForm && launchpadEmail && launchpadStatus) {
+    launchpadForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var val = launchpadEmail.value.trim();
+      if (!val || val.indexOf("@") === -1) {
+        launchpadStatus.style.display = "block";
+        launchpadStatus.style.color = "#f87171";
+        launchpadStatus.textContent = "Please enter a valid work email address.";
+      } else {
+        launchpadStatus.style.display = "block";
+        launchpadStatus.style.color = "#34d399";
+        launchpadStatus.textContent = "✓ Enterprise invitation sent. Please check your inbox for API credentials.";
+        launchpadEmail.value = "";
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
