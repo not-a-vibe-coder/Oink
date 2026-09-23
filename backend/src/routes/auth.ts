@@ -198,7 +198,7 @@ authRouter.post("/unlock", ipRateLimiter("unlock", 30, 3600), async (req: Reques
 
     // Create session
     const userAgent = req.headers["user-agent"];
-    const { token, expiresAt } = await createSession(tag, userAgent, ipHash);
+    const { token, expiresAt } = await createSession(tag, userAgent, ipHash, client);
 
     await client.query("COMMIT");
 
@@ -384,7 +384,7 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
 
     // 7. Issue new session
     const userAgent = req.headers["user-agent"];
-    const { token, expiresAt } = await createSession(tag, userAgent, ipHash);
+    const { token, expiresAt } = await createSession(tag, userAgent, ipHash, client);
 
     await recordLoginAttempt(tag, ipHash, "recover", true);
     await client.query("COMMIT");

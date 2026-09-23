@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import cookie from "cookie";
 import { query } from "../db";
+import type { PoolClient } from "pg";
 
 export const SESSION_COOKIE_NAME = "oink_session";
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 3600; // 7 days
@@ -52,12 +53,20 @@ export function clearSessionCookie(): string {
   });
 }
 
-export async function createSession(tag: string, userAgent?: string, ipHash?: string): Promise<{ token: string; expiresAt: Date }> {
+// Callers inside a transaction must pass their client: sessions.tag references
+// wallets(tag), and a session written through the pool on another connection cannot
+// see a wallet row the transaction has not committed yet, so the FK check fails.
+export async function createSession(
+  tag: string,
+  userAgent?: string,
+  ipHash?: string,
+  db: Pick<PoolClient, "query"> = { query } as unknown as Pick<PoolClient, "query">,
+): Promise<{ token: string; expiresAt: Date }> {
   const token = generateSessionToken();
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
 
-  await query(
+  await db.query(
     `INSERT INTO sessions (token_hash, tag, user_agent, ip_hash, created_at, last_used_at, expires_at)
      VALUES ($1, $2, $3, $4, NOW(), NOW(), $5)`,
     [tokenHash, tag.toLowerCase(), userAgent || null, ipHash || null, expiresAt],

@@ -206,7 +206,7 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
     // 8. Create session
     const ipHash = hashIp(getClientIp(req));
     const userAgent = req.headers["user-agent"];
-    const { token, expiresAt } = await createSession(normalizedTag, userAgent, ipHash);
+    const { token, expiresAt } = await createSession(normalizedTag, userAgent, ipHash, client);
 
     await client.query("COMMIT");
 
