@@ -10,11 +10,13 @@ Source project to port from: `C:\Users\USER\tender` (read-only — never modify 
 
 ## What Oink is, in one paragraph
 
-A self-custodial Solana wallet where the account identity is a tag (`@pascal`), created with
-a password and a TOTP authenticator rather than a seed phrase prompt, and recoverable from any device
-with **tag + password + TOTP code**. Every wallet has an *election* — a basis-points
-allocation across tokenized stocks and stablecoins — and inbound payments settle atomically
-into that allocation through Jupiter. Built for a Solana stocks hackathon.
+A self-custodial Solana wallet created with a password and a TOTP authenticator rather than a
+seed phrase prompt, identified by a permanent account ID (`oink-k7p2-9xqm`) and, once the user
+links X, by a tag (`@pascal`). It is recoverable from any device with **account ID or tag +
+password + TOTP code**. Every wallet has a *mix* — a basis-points allocation across tokenized
+stocks and stablecoins — and inbound payments settle atomically into that allocation through
+Jupiter. A linked email or X account can be paid even before its owner joins, through a held
+payment (`docs/12-IDENTITY-ESCROW-ADMIN.md`). Built for a Solana stocks hackathon.
 
 ---
 
@@ -26,11 +28,14 @@ into that allocation through Jupiter. Built for a Solana stocks hackathon.
 2. **Implement `docs/02-WALLET-AND-AUTH-SPEC.md` exactly.** Do not substitute algorithms,
    lower Argon2id parameters, skip the HKDF `encKey` / `authKey` split, or drop the AAD.
    If a library makes something awkward, ask — do not improvise around the spec.
-3. **X/Twitter is never required.** Creating, receiving, sending, electing and recovering all
-   work with zero social accounts. The X gate in TENDER (`XAuthGate.tsx`) is deleted, not
-   ported.
-4. **No custodial signing.** The only server-held key is the fee payer, which can pay fees
-   and nothing else. If a feature seems to need another server-side key, stop and ask.
+3. **X/Twitter is required only to claim a tag.** Creating, receiving, sending, setting a mix,
+   unlocking and recovering all work with zero social accounts. The X gate in TENDER
+   (`XAuthGate.tsx`) is deleted, not ported.
+4. **No custodial signing.** The server-held keys are the fee payer, which can pay fees and
+   nothing else, and the Privy refund signer, which exists only on held-payment wallets and
+   is policy-limited to returning funds to the sender or delivering them to the verified
+   claimant (`docs/12-...` §6, approved 2026-09-23). It is never added to a user's Oink
+   wallet. If a feature seems to need any other server-side key, stop and ask.
 5. **No EVM.** No wagmi, no viem, no Robinhood Chain, no `/api/v2`, no rail abstraction.
 6. **Amounts are `BigInt`.** Never floating point for token amounts. Format at the display
    edge only.
@@ -69,7 +74,8 @@ into that allocation through Jupiter. Built for a Solana stocks hackathon.
 - **Comments:** explain *why*, not *what*. TENDER's header comments on non-obvious modules
   (see `src/lib/rail.ts`, `src/lib/wallet/wallet-context.tsx`) are a good model — match that
   density and tone.
-- **Naming:** `tag` not `handle`, `transfers` not `settlements`, `election` retained.
+- **Naming:** `tag` not `handle`, `transfers` not `settlements`, `mix` not `election`,
+  `accountId` for the permanent wallet identifier.
 
 ---
 
@@ -89,7 +95,7 @@ into that allocation through Jupiter. Built for a Solana stocks hackathon.
 
 A person can, on a phone, with no wallet extension and without typing a seed phrase:
 
-create a wallet with a password and an authenticator, claim `@them`, receive USDC from a
-friend's Phantom, watch it settle 60/40 into `SPYx` and `USDC` because that is their
-election, send 5 USDC to `@friend`, wipe the browser, and get the whole thing back on a
-laptop with their tag, password and a 6-digit code.
+create a wallet with a password and an authenticator, link X to claim `@them`, receive USDC
+from a friend's Phantom, watch it settle 60/40 into `SPYx` and `USDC` because that is their
+mix, send 5 USDC to `@friend`, wipe the browser, and get the whole thing back on a laptop
+with their tag, password and a 6-digit code.
