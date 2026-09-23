@@ -45,9 +45,15 @@ function useLinker(purposes: ProofPurpose[]) {
       queryClient.setQueryData(identityQueryKey, result.data);
       // The tag shows in the header and on Receive, which read the session.
       await queryClient.invalidateQueries({ queryKey: ["session"] });
+      const waiting = result.data.claiming ?? 0;
+      const claimNote =
+        waiting > 0
+          ? ` ${waiting} payment${waiting === 1 ? " was" : "s were"} waiting for you — ${waiting === 1 ? "it's" : "they're"} on the way to your wallet now.`
+          : "";
+      if (waiting > 0) void queryClient.invalidateQueries({ queryKey: ["held"] });
       setNotice({
         tone: "seal",
-        text: kind === "x" ? tagMessage(result.data.tagOutcome, result.data) : `${result.data.email} is linked.`,
+        text: (kind === "x" ? tagMessage(result.data.tagOutcome, result.data) : `${result.data.email} is linked.`) + claimNote,
       });
     },
     onError: (text) => setNotice({ tone: "danger", text }),

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
+import { HeldPayments } from "@/components/oink/HeldPayments";
 import { Sheet } from "@/components/oink/Sheet";
 import { useActivity } from "@/hooks/useOink";
 import { formatDateTime, formatTokenAmount, shortAddress, timeAgo, counterparty } from "@/lib/format";
@@ -29,6 +30,8 @@ function ActivityPage() {
           Every payment in and out, with what each one actually settled into.
         </p>
       </header>
+
+      <HeldPayments />
 
       {activity.isPending ? (
         <div className="skeleton" style={{ height: 320 }} />

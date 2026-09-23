@@ -18,6 +18,7 @@ import { OinkApiError, oinkFetch, oinkFetchRaw } from "@/server/oink-api";
 import type { OinkToken, MixItem, WalletHolding } from "@/types/token";
 import type {
   AdminActivityItem,
+  AdminHeldPayment,
   AdminOverview,
   AdminPage,
   AdminTableRows,
@@ -28,6 +29,7 @@ import type {
   DeviceSession,
   EnrollCompleteResponse,
   EnrollStartResponse,
+  HeldPaymentRow,
   IdentityLinks,
   InvoiceRow,
   OinkResult,
@@ -572,7 +574,7 @@ export const linkIdentity = createServerFn({ method: "POST" })
   .validator(z.object({ kind: z.enum(["email", "x"]), identityToken: z.string().min(20).max(8192) }))
   .handler(({ data }) =>
     guard(() =>
-      oinkFetch<IdentityLinks & { tagOutcome?: "assigned" | "kept" | "invalid" | "reserved" }>(
+      oinkFetch<IdentityLinks & { tagOutcome?: "assigned" | "kept" | "invalid" | "reserved"; claiming?: number }>(
         `/api/v1/identity/${data.kind}`,
         { method: "POST", body: { identityToken: data.identityToken }, cookie: inboundCookie() },
       ),
@@ -679,6 +681,38 @@ export const adminTable = createServerFn({ method: "GET" })
     proxy(() =>
       oinkFetch<AdminTableRows>(`/api/v1/admin/tables/${data.name}`, {
         query: { limit: data.limit, offset: data.offset },
+        cookie: inboundCookie(),
+      }),
+    ),
+  );
+
+// ── Held payments ──────────────────────────────────────────────────────────
+
+export const getHeldPayments = createServerFn({ method: "GET" }).handler(() =>
+  proxy(() =>
+    oinkFetch<{ sent: HeldPaymentRow[]; incoming: HeldPaymentRow[] }>("/api/v1/held", { cookie: inboundCookie() }),
+  ),
+);
+
+export const adminHeld = createServerFn({ method: "GET" })
+  .validator(pageSchema.extend({ status: z.string().trim().optional() }))
+  .handler(({ data }) =>
+    proxy(() =>
+      oinkFetch<
+        AdminPage & {
+          held: AdminHeldPayment[];
+          pending: Array<{ symbol: string; payments: number; amount_base: string; decimals: number }>;
+        }
+      >("/api/v1/admin/held", { query: data, cookie: inboundCookie() }),
+    ),
+  );
+
+export const adminHeldRetry = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.number().int() }))
+  .handler(({ data }) =>
+    guard(() =>
+      oinkFetch<{ id: number; status: string }>(`/api/v1/admin/held/${data.id}/retry`, {
+        method: "POST",
         cookie: inboundCookie(),
       }),
     ),

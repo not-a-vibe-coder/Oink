@@ -15,6 +15,8 @@ import { privyAvailable } from "@/lib/privy/config";
 import { useIdentityProof } from "@/lib/privy/useIdentityProof";
 import {
   adminActivity,
+  adminHeld,
+  adminHeldRetry,
   adminLogin,
   adminLogout,
   adminMe,
@@ -24,8 +26,8 @@ import {
   adminTables,
   adminTransfers,
 } from "@/lib/oink-server-fns";
-import { formatDateTime, formatTokenAmount, shortAddress, timeAgo } from "@/lib/format";
-import type { AdminActivityItem, AdminTransfer, Json } from "@/types/api";
+import { formatDateTime, formatTokenAmount, fromBaseUnits, shortAddress, timeAgo } from "@/lib/format";
+import type { AdminActivityItem, AdminHeldPayment, AdminTransfer, Json } from "@/types/api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Oink admin" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -106,7 +108,7 @@ function SignInButton({ onSignedIn }: { onSignedIn: () => void }) {
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "transfers" | "activity" | "database";
+type Tab = "overview" | "transfers" | "held" | "activity" | "database";
 
 function Dashboard({ email }: { email: string }) {
   const queryClient = useQueryClient();
@@ -133,7 +135,7 @@ function Dashboard({ email }: { email: string }) {
       </header>
 
       <div className="tabs" role="tablist" aria-label="Admin sections" style={{ marginBottom: "var(--s5)", flexWrap: "wrap" }}>
-        {(["overview", "transfers", "activity", "database"] as const).map((name) => (
+        {(["overview", "transfers", "held", "activity", "database"] as const).map((name) => (
           <button
             key={name}
             type="button"
@@ -150,6 +152,7 @@ function Dashboard({ email }: { email: string }) {
 
       {tab === "overview" && <Overview />}
       {tab === "transfers" && <Transfers />}
+      {tab === "held" && <Held />}
       {tab === "activity" && <Activity />}
       {tab === "database" && <Database />}
     </main>
@@ -187,6 +190,8 @@ function Overview() {
         <Stat label="Failed transfers" value={data.transfers_failed} tone={data.transfers_failed > 0 ? "bad" : undefined} />
         <Stat label="Failed logins today" value={data.failed_logins_24h} tone={data.failed_logins_24h > 20 ? "bad" : undefined} />
         <Stat label="Flagged" value={data.flagged} tone={data.flagged > 0 ? "warn" : undefined} />
+        <Stat label="Held, pending" value={data.held_pending} />
+        <Stat label="Held, stuck" value={data.held_failed} tone={data.held_failed > 0 ? "bad" : undefined} />
       </div>
 
       <section className="panel">
@@ -386,6 +391,111 @@ function Transfers() {
   );
 }
 
+// ── Held payments ──────────────────────────────────────────────────────────
+
+const HELD_TONES: Record<string, "ok" | "warn" | "bad" | undefined> = {
+  held: "warn",
+  claiming: "warn",
+  refunding: "warn",
+  claimed: "ok",
+  failed: "bad",
+};
+
+function Held() {
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState<number | null>(null);
+  const held = useQuery({
+    queryKey: ["admin", "held", page, status],
+    queryFn: () => adminHeld({ data: { limit: PAGE_SIZE, offset: page * PAGE_SIZE, status: status || undefined } }),
+    refetchInterval: 30_000,
+  });
+
+  async function retry(id: number) {
+    setBusy(id);
+    await adminHeldRetry({ data: { id } });
+    setBusy(null);
+    void queryClient.invalidateQueries({ queryKey: ["admin", "held"] });
+  }
+
+  return (
+    <div className="stack">
+      {(held.data?.pending.length ?? 0) > 0 && (
+        <p className="meta">
+          Waiting in holding wallets:{" "}
+          {held.data!.pending
+            .map((p) => `${formatTokenAmount(fromBaseUnits(p.amount_base, p.decimals))} ${p.symbol} across ${p.payments}`)
+            .join(" · ")}
+        </p>
+      )}
+      <div className="chip-row">
+        {["", "held", "claimed", "refunded", "failed"].map((name) => (
+          <button
+            key={name || "all"}
+            type="button"
+            className="chip"
+            style={status === name ? { borderColor: "var(--ink)", color: "var(--ink)" } : undefined}
+            onClick={() => {
+              setPage(0);
+              setStatus(name);
+            }}
+          >
+            {name ? name[0].toUpperCase() + name.slice(1) : "All"}
+          </button>
+        ))}
+      </div>
+
+      {held.isPending ? (
+        <div className="skeleton" style={{ height: 240 }} />
+      ) : (held.data?.held.length ?? 0) === 0 ? (
+        <div className="empty">
+          <p className="empty-title">No held payments</p>
+        </div>
+      ) : (
+        <div className="ledger">
+          {held.data!.held.map((h: AdminHeldPayment) => (
+            <div className="ledger-row" key={h.id} style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+              <span className="ledger-main" style={{ minWidth: 240 }}>
+                <span className="ledger-title">
+                  {h.sender_tag ? `@${h.sender_tag}` : h.sender_account_id ?? "unknown"} → {h.recipient_display}
+                  {h.claimant_account_id && ` (claimed by ${h.claimant_tag ? `@${h.claimant_tag}` : h.claimant_account_id})`}
+                </span>
+                <span className="ledger-sub">
+                  {formatDateTime(h.created_at)} · expires {formatDateTime(h.expires_at)}
+                  {h.notified_at ? " · emailed" : ""}
+                  {h.attempts > 0 ? ` · ${h.attempts} attempt${h.attempts === 1 ? "" : "s"}` : ""}
+                  {h.last_error ? ` · ${h.last_error}` : ""}
+                </span>
+                <span className="ledger-sub mono">holding {shortAddress(h.holding_wallet, 6)}</span>
+              </span>
+              <span className="ledger-amount" style={{ gap: 6 }}>
+                <span className="ledger-value tnum">
+                  {formatTokenAmount(fromBaseUnits(h.amount_base, h.decimals))} {h.symbol}
+                </span>
+                <span className="row" style={{ gap: 6 }}>
+                  <span className="badge" data-tone={HELD_TONES[h.status]}>
+                    {h.status}
+                  </span>
+                  <a className="btn btn-quiet btn-sm" href={`https://solscan.io/tx/${h.release_signature ?? h.deposit_signature}`} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14} aria-hidden="true" />
+                  </a>
+                </span>
+                {h.status === "failed" && (
+                  <button type="button" className="btn btn-outline btn-sm" disabled={busy === h.id} onClick={() => void retry(h.id)}>
+                    <RotateCcw size={14} aria-hidden="true" /> Retry
+                  </button>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <Pager page={page} total={held.data?.total ?? 0} setPage={setPage} />
+    </div>
+  );
+}
+
 // ── Activity ───────────────────────────────────────────────────────────────
 
 const KIND_LABELS: Record<string, string> = {
@@ -398,6 +508,9 @@ const KIND_LABELS: Record<string, string> = {
   x_unlinked: "X unlinked",
   tag_assigned: "Tag claimed",
   tag_lost: "Tag lost to X owner",
+  held_sent: "Sent to someone not on Oink",
+  held_claimed: "Claimed a held payment",
+  held_refunded: "Held payment refunded",
   unlock: "Sign-in",
   totp: "Sign-in (code)",
   recover: "Recovery attempt",

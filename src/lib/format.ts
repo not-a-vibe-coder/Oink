@@ -152,3 +152,11 @@ export function counterparty(tag: string | null, accountId: string | null, walle
   if (accountId) return accountId;
   return shortAddress(wallet);
 }
+
+/** Base units (a string of digits) to a decimal string, exactly. */
+export function fromBaseUnits(amountBase: string, decimals: number): string {
+  const digits = BigInt(amountBase).toString();
+  if (decimals === 0) return digits;
+  const padded = digits.padStart(decimals + 1, "0");
+  return `${padded.slice(0, -decimals)}.${padded.slice(-decimals)}`.replace(/\.?0+$/, "");
+}

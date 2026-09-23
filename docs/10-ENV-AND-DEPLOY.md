@@ -77,6 +77,16 @@ PRIVY_VERIFICATION_KEY=   # ES256 public key (PEM) from the Privy dashboard; "
 " escapes are fine
 ADMIN_EMAILS=             # comma-separated; the only addresses that can sign in to /admin
 
+# Held payments: paying an email or X account that has no Oink wallet (docs/12 §5, §6).
+# Without the four Privy values those sends answer NOT_CONFIGURED; everything else works.
+PRIVY_APP_SECRET=         # Privy dashboard > App settings > API keys. Secret
+PRIVY_AUTHORIZATION_KEY=  # Keys & quorums > new key: the private key, shown once. The refund signer. Secret
+PRIVY_SIGNER_ID=          # the same key's ID; it is added as the holding wallets' only additional signer
+RESEND_API_KEY=           # payment emails; a sending-only key is enough. Secret
+EMAIL_FROM=Oink <onboarding@resend.dev>   # needs a domain verified in Resend to reach anyone but you
+X_BEARER_TOKEN=           # optional: without it, paying an X account not on Oink is refused
+HELD_PAYMENT_HOURS=48
+
 # Phase 2 only
 X_BOT_ENABLED=false
 X_CLIENT_ID=

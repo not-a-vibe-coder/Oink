@@ -92,7 +92,7 @@ export interface QuoteLeg {
 
 export interface TransferQuote {
   recipient: {
-    kind: "account" | "address";
+    kind: "account" | "address" | "held";
     accountId?: string;
     tag?: string | null;
     wallet: string;
@@ -120,6 +120,8 @@ export interface SubmittedTransfer {
   status: string;
   explorerUrl: string;
   transferId: number;
+  /** Present when the recipient isn't on Oink and the money is being held for them. */
+  held?: { expiresAt: string; recipient: string; notified: boolean };
 }
 
 export interface TransferRow {
@@ -215,6 +217,8 @@ export interface AdminOverview {
   transfers_failed: number;
   failed_logins_24h: number;
   flagged: number;
+  held_pending: number;
+  held_failed: number;
   sponsored_lamports_today: string;
   feePayer: string | null;
   feePayerSol: string | null;
@@ -266,4 +270,31 @@ export interface AdminTableRows {
   total: number;
   limit: number;
   offset: number;
+}
+
+export interface HeldPaymentRow {
+  id: number;
+  recipient_kind?: "email" | "x";
+  recipient_display: string;
+  symbol: string;
+  decimals: number;
+  /** Base units, as a string: never a float. */
+  amount_base: string;
+  status: "held" | "claiming" | "claimed" | "refunding" | "refunded" | "failed";
+  expires_at: string;
+  released_at?: string | null;
+  created_at: string;
+  sender_tag?: string | null;
+}
+
+export interface AdminHeldPayment extends HeldPaymentRow {
+  attempts: number;
+  last_error: string | null;
+  notified_at: string | null;
+  deposit_signature: string;
+  release_signature: string | null;
+  sender_account_id: string | null;
+  claimant_account_id: string | null;
+  claimant_tag: string | null;
+  holding_wallet: string;
 }

@@ -82,7 +82,19 @@ token and stores the address lowercased. One email belongs to at most one wallet
 
 ## 5. Paying an email or X username
 
-The send screen accepts `@tag`, an address, an email, or an X username (`x:@izuu`).
+The send screen accepts `@tag`, an account ID, an address, an email, or an X account written
+`x:@izuu`, `x.com/izuu` or `twitter.com/izuu` (a bare `@izuu` is an Oink tag). Held payments
+are SPL tokens only: the holding wallet's policy permits nothing but `TransferChecked`.
+
+**As built.** One Privy wallet per recipient identity pools every payment to them; the
+`held_payments` table, not the balance, says what belongs to whom. The policy is a plain `in`
+list on `TransferChecked.destination` plus `instructionName = TransferChecked` (the Node SDK
+does not wrap condition sets), updated through the policy's owner — our key. Each release is
+one instruction; the destination token account is created first in a fee-payer-only
+transaction. A release is recorded (signature, blockhash expiry) before broadcast; a crashed or
+unseen release is resolved by asking the chain, never by resending. A worker runs every
+minute: settle in-flight releases, deliver claims, refund what expired. Five failed attempts
+park a payment as `failed` for an admin retry.
 
 **Recipient has an Oink wallet with that identity linked** → an ordinary transfer to their
 wallet, settled into their mix. Nothing is held.
@@ -171,7 +183,9 @@ Rename everywhere: tables `mixes`, `mix_revisions`; column `transfers.mix_applie
 | `PRIVY_APP_ID` | backend + frontend (`VITE_PRIVY_APP_ID`) | for linking, held payments, admin |
 | `PRIVY_APP_SECRET` | backend | as above |
 | `PRIVY_VERIFICATION_KEY` | backend | to verify identity tokens offline |
+| `PRIVY_APP_SECRET` | backend | for held payments (creating holding wallets) |
 | `PRIVY_AUTHORIZATION_KEY` | backend | for the refund signer |
+| `PRIVY_SIGNER_ID` | backend | the authorization key's ID, attached to holding wallets |
 | `RESEND_API_KEY`, `EMAIL_FROM` | backend | for payment emails |
 | `X_BEARER_TOKEN` | backend | only to pay X usernames not on Oink |
 | `ADMIN_EMAILS` | backend | comma-separated |
