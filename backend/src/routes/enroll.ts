@@ -5,6 +5,7 @@ import { encryptKms, decryptKms } from "../lib/crypto";
 import { generateTotpSecret, verifyTotp, formatOtpauthUri } from "../lib/totp";
 import { hashAuthKey } from "../lib/argon";
 import { generateAccountId } from "../lib/accountId";
+import { recordEvent } from "../lib/events";
 import { hashIp, getClientIp, ipRateLimiter } from "../middleware/rateLimit";
 import { createSession, serializeSessionCookie } from "../middleware/session";
 
@@ -205,6 +206,7 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
     const ipHash = hashIp(getClientIp(req));
     const userAgent = req.headers["user-agent"];
     const { token, expiresAt } = await createSession(accountId, userAgent, ipHash, client);
+    await recordEvent(accountId, "wallet_created", {}, ipHash, client);
 
     await client.query("COMMIT");
 

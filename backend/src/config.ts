@@ -24,6 +24,10 @@ export type Config = {
   oinkFeeWallet: string;
   defaultSlippageBps: number;
   safeSettlePriceImpactPct: number;
+  // Optional: without them linking and admin login answer NOT_CONFIGURED instead of failing.
+  privyAppId: string | undefined;
+  privyVerificationKey: string | undefined;
+  adminEmails: string[];
 };
 
 const optional = (name: string, fallback: string): string => process.env[name] ?? fallback;
@@ -71,5 +75,12 @@ export function getConfig(): Config {
     oinkFeeWallet: optional("OINK_FEE_WALLET", ""),
     defaultSlippageBps: Number(optional("DEFAULT_SLIPPAGE_BPS", "100")),
     safeSettlePriceImpactPct: Number(optional("SAFE_SETTLE_PRICE_IMPACT_PCT", "3")),
+    privyAppId: process.env.PRIVY_APP_ID || undefined,
+    // Env dashboards mangle multi-line values, so a PEM may arrive with literal "\n" escapes.
+    privyVerificationKey: process.env.PRIVY_VERIFICATION_KEY?.replace(/\\n/g, "\n") || undefined,
+    adminEmails: optional("ADMIN_EMAILS", "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
   };
 }

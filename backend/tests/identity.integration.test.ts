@@ -6,12 +6,14 @@ import bs58 from "bs58";
 import nacl from "tweetnacl";
 import request from "supertest";
 
+// The pool is built when src/db is first imported, possibly by another test file, so the
+// database has to be chosen for the whole process: `bun run test:integration`.
 const url = process.env.TEST_DATABASE_URL;
-const suite = url ? describe : describe.skip;
+const suite = url && process.env.DATABASE_URL === url ? describe : describe.skip;
 
 let app: import("express").Express;
 let query: typeof import("../src/db").query;
-let pool: typeof import("../src/db").pool;
+
 let base32Decode: typeof import("../src/lib/totp").base32Decode;
 let generateHotp: typeof import("../src/lib/totp").generateHotp;
 
@@ -43,18 +45,18 @@ suite("identity flow (integration)", () => {
   let secret = "";
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = url;
     ({ app } = await import("../src/app"));
-    ({ query, pool } = await import("../src/db"));
+    ({ query } = await import("../src/db"));
     ({ base32Decode, generateHotp } = await import("../src/lib/totp"));
-  });
+    // enroll/start allows 10 per hour per IP, and every test run comes from 127.0.0.1.
+    await query("DELETE FROM rate_limit_hits");
+  }, 30_000); // cold imports of the app and pg can outlast the 5s hook default
 
   afterAll(async () => {
     if (accountId) await query("DELETE FROM wallets WHERE account_id = $1", [accountId]);
     await query("DELETE FROM enrollments WHERE ip_hash IS NOT NULL AND consumed_at IS NULL");
     await query("DELETE FROM login_attempts");
     await query("DELETE FROM auth_challenges");
-    await pool.end();
   });
 
   test("enroll/start issues an account ID and labels the authenticator with it", async () => {

@@ -9,8 +9,10 @@ import { assetsRouter } from "./routes/assets";
 import { walletRouter } from "./routes/wallet";
 import { transferRouter } from "./routes/transfer";
 import { invoicesRouter } from "./routes/invoices";
+import { identityRouter } from "./routes/identity";
+import { adminRouter } from "./routes/admin";
 
-const redactedKeys = new Set(["privatekey", "secret", "authkey", "totpcode", "ciphertext", "kdfsalt", "mnemonic", "secretphrase", "password", "totpsecret", "signature"]);
+const redactedKeys = new Set(["privatekey", "secret", "authkey", "totpcode", "ciphertext", "kdfsalt", "mnemonic", "secretphrase", "password", "totpsecret", "signature", "identitytoken"]);
 
 function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
@@ -51,6 +53,8 @@ app.use("/api/v1/assets", assetsRouter);
 app.use("/api/v1/wallet", walletRouter);
 app.use("/api/v1/transfer", transferRouter);
 app.use("/api/v1/invoices", invoicesRouter);
+app.use("/api/v1/identity", identityRouter);
+app.use("/api/v1/admin", adminRouter);
 
 app.use((_request, response) => response.status(404).json({ error: "NOT_FOUND", message: "The requested resource does not exist.", details: null }));
 

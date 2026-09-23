@@ -11,6 +11,8 @@
  *                    auth endpoints that mint or clear a session
  */
 
+import { getRequestHeader } from "@tanstack/react-start/server";
+
 const DEFAULT_PRIMARY = "http://localhost:3001";
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -68,6 +70,22 @@ export interface OinkRawResponse<T> {
   setCookies: string[];
 }
 
+/**
+ * The browser's IP, as Vercel's edge reported it. Every API call leaves from Vercel, so
+ * without this the API would rate-limit and lock out all users as one address. Vercel
+ * overwrites these headers at its edge, so the browser cannot choose them. Returns
+ * undefined outside a request (tests, build).
+ */
+function clientIp(): string | undefined {
+  try {
+    const real = getRequestHeader("x-real-ip");
+    const forwarded = getRequestHeader("x-forwarded-for")?.split(",")[0];
+    return (real || forwarded)?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Node's fetch exposes multiple Set-Cookie values through getSetCookie(). */
 function readSetCookies(headers: Headers): string[] {
   const typed = headers as Headers & { getSetCookie?: () => string[] };
@@ -102,6 +120,14 @@ export async function oinkFetchRaw<T>(
       }
       if (cookie) {
         headers["cookie"] = cookie;
+      }
+      // The API trusts the forwarded IP only alongside this shared secret, so a caller that
+      // skips Vercel cannot claim to be someone else's address.
+      const proxySecret = env("OINK_PROXY_SECRET");
+      const ip = clientIp();
+      if (proxySecret && ip) {
+        headers["x-oink-proxy-secret"] = proxySecret;
+        headers["x-oink-client-ip"] = ip;
       }
 
       const res = await fetch(`${host}${path}${suffix}`, {

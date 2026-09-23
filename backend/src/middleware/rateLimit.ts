@@ -6,10 +6,30 @@ export function hashIp(ip: string): string {
   return crypto.createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 32);
 }
 
+function sameSecret(given: unknown, expected: string): boolean {
+  if (typeof given !== "string") return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Requests normally arrive from the frontend's server functions on Vercel, which forward the
+ * browser's IP with a shared secret; without that, every user would share Vercel's address
+ * for rate limits and lockouts. Anything else is keyed on the address the nearest proxy saw:
+ * the last X-Forwarded-For entry, which Render appends — the first entry is whatever the
+ * caller chose to send.
+ */
 export function getClientIp(req: Request): string {
+  const secret = process.env.OINK_PROXY_SECRET;
+  const proxied = req.headers["x-oink-client-ip"];
+  if (secret && typeof proxied === "string" && proxied.trim() && sameSecret(req.headers["x-oink-proxy-secret"], secret)) {
+    return proxied.trim();
+  }
   const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0].trim();
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    const hops = forwarded.split(",").map((hop) => hop.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
   }
   return req.socket.remoteAddress || "127.0.0.1";
 }
@@ -87,8 +107,8 @@ export async function checkIpLimit(
   try {
     const res = await query(
       `SELECT COUNT(*) as count, MIN(created_at) as oldest
-       FROM login_attempts
-       WHERE ip_hash = $1 AND kind = $2 AND created_at > NOW() - ($3 || ' seconds')::INTERVAL`,
+       FROM rate_limit_hits
+       WHERE ip_hash = $1 AND bucket = $2 AND created_at > NOW() - ($3 || ' seconds')::INTERVAL`,
       [ipHash, kind, windowSeconds],
     );
 
@@ -118,6 +138,15 @@ export function ipRateLimiter(kind: string, maxCount: number, windowSeconds: num
         details: null,
       });
       return;
+    }
+    // Counted at admission, so every request spends budget whether or not it succeeds.
+    try {
+      await query("INSERT INTO rate_limit_hits (bucket, ip_hash) VALUES ($1, $2)", [kind, ipHash]);
+      if (Math.random() < 0.01) {
+        await query("DELETE FROM rate_limit_hits WHERE created_at < NOW() - INTERVAL '1 day'");
+      }
+    } catch (err) {
+      console.error("Record rate limit hit error:", err);
     }
     next();
   };

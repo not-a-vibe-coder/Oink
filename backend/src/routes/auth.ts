@@ -7,6 +7,7 @@ import { verifyTotp, generateTotpSecret, formatOtpauthUri } from "../lib/totp";
 import { verifyAuthKey, hashAuthKey, dummyArgonVerify } from "../lib/argon";
 import { verifySolanaSignature } from "../lib/verifySignature";
 import { identifierLookup, parseIdentifier } from "../lib/accountId";
+import { recordEvent } from "../lib/events";
 import {
   hashIp,
   getClientIp,
@@ -395,6 +396,7 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
     const { token, expiresAt } = await createSession(accountId, userAgent, ipHash, client);
 
     await recordLoginAttempt(accountId, ipHash, "recover", true);
+    await recordEvent(accountId, "recovered", {}, ipHash, client);
     await client.query("COMMIT");
 
     res.setHeader("Set-Cookie", serializeSessionCookie(token, expiresAt));
@@ -429,7 +431,7 @@ authRouter.post("/logout", requireSession, async (req: Request, res: Response) =
 authRouter.get("/session", requireSession, async (req: Request, res: Response) => {
   try {
     const resRow = await query(
-      `SELECT w.account_id, w.tag, w.public_key, s.expires_at, s.created_at
+      `SELECT w.account_id, w.tag, w.public_key, w.email, w.x_username, s.expires_at, s.created_at
        FROM sessions s
        JOIN wallets w ON s.account_id = w.account_id
        WHERE s.token_hash = $1`,
@@ -446,6 +448,8 @@ authRouter.get("/session", requireSession, async (req: Request, res: Response) =
       accountId: row.account_id,
       tag: row.tag,
       publicKey: row.public_key,
+      email: row.email,
+      xUsername: row.x_username,
       expiresAt: new Date(row.expires_at).toISOString(),
       createdAt: new Date(row.created_at).toISOString(),
     });
@@ -560,6 +564,8 @@ authRouter.post("/rotate-keystore", requireSession, async (req: Request, res: Re
       "UPDATE sessions SET revoked_at = NOW() WHERE account_id = $1 AND token_hash != $2",
       [req.accountId, req.sessionTokenHash],
     );
+
+    await recordEvent(req.accountId!, "password_changed", {}, hashIp(getClientIp(req)));
 
     res.status(200).json({ rotatedAt: now.toISOString() });
   } catch (err) {
