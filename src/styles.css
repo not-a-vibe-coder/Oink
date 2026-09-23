@@ -406,6 +406,49 @@ button {
   text-wrap: pretty;
 }
 
+/* Returning users: always one tap from the top bar and under the hero. */
+.alwayzz-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alwayzz-login-btn {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Inter", sans-serif;
+  padding: 8px 18px;
+  text-decoration: none;
+  transition: transform 0.2s ease, background 0.2s ease;
+  z-index: 101;
+}
+
+.alwayzz-login-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.alwayzz-login-line {
+  position: relative;
+  z-index: 2;
+  margin-top: 20px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.alwayzz-login-line a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* CTA Row */
 .alwayzz-cta-row {
   display: flex;

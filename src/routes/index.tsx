@@ -32,7 +32,8 @@ const TRUSTED_COMPANIES = [
 
 const DRAWER_LINKS = [
   { label: "Create Wallet", href: "/create" },
-  { label: "Unlock / Recover", href: "/unlock" },
+  { label: "Log in", href: "/unlock" },
+  { label: "Recover with phrase", href: "/unlock/restore" },
   { label: "Portfolio Mix", href: "/app/mix" },
   { label: "Tokenized Equities", href: "#stocks" },
   { label: "Security & Keys", href: "#security" },
@@ -93,6 +94,10 @@ function LandingPage() {
             Oink<span className="alwayzz-logo-reg">®</span>
           </a>
 
+          <div className="alwayzz-nav-actions">
+            <a href="/unlock" className="alwayzz-login-btn">
+              Log in
+            </a>
           <button
             type="button"
             className="alwayzz-menu-btn"
@@ -107,6 +112,7 @@ function LandingPage() {
               aria-hidden="true"
             />
           </button>
+          </div>
         </div>
       </nav>
 
@@ -236,6 +242,10 @@ function LandingPage() {
             </div>
           </a>
         </div>
+
+        <p className="alwayzz-login-line">
+          Already have a wallet? <a href="/unlock">Log in</a>
+        </p>
 
         {/* Progressive Blur at Bottom */}
         <div className="alwayzz-blur-bottom" aria-hidden="true" />
