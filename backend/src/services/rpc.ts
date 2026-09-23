@@ -1,7 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getConfig } from "../config";
 import { resolveSolanaToken, type SolanaTokenInfo } from "../lib/tokens";
-import { formatTokenUnits } from "./electionEngine";
+import { formatTokenUnits } from "./mixEngine";
 
 let connectionInstance: Connection | null = null;
 
@@ -35,7 +35,7 @@ export interface TokenHolding {
 }
 
 export interface WalletBalances {
-  tag: string;
+  accountId: string;
   publicKey: string;
   solBalance: string;
   solLamports: bigint;
@@ -91,7 +91,7 @@ export async function fetchTokenPrices(mints: string[]): Promise<Record<string, 
   return result;
 }
 
-export async function getWalletBalances(tag: string, walletAddress: string): Promise<WalletBalances> {
+export async function getWalletBalances(accountId: string, walletAddress: string): Promise<WalletBalances> {
   const now = Date.now();
   const cached = balanceCache.get(walletAddress);
   if (cached && now - cached.timestamp < BALANCE_CACHE_TTL_MS) {
@@ -161,7 +161,7 @@ export async function getWalletBalances(tag: string, walletAddress: string): Pro
   const needsSol = lamports < 5_000_000n; // < 0.005 SOL
 
   const data: WalletBalances = {
-    tag,
+    accountId,
     publicKey: walletAddress,
     solBalance: solFormatted,
     solLamports: lamports,

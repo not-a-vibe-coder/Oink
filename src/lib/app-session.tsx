@@ -1,7 +1,10 @@
 import { createContext, useContext } from "react";
 
 export interface WalletSession {
-  tag: string;
+  /** Permanent identifier; every account-scoped call keys off this. */
+  accountId: string;
+  /** Present only once the user has linked X (docs/12 §3). */
+  tag: string | null;
   publicKey: string;
   expiresAt: string;
 }

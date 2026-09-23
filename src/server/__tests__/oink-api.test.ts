@@ -30,7 +30,7 @@ beforeAll(() => {
 
       if (url.pathname === "/taken") {
         return Response.json(
-          { error: "TAG_TAKEN", message: "That tag is already claimed.", details: null },
+          { error: "WALLET_EXISTS", message: "That wallet is already registered.", details: null },
           { status: 409 },
         );
       }
@@ -102,7 +102,7 @@ describe("error handling", () => {
       await oinkFetch("/taken");
     } catch (err) {
       expect(err).toBeInstanceOf(OinkApiError);
-      expect((err as OinkApiError).code).toBe("TAG_TAKEN");
+      expect((err as OinkApiError).code).toBe("WALLET_EXISTS");
       expect((err as OinkApiError).status).toBe(409);
     }
   });

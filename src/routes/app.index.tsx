@@ -5,7 +5,7 @@ import { AllocationRail } from "@/components/oink/AllocationRail";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { Monogram } from "@/components/oink/Monogram";
 import { Sheet } from "@/components/oink/Sheet";
-import { useActivity, useElections, useWallet, useWalletAddress } from "@/hooks/useOink";
+import { useActivity, useMix, useWallet, useWalletAddress } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
 import { formatTokenAmount, formatUsd, shortAddress, splitUsd, timeAgo } from "@/lib/format";
 import type { WalletHolding } from "@/types/token";
@@ -15,15 +15,15 @@ export const Route = createFileRoute("/app/")({
 });
 
 function WalletHome() {
-  const { tag, publicKey } = useWalletSession();
+  const { accountId, tag, publicKey } = useWalletSession();
   const wallet = useWallet();
   const address = useWalletAddress();
-  const elections = useElections(tag);
+  const mixQuery = useMix(accountId);
   const activity = useActivity({ limit: 5 });
   const [openHolding, setOpenHolding] = useState<WalletHolding | null>(null);
 
   const holdings = wallet.data?.holdings ?? [];
-  const election = elections.data?.elections ?? [];
+  const mix = mixQuery.data?.mix ?? [];
   const balance = splitUsd(wallet.data?.totalValueUsd ?? null);
   const recent = activity.data?.transfers ?? [];
 
@@ -50,12 +50,12 @@ function WalletHome() {
             </p>
           </section>
 
-          {election.length > 0 && (
+          {mix.length > 0 && (
             <section>
               <p className="eyebrow" style={{ marginBottom: 10 }}>
                 Money arriving settles into
               </p>
-              <AllocationRail election={election} size="lg" label="Your election" />
+              <AllocationRail mix={mix} size="lg" label="Your mix" />
             </section>
           )}
 
@@ -68,8 +68,8 @@ function WalletHome() {
               <span className="action-label">Receive</span>
               <span className="action-note">Address, QR or a request</span>
             </Link>
-            <Link to="/app/election" className="action">
-              <span className="action-label">Election</span>
+            <Link to="/app/mix" className="action">
+              <span className="action-label">Mix</span>
               <span className="action-note">Change your split</span>
             </Link>
           </section>
@@ -87,7 +87,7 @@ function WalletHome() {
           <section>
             <div className="section-head">
               <h2 className="eyebrow">Holdings</h2>
-              <Link to="/app/election" className="link meta">
+              <Link to="/app/mix" className="link meta">
                 Rebalance
               </Link>
             </div>
@@ -98,7 +98,7 @@ function WalletHome() {
               <div className="empty">
                 <p className="empty-title">No assets yet</p>
                 <p className="empty-note">
-                  Share your tag or your address and the first payment will land in your election.
+                  Share your tag or your address and the first payment will land in your mix.
                 </p>
                 <Link
                   to="/app/receive"
@@ -160,7 +160,7 @@ function WalletHome() {
             </div>
             <p className="footnote" style={{ marginTop: 10 }}>
               Anything sent here arrives as sent. Payments to <strong>@{tag}</strong> settle into
-              your election.
+              your mix.
             </p>
           </section>
 
@@ -241,7 +241,7 @@ function WalletHome() {
               Send {openHolding.symbol}
             </Link>
             <Link
-              to="/app/election"
+              to="/app/mix"
               className="btn btn-outline btn-block"
               onClick={() => setOpenHolding(null)}
             >

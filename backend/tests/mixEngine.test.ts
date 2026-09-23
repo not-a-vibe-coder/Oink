@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   formatTokenUnits,
   parseTokenUnits,
-} from "../src/services/electionEngine";
+} from "../src/services/mixEngine";
 
-describe("electionEngine", () => {
+describe("mixEngine", () => {
   test("parseTokenUnits converts decimal string to base atomic units", () => {
     expect(parseTokenUnits("1.5", 6)).toBe("1500000");
     expect(parseTokenUnits("0.000001", 6)).toBe("1");

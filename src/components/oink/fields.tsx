@@ -197,56 +197,41 @@ export function CodeField({
   );
 }
 
-export function TagField({
+/**
+ * Sign-in and recovery take either the account ID or the tag in one box. No "@" lead-in,
+ * because most people won't have a tag; a leading "@" typed out of habit is kept and the
+ * API strips it.
+ */
+export function IdentifierField({
   id,
-  label = "Your tag",
   value,
   onChange,
-  hint,
-  tone,
   autoFocus = false,
-  placeholder = "pascal",
 }: {
   id: string;
-  label?: string;
   value: string;
   onChange: (value: string) => void;
-  hint?: string;
-  tone?: "ok" | "bad";
   autoFocus?: boolean;
-  placeholder?: string;
 }) {
   return (
     <div className="field">
       <label className="field-label" htmlFor={id}>
-        {label}
+        Account ID or tag
       </label>
-      <div className="input-group">
-        <span className="input-lead" aria-hidden="true">
-          @
-        </span>
-        <input
-          id={id}
-          className="input"
-          type="text"
-          value={value}
-          onChange={(event) =>
-            onChange(event.target.value.trim().replace(/^[@$]/, "").toLowerCase())
-          }
-          autoComplete="username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          maxLength={20}
-        />
-      </div>
-      {hint && (
-        <p className="hint" data-tone={tone} role="status">
-          {hint}
-        </p>
-      )}
+      <input
+        id={id}
+        className="input mono"
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value.trim().toLowerCase())}
+        autoComplete="username"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        placeholder="oink-k7p2-9xqm or @pascal"
+        autoFocus={autoFocus}
+        maxLength={21}
+      />
     </div>
   );
 }

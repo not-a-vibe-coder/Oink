@@ -15,7 +15,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { OinkApiError, oinkFetch, oinkFetchRaw } from "@/server/oink-api";
-import type { OinkToken, ElectionItem, WalletHolding } from "@/types/token";
+import type { OinkToken, MixItem, WalletHolding } from "@/types/token";
 import type {
   AuthChallengeResponse,
   AuthUnlockResponse,
@@ -104,16 +104,9 @@ const totpCodeSchema = z
 
 // ── Enrollment ─────────────────────────────────────────────────────────────
 
-export const enrollStart = createServerFn({ method: "POST" })
-  .validator(z.object({ tagHint: z.string().trim().optional() }))
-  .handler(({ data }) =>
-    guard(() =>
-      oinkFetch<EnrollStartResponse>("/api/v1/enroll/start", {
-        method: "POST",
-        body: { tagHint: data.tagHint },
-      }),
-    ),
-  );
+export const enrollStart = createServerFn({ method: "POST" }).handler(() =>
+  guard(() => oinkFetch<EnrollStartResponse>("/api/v1/enroll/start", { method: "POST", body: {} })),
+);
 
 export const enrollVerifyTotp = createServerFn({ method: "POST" })
   .validator(z.object({ enrollmentId: z.string().min(1), totpCode: totpCodeSchema }))
@@ -127,7 +120,6 @@ export const enrollComplete = createServerFn({ method: "POST" })
   .validator(
     z.object({
       enrollmentId: z.string().min(1),
-      tag: z.string().trim().min(3).max(20),
       publicKey: z.string().trim().min(32),
       keystore: keystoreSchema,
       authKey: z.string().min(1),
@@ -147,8 +139,9 @@ export const enrollComplete = createServerFn({ method: "POST" })
 
 // ── Authentication ─────────────────────────────────────────────────────────
 
+/** `identifier` is a tag or an account ID; the API tells them apart. */
 export const authChallenge = createServerFn({ method: "POST" })
-  .validator(z.object({ tag: z.string().trim().min(1) }))
+  .validator(z.object({ identifier: z.string().trim().min(1) }))
   .handler(({ data }) =>
     guard(() =>
       oinkFetch<AuthChallengeResponse>("/api/v1/auth/challenge", { method: "POST", body: data }),
@@ -209,7 +202,7 @@ export const revokeSession = createServerFn({ method: "POST" })
   );
 
 export const recoverChallenge = createServerFn({ method: "POST" })
-  .validator(z.object({ tag: z.string().trim().min(1) }))
+  .validator(z.object({ identifier: z.string().trim().min(1) }))
   .handler(({ data }) =>
     guard(() =>
       oinkFetch<RecoverChallengeResponse>("/api/v1/auth/recover/challenge", {
@@ -270,7 +263,6 @@ export const revealKeystore = createServerFn({ method: "POST" })
         kdfSalt: string;
         kdfParams: { alg: string; v: number; m: number; t: number; p: number; len: number };
         publicKey?: string;
-        tag?: string;
       }>("/api/v1/auth/reveal-keystore", {
         method: "POST",
         body: data,
@@ -331,29 +323,20 @@ export const getAssetPrices = createServerFn({ method: "GET" })
 
 // ── Tags and profiles ──────────────────────────────────────────────────────
 
-export const checkTagAvailability = createServerFn({ method: "GET" })
-  .validator(z.object({ tag: z.string().trim().min(1) }))
-  .handler(({ data }) =>
-    proxy(() =>
-      oinkFetch<{ tag: string; available: boolean; reason: string | null }>(
-        `/api/v1/tags/${encodeURIComponent(data.tag)}/availability`,
-      ),
-    ),
-  );
-
 export const getTagProfile = createServerFn({ method: "GET" })
-  .validator(z.object({ tag: z.string().trim().min(1) }))
+  .validator(z.object({ identifier: z.string().trim().min(1) }))
   .handler(({ data }) =>
     proxy(() =>
       oinkFetch<{
-        tag: string;
+        accountId: string;
+        tag: string | null;
         publicKey: string;
         displayName: string;
         avatarSeed: string;
-        acceptsElection: boolean;
-        election: ElectionItem[];
+        acceptsMix: boolean;
+        mix: MixItem[];
         createdAt: string;
-      }>(`/api/v1/tags/${encodeURIComponent(data.tag)}`),
+      }>(`/api/v1/tags/${encodeURIComponent(data.identifier)}`),
     ),
   );
 
@@ -361,27 +344,29 @@ export const resolveTags = createServerFn({ method: "GET" })
   .validator(z.object({ q: z.string().trim().min(1) }))
   .handler(({ data }) =>
     proxy(() =>
-      oinkFetch<{ results: Array<{ tag: string; displayName: string; avatarSeed: string }> }>(
+      oinkFetch<{
+        results: Array<{ accountId: string; tag: string; displayName: string; avatarSeed: string }>;
+      }>(
         "/api/v1/tags/resolve",
         { query: { q: data.q }, cookie: inboundCookie() },
       ),
     ),
   );
 
-// ── Elections ──────────────────────────────────────────────────────────────
+// ── Mix ──────────────────────────────────────────────────────────────
 
-export const getElections = createServerFn({ method: "GET" })
-  .validator(z.object({ tag: z.string().trim().min(1) }))
+export const getMix = createServerFn({ method: "GET" })
+  .validator(z.object({ identifier: z.string().trim().min(1) }))
   .handler(({ data }) =>
     proxy(() =>
-      oinkFetch<{ elections: ElectionItem[] }>(`/api/v1/elections/${encodeURIComponent(data.tag)}`),
+      oinkFetch<{ mix: MixItem[] }>(`/api/v1/mix/${encodeURIComponent(data.identifier)}`),
     ),
   );
 
-export const saveElections = createServerFn({ method: "POST" })
+export const saveMix = createServerFn({ method: "POST" })
   .validator(
     z.object({
-      elections: z
+      mix: z
         .array(
           z.object({
             symbol: z.string().trim(),
@@ -395,7 +380,7 @@ export const saveElections = createServerFn({ method: "POST" })
   )
   .handler(({ data }) =>
     guard(() =>
-      oinkFetch<{ elections: ElectionItem[]; revisionId: string }>("/api/v1/elections", {
+      oinkFetch<{ mix: MixItem[]; revisionId: string }>("/api/v1/mix", {
         method: "PUT",
         body: data,
         cookie: inboundCookie(),
@@ -408,7 +393,7 @@ export const saveElections = createServerFn({ method: "POST" })
 export const getWallet = createServerFn({ method: "GET" }).handler(() =>
   proxy(() =>
     oinkFetch<{
-      tag: string;
+      accountId: string;
       publicKey: string;
       solBalance: string;
       totalValueUsd: string | null;
@@ -435,7 +420,7 @@ export const quoteTransfer = createServerFn({ method: "POST" })
       recipient: z.string().trim().min(1),
       fromSymbolOrMint: z.string().trim().min(1),
       amountIn: z.string().trim().min(1),
-      applyElection: z.boolean().optional(),
+      applyMix: z.boolean().optional(),
       slippageBps: z.number().int().min(10).max(500).optional(),
     }),
   )
@@ -509,7 +494,7 @@ export const createInvoice = createServerFn({ method: "POST" })
       amount: z.string().trim().min(1),
       tokenSymbol: z.string().trim().optional(),
       memo: z.string().trim().max(140).optional(),
-      applyElection: z.boolean().optional(),
+      applyMix: z.boolean().optional(),
       expiresInHours: z.number().int().positive().max(720).optional(),
     }),
   )
@@ -551,7 +536,6 @@ export const confirmInvoice = createServerFn({ method: "POST" })
       id: z.string().trim().min(1),
       signature: z.string().trim().min(1),
       payerWallet: z.string().trim().optional(),
-      payerTag: z.string().trim().optional(),
     }),
   )
   .handler(({ data }) =>
@@ -563,7 +547,6 @@ export const confirmInvoice = createServerFn({ method: "POST" })
           body: {
             signature: data.signature,
             payerWallet: data.payerWallet,
-            payerTag: data.payerTag,
           },
         },
       ),

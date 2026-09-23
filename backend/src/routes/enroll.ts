@@ -4,7 +4,7 @@ import { pool, query } from "../db";
 import { encryptKms, decryptKms } from "../lib/crypto";
 import { generateTotpSecret, verifyTotp, formatOtpauthUri } from "../lib/totp";
 import { hashAuthKey } from "../lib/argon";
-import { validateTag } from "../lib/tagRules";
+import { generateAccountId } from "../lib/accountId";
 import { hashIp, getClientIp, ipRateLimiter } from "../middleware/rateLimit";
 import { createSession, serializeSessionCookie } from "../middleware/session";
 
@@ -18,8 +18,6 @@ enrollRouter.post("/start", ipRateLimiter("enroll", 10, 3600), async (req: Reque
   try {
     const enrollmentId = `enr_${nanoid(24)}`;
     const secretBase32 = generateTotpSecret();
-    const tagHint = typeof req.body?.tagHint === "string" ? req.body.tagHint : "pending";
-    const otpauthUri = formatOtpauthUri(tagHint, secretBase32);
 
     const secretBytes = Buffer.from(secretBase32, "utf8");
     const { ciphertext, nonce } = encryptKms(secretBytes);
@@ -27,16 +25,29 @@ enrollRouter.post("/start", ipRateLimiter("enroll", 10, 3600), async (req: Reque
     const ipHash = hashIp(getClientIp(req));
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes TTL
 
-    await query(
-      `INSERT INTO enrollments (id, totp_secret_enc, totp_nonce, ip_hash, expires_at, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [enrollmentId, ciphertext, nonce, ipHash, expiresAt],
-    );
+    // The account ID is fixed here, before the browser seals the keystore, because the AAD
+    // binds it. 40 random bits make a clash vanishingly rare; the unique constraints turn one
+    // into a retry rather than a shared ID.
+    let accountId = "";
+    for (let attempt = 0; attempt < 5 && !accountId; attempt++) {
+      const candidate = generateAccountId();
+      const inserted = await query(
+        `INSERT INTO enrollments (id, account_id, totp_secret_enc, totp_nonce, ip_hash, expires_at, created_at)
+         SELECT $1, $2::varchar, $3, $4, $5, $6, NOW()
+         WHERE NOT EXISTS (SELECT 1 FROM wallets WHERE account_id = $2::varchar)
+         ON CONFLICT (account_id) DO NOTHING
+         RETURNING account_id`,
+        [enrollmentId, candidate, ciphertext, nonce, ipHash, expiresAt],
+      );
+      if (inserted.rows.length > 0) accountId = candidate;
+    }
+    if (!accountId) throw new Error("Could not allocate an account ID");
 
     res.status(201).json({
       enrollmentId,
+      accountId,
       totpSecret: secretBase32,
-      otpauthUri,
+      otpauthUri: formatOtpauthUri(accountId, secretBase32),
       expiresAt: expiresAt.toISOString(),
     });
   } catch (err) {
@@ -88,20 +99,11 @@ enrollRouter.post("/verify-totp", async (req: Request, res: Response) => {
 
 // POST /api/v1/enroll/complete
 enrollRouter.post("/complete", async (req: Request, res: Response) => {
-  const { enrollmentId, tag, publicKey, keystore, authKey, totpCode } = req.body || {};
+  // No tag here: a tag is claimed later by linking X (docs/12 §3).
+  const { enrollmentId, publicKey, keystore, authKey, totpCode } = req.body || {};
 
-  if (!enrollmentId || !tag || !publicKey || !keystore || !authKey || !totpCode) {
+  if (!enrollmentId || !publicKey || !keystore || !authKey || !totpCode) {
     res.status(400).json({ error: "VALIDATION_FAILED", message: "Missing required enrollment fields.", details: null });
-    return;
-  }
-
-  const { valid: tagValid, reason: tagReason, tag: normalizedTag } = validateTag(tag);
-  if (!tagValid) {
-    res.status(400).json({
-      error: "VALIDATION_FAILED",
-      message: tagReason === "reserved" ? "That tag is reserved." : "Invalid tag format.",
-      details: null,
-    });
     return;
   }
 
@@ -123,7 +125,7 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
 
     // 1. Fetch & lock enrollment row
     const enrResult = await client.query(
-      "SELECT totp_secret_enc, totp_nonce, expires_at, consumed_at FROM enrollments WHERE id = $1 FOR UPDATE",
+      "SELECT account_id, totp_secret_enc, totp_nonce, expires_at, consumed_at FROM enrollments WHERE id = $1 FOR UPDATE",
       [enrollmentId],
     );
 
@@ -151,14 +153,14 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
       return;
     }
 
-    // 3. Check tag and public key uniqueness
-    const existingWallet = await client.query(
-      "SELECT tag, public_key FROM wallets WHERE tag = $1 OR public_key = $2",
-      [normalizedTag, publicKey],
-    );
+    const accountId: string = enr.account_id;
+
+    // 3. One Oink account per keypair. An imported phrase that is already registered belongs
+    // on the recovery path, not a second account.
+    const existingWallet = await client.query("SELECT 1 FROM wallets WHERE public_key = $1", [publicKey]);
     if (existingWallet.rows.length > 0) {
       await client.query("ROLLBACK");
-      res.status(409).json({ error: "TAG_TAKEN", message: "That tag or wallet address is already registered.", details: null });
+      res.status(409).json({ error: "WALLET_EXISTS", message: "That wallet is already registered. Recover it instead.", details: null });
       return;
     }
 
@@ -169,11 +171,11 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
     const createdAt = new Date();
     await client.query(
       `INSERT INTO wallets (
-        tag, public_key, keystore_version, cipher, ciphertext, nonce, kdf_salt, kdf_params,
+        account_id, public_key, keystore_version, cipher, ciphertext, nonce, kdf_salt, kdf_params,
         auth_key_hash, totp_secret_enc, totp_nonce, totp_last_step, status, created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'active', $13, $13)`,
       [
-        normalizedTag,
+        accountId,
         publicKey,
         keystore.version,
         keystore.cipher,
@@ -189,16 +191,12 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
       ],
     );
 
-    // 6. Insert default 100% USDC election if elections table exists
-    try {
-      await client.query(
-        `INSERT INTO elections (tag, asset_symbol, asset_mint, decimals, basis_points, is_active, created_at, updated_at)
-         VALUES ($1, 'USDC', $2, 6, 10000, true, $3, $3)`,
-        [normalizedTag, USDC_MINT, createdAt],
-      );
-    } catch {
-      // If elections table is created in later migration, handle gracefully
-    }
+    // 6. Default mix: 100% USDC
+    await client.query(
+      `INSERT INTO mixes (account_id, asset_symbol, asset_mint, decimals, basis_points, is_active, created_at, updated_at)
+       VALUES ($1, 'USDC', $2, 6, 10000, true, $3, $3)`,
+      [accountId, USDC_MINT, createdAt],
+    );
 
     // 7. Mark enrollment consumed
     await client.query("UPDATE enrollments SET consumed_at = NOW() WHERE id = $1", [enrollmentId]);
@@ -206,22 +204,23 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
     // 8. Create session
     const ipHash = hashIp(getClientIp(req));
     const userAgent = req.headers["user-agent"];
-    const { token, expiresAt } = await createSession(normalizedTag, userAgent, ipHash, client);
+    const { token, expiresAt } = await createSession(accountId, userAgent, ipHash, client);
 
     await client.query("COMMIT");
 
     res.setHeader("Set-Cookie", serializeSessionCookie(token, expiresAt));
     res.status(201).json({
-      tag: normalizedTag,
+      accountId,
+      tag: null,
       publicKey,
-      elections: [{ symbol: "USDC", mint: USDC_MINT, basisPoints: 10000, percentage: 100 }],
+      mix: [{ symbol: "USDC", mint: USDC_MINT, basisPoints: 10000, percentage: 100 }],
       sessionExpiresAt: expiresAt.toISOString(),
       createdAt: createdAt.toISOString(),
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
     if (err?.code === "23505") {
-      res.status(409).json({ error: "TAG_TAKEN", message: "That tag is already claimed.", details: null });
+      res.status(409).json({ error: "WALLET_EXISTS", message: "That wallet is already registered. Recover it instead.", details: null });
       return;
     }
     console.error("Enroll complete error:", err);

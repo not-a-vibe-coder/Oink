@@ -44,6 +44,7 @@ function PayPage() {
 
   const data = invoice.data;
   const open = data.status === "pending";
+  const handle = data.creatorTag ? `@${data.creatorTag}` : data.creatorAccountId;
   const solanaPayUri = `solana:${data.recipientWallet}?amount=${data.amount}&spl-token=${data.tokenMint}&memo=${encodeURIComponent(data.memo || data.id)}`;
 
   return (
@@ -54,10 +55,10 @@ function PayPage() {
 
       <header className="page-head">
         <div className="identity" style={{ marginBottom: "var(--s4)" }}>
-          <PigAvatar seed={data.creatorTag} size={44} />
+          <PigAvatar seed={data.creatorTag ?? data.creatorAccountId} size={44} />
           <div>
             <p className="eyebrow">Payment request</p>
-            <p className="identity-tag">@{data.creatorTag}</p>
+            <p className="identity-tag">{handle}</p>
           </div>
         </div>
 
@@ -84,11 +85,11 @@ function PayPage() {
             </>
           ) : data.status === "expired" ? (
             <>
-              <strong>Expired.</strong> Ask @{data.creatorTag} for a fresh link.
+              <strong>Expired.</strong> Ask {handle} for a fresh link.
             </>
           ) : (
             <>
-              <strong>Cancelled.</strong> @{data.creatorTag} withdrew this request.
+              <strong>Cancelled.</strong> {handle} withdrew this request.
             </>
           )}
         </div>
@@ -120,14 +121,14 @@ function PayPage() {
             </div>
           </div>
 
-          {data.applyElection && data.election.length > 0 && (
+          {data.applyMix && data.mix.length > 0 && (
             <section className="panel">
               <p className="eyebrow" style={{ marginBottom: 10 }}>
-                @{data.creatorTag} receives this as
+                {handle} receives this as
               </p>
-              <AllocationRail election={data.election} />
+              <AllocationRail mix={data.mix} />
               <p className="footnote" style={{ marginTop: "var(--s3)" }}>
-                Their election splits the payment the moment it lands — one transaction, no cash
+                Their mix splits the payment the moment it lands — one transaction, no cash
                 sitting in between.
               </p>
             </section>
@@ -136,7 +137,7 @@ function PayPage() {
           <div className="btn-row">
             <Link
               to="/app/send"
-              search={{ to: data.creatorTag, token: data.tokenSymbol, amount: data.amount }}
+              search={{ to: data.creatorTag ?? data.creatorAccountId, token: data.tokenSymbol, amount: data.amount }}
               className="btn btn-primary"
               style={{ flex: 1 }}
             >

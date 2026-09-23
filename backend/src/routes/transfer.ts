@@ -2,14 +2,14 @@ import crypto from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { query } from "../db";
-import { normalizeTag, validateTag } from "../lib/tagRules";
+import { identifierLookup, parseIdentifier } from "../lib/accountId";
 import { requireSession } from "../middleware/session";
 import {
-  calculateElectionQuotes,
+  calculateMixQuotes,
   getStoredQuote,
-  type ElectionLeg,
-  type StoredQuote,
-} from "../services/electionEngine";
+  type MixLeg,
+  type QuoteRecipient,
+} from "../services/mixEngine";
 import { checkSponsorshipBudget, recordSponsorship } from "../services/feePayer";
 import { buildSettlementTransaction, type BuiltTransactionPlan } from "../services/txBuilder";
 import { broadcastAndConfirmTransaction } from "../services/rpc";
@@ -39,8 +39,8 @@ function isSolanaAddress(addr: string): boolean {
 
 // POST /api/v1/transfer/quote [S]
 transferRouter.post("/quote", requireSession, async (req: Request, res: Response) => {
-  const { recipient, fromSymbolOrMint, amountIn, applyElection = true, slippageBps } = req.body || {};
-  const senderTag = req.userTag!;
+  const { recipient, fromSymbolOrMint, amountIn, applyMix = true, slippageBps } = req.body || {};
+  const senderAccountId = req.accountId!;
 
   if (!recipient || !fromSymbolOrMint || !amountIn) {
     res.status(400).json({
@@ -53,7 +53,7 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
 
   try {
     // 1. Get sender wallet public key
-    const senderRes = await query("SELECT public_key FROM wallets WHERE tag = $1", [senderTag]);
+    const senderRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [senderAccountId]);
     if (senderRes.rows.length === 0) {
       res.status(404).json({ error: "NOT_FOUND", message: "Sender wallet not found.", details: null });
       return;
@@ -61,14 +61,9 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
     const senderWallet = senderRes.rows[0].public_key;
 
     // 2. Resolve recipient
-    let resolvedRecipient: {
-      kind: "tag" | "address";
-      tag?: string;
-      wallet: string;
-      displayName?: string;
-    };
-    let elections: ElectionLeg[] = [];
-    let effectiveApplyElection = applyElection;
+    let resolvedRecipient: QuoteRecipient;
+    let mix: MixLeg[] = [];
+    let effectiveApplyMix = applyMix;
 
     const trimmedRecipient = String(recipient).trim();
     if (isSolanaAddress(trimmedRecipient)) {
@@ -76,32 +71,37 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
         kind: "address",
         wallet: trimmedRecipient,
       };
-      effectiveApplyElection = false; // Raw external address has no election
+      effectiveApplyMix = false; // Raw external address has no mix
     } else {
-      const recTag = normalizeTag(trimmedRecipient);
-      const recRes = await query(
-        "SELECT tag, public_key, display_name FROM wallets WHERE tag = $1 AND status = 'active'",
-        [recTag],
-      );
+      const id = parseIdentifier(trimmedRecipient);
+      const recRes = id
+        ? await query(
+            `SELECT account_id, tag, public_key, display_name FROM wallets
+             WHERE ${identifierLookup(id).where} AND status = 'active'`,
+            [identifierLookup(id).value],
+          )
+        : { rows: [] as any[] };
 
       if (recRes.rows.length === 0) {
-        res.status(404).json({ error: "NOT_FOUND", message: `Recipient @${recTag} not found.`, details: null });
+        res.status(404).json({ error: "NOT_FOUND", message: `Recipient ${trimmedRecipient} not found.`, details: null });
         return;
       }
 
+      const rec = recRes.rows[0];
       resolvedRecipient = {
-        kind: "tag",
-        tag: recRes.rows[0].tag,
-        wallet: recRes.rows[0].public_key,
-        displayName: recRes.rows[0].display_name || recRes.rows[0].tag,
+        kind: "account",
+        accountId: rec.account_id,
+        tag: rec.tag,
+        wallet: rec.public_key,
+        displayName: rec.display_name || (rec.tag ? `@${rec.tag}` : rec.account_id),
       };
 
-      if (effectiveApplyElection) {
-        const elecRes = await query(
-          "SELECT asset_symbol, asset_mint, basis_points FROM elections WHERE tag = $1 AND is_active = true",
-          [recTag],
+      if (effectiveApplyMix) {
+        const mixRes = await query(
+          "SELECT asset_symbol, asset_mint, basis_points FROM mixes WHERE account_id = $1 AND is_active = true",
+          [rec.account_id],
         );
-        elections = elecRes.rows.map((r) => ({
+        mix = mixRes.rows.map((r) => ({
           symbol: r.asset_symbol,
           mint: r.asset_mint,
           basisPoints: r.basis_points,
@@ -110,17 +110,17 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
     }
 
     // 3. Sponsorship check
-    const sponsorship = await checkSponsorshipBudget(senderTag);
+    const sponsorship = await checkSponsorshipBudget(senderAccountId);
 
     // 4. Calculate quotes
-    const quote = await calculateElectionQuotes({
-      senderTag,
+    const quote = await calculateMixQuotes({
+      senderAccountId,
       senderWallet,
       recipient: resolvedRecipient,
       fromSymbolOrMint,
       amountInFormatted: String(amountIn),
-      elections,
-      applyElection: effectiveApplyElection,
+      mix,
+      applyMix: effectiveApplyMix,
       slippageBps,
     });
 
@@ -160,7 +160,7 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
 // POST /api/v1/transfer/build [S]
 transferRouter.post("/build", requireSession, async (req: Request, res: Response) => {
   const { quoteId, sponsorFee = true } = req.body || {};
-  const senderTag = req.userTag!;
+  const senderAccountId = req.accountId!;
 
   if (!quoteId) {
     res.status(400).json({ error: "VALIDATION_FAILED", message: "quoteId is required.", details: null });
@@ -173,7 +173,7 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
     return;
   }
 
-  if (quote.senderTag && quote.senderTag !== senderTag) {
+  if (quote.senderAccountId && quote.senderAccountId !== senderAccountId) {
     res.status(403).json({ error: "FORBIDDEN", message: "Quote belongs to another account.", details: null });
     return;
   }
@@ -181,7 +181,7 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
   try {
     let shouldSponsor = sponsorFee;
     if (shouldSponsor) {
-      const budget = await checkSponsorshipBudget(senderTag);
+      const budget = await checkSponsorshipBudget(senderAccountId);
       if (!budget.eligible) {
         res.status(429).json({
           error: "SPONSORSHIP_EXHAUSTED",
@@ -211,7 +211,7 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
 // POST /api/v1/transfer/submit [S]
 transferRouter.post("/submit", requireSession, async (req: Request, res: Response) => {
   const { quoteId, signedTransaction } = req.body || {};
-  const senderTag = req.userTag!;
+  const senderAccountId = req.accountId!;
 
   if (!quoteId || !signedTransaction) {
     res.status(400).json({
@@ -258,22 +258,22 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
       // Record failed transfer
       await query(
         `INSERT INTO transfers (
-          signature, direction, sender_tag, sender_wallet, recipient_tag, recipient_wallet,
-          input_mint, input_symbol, input_amount, output_breakdown, election_applied, fee_sponsored,
+          signature, direction, sender_account_id, sender_wallet, recipient_account_id, recipient_wallet,
+          input_mint, input_symbol, input_amount, output_breakdown, mix_applied, fee_sponsored,
           status, created_at
         ) VALUES ($1, 'send', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'failed', NOW())
         ON CONFLICT (signature) DO NOTHING`,
         [
           broadcastRes.signature,
-          senderTag,
+          senderAccountId,
           quote.senderWallet,
-          quote.recipient.tag || null,
+          quote.recipient.accountId || null,
           quote.recipient.wallet,
           quote.inputToken.mint,
           quote.inputToken.symbol,
           quote.totalIn,
           JSON.stringify(quote.legs),
-          quote.applyElection,
+          quote.applyMix,
           plan.partiallySigned,
         ],
       );
@@ -291,23 +291,23 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
     // 3. Record transfer
     const insertRes = await query(
       `INSERT INTO transfers (
-        signature, direction, sender_tag, sender_wallet, recipient_tag, recipient_wallet,
-        input_mint, input_symbol, input_amount, output_breakdown, election_applied, fee_sponsored,
+        signature, direction, sender_account_id, sender_wallet, recipient_account_id, recipient_wallet,
+        input_mint, input_symbol, input_amount, output_breakdown, mix_applied, fee_sponsored,
         fee_lamports, status, confirmed_at, created_at
       ) VALUES ($1, 'send', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'confirmed', NOW(), NOW())
       ON CONFLICT (signature) DO NOTHING
       RETURNING id`,
       [
         signature,
-        senderTag,
+        senderAccountId,
         quote.senderWallet,
-        quote.recipient.tag || null,
+        quote.recipient.accountId || null,
         quote.recipient.wallet,
         quote.inputToken.mint,
         quote.inputToken.symbol,
         quote.totalIn,
         JSON.stringify(quote.legs),
-        quote.applyElection,
+        quote.applyMix,
         plan.partiallySigned,
         15000,
       ],
@@ -315,7 +315,7 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
 
     // 4. Record fee sponsorship if sponsored
     if (plan.partiallySigned) {
-      await recordSponsorship(senderTag, signature, 15000n);
+      await recordSponsorship(senderAccountId, signature, 15000n);
     }
 
     const transferId = insertRes.rows[0]?.id;
@@ -332,34 +332,41 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
   }
 });
 
+// Tags are joined in at read time rather than stored, because a tag can be claimed or move
+// after the transfer happened (docs/12 §3).
+const TRANSFER_COLUMNS = `t.id, t.signature, t.direction, t.sender_account_id, s.tag AS sender_tag, t.sender_wallet,
+  t.recipient_account_id, r.tag AS recipient_tag, t.recipient_wallet, t.input_mint, t.input_symbol,
+  t.input_amount, t.output_breakdown, t.mix_applied, t.fee_sponsored, t.memo, t.source, t.status,
+  t.confirmed_at, t.created_at`;
+const TRANSFER_JOINS = `LEFT JOIN wallets s ON s.account_id = t.sender_account_id
+  LEFT JOIN wallets r ON r.account_id = t.recipient_account_id`;
+
 // GET /api/v1/transfer/history [S]
 transferRouter.get("/history", requireSession, async (req: Request, res: Response) => {
-  const tag = req.userTag!;
+  const accountId = req.accountId!;
   const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || "20", 10)));
   const offset = Math.max(0, parseInt((req.query.offset as string) || "0", 10));
 
   try {
     const countRes = await query(
-      "SELECT COUNT(*) as count FROM transfers WHERE sender_tag = $1 OR recipient_tag = $1",
-      [tag],
+      "SELECT COUNT(*) as count FROM transfers WHERE sender_account_id = $1 OR recipient_account_id = $1",
+      [accountId],
     );
     const total = parseInt(countRes.rows[0]?.count || "0", 10);
 
     const rows = await query(
-      `SELECT id, signature, direction, sender_tag, sender_wallet, recipient_tag, recipient_wallet,
-              input_mint, input_symbol, input_amount, output_breakdown, election_applied, fee_sponsored,
-              memo, status, confirmed_at, created_at
-       FROM transfers
-       WHERE sender_tag = $1 OR recipient_tag = $1
-       ORDER BY created_at DESC
+      `SELECT ${TRANSFER_COLUMNS}
+       FROM transfers t ${TRANSFER_JOINS}
+       WHERE t.sender_account_id = $1 OR t.recipient_account_id = $1
+       ORDER BY t.created_at DESC
        LIMIT $2 OFFSET $3`,
-      [tag, limit, offset],
+      [accountId, limit, offset],
     );
 
     res.status(200).json({
       transfers: rows.rows.map((r) => ({
         ...r,
-        isOutgoing: r.sender_tag === tag,
+        isOutgoing: r.sender_account_id === accountId,
       })),
       total,
       limit,
@@ -371,12 +378,17 @@ transferRouter.get("/history", requireSession, async (req: Request, res: Respons
   }
 });
 
-// GET /api/v1/transfer/:signature [S]
+// GET /api/v1/transfer/:signature [S] — only the sender or recipient can read a receipt.
 transferRouter.get("/:signature", requireSession, async (req: Request, res: Response) => {
   const signature = req.params.signature;
 
   try {
-    const resRow = await query("SELECT * FROM transfers WHERE signature = $1", [signature]);
+    const resRow = await query(
+      `SELECT ${TRANSFER_COLUMNS}
+       FROM transfers t ${TRANSFER_JOINS}
+       WHERE t.signature = $1 AND (t.sender_account_id = $2 OR t.recipient_account_id = $2)`,
+      [signature, req.accountId],
+    );
     if (resRow.rows.length === 0) {
       res.status(404).json({ error: "NOT_FOUND", message: "Transfer receipt not found.", details: null });
       return;

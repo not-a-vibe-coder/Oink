@@ -9,7 +9,7 @@ export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 3600; // 7 days
 export const SESSION_IDLE_TIMEOUT_SECONDS = 24 * 3600; // 24 hours
 
 export interface SessionData {
-  tag: string;
+  accountId: string;
   tokenHash: string;
   expiresAt: Date;
 }
@@ -17,7 +17,7 @@ export interface SessionData {
 declare global {
   namespace Express {
     interface Request {
-      userTag?: string;
+      accountId?: string;
       sessionTokenHash?: string;
     }
   }
@@ -53,11 +53,11 @@ export function clearSessionCookie(): string {
   });
 }
 
-// Callers inside a transaction must pass their client: sessions.tag references
-// wallets(tag), and a session written through the pool on another connection cannot
+// Callers inside a transaction must pass their client: sessions.account_id references
+// wallets(account_id), and a session written through the pool on another connection cannot
 // see a wallet row the transaction has not committed yet, so the FK check fails.
 export async function createSession(
-  tag: string,
+  accountId: string,
   userAgent?: string,
   ipHash?: string,
   db: Pick<PoolClient, "query"> = { query } as unknown as Pick<PoolClient, "query">,
@@ -67,9 +67,9 @@ export async function createSession(
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
 
   await db.query(
-    `INSERT INTO sessions (token_hash, tag, user_agent, ip_hash, created_at, last_used_at, expires_at)
+    `INSERT INTO sessions (token_hash, account_id, user_agent, ip_hash, created_at, last_used_at, expires_at)
      VALUES ($1, $2, $3, $4, NOW(), NOW(), $5)`,
-    [tokenHash, tag.toLowerCase(), userAgent || null, ipHash || null, expiresAt],
+    [tokenHash, accountId, userAgent || null, ipHash || null, expiresAt],
   );
 
   return { token, expiresAt };
@@ -94,7 +94,7 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
 
   try {
     const result = await query(
-      `SELECT tag, last_used_at, expires_at, revoked_at
+      `SELECT account_id, last_used_at, expires_at, revoked_at
        FROM sessions
        WHERE token_hash = $1`,
       [tokenHash],
@@ -124,7 +124,7 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
     // Refresh last_used_at
     await query("UPDATE sessions SET last_used_at = NOW() WHERE token_hash = $1", [tokenHash]);
 
-    req.userTag = session.tag;
+    req.accountId = session.account_id;
     req.sessionTokenHash = tokenHash;
     next();
   } catch (err) {

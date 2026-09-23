@@ -4,28 +4,29 @@ import { Plus, Scale, X } from "lucide-react";
 import { AllocationRail } from "@/components/oink/AllocationRail";
 import { Monogram } from "@/components/oink/Monogram";
 import { Sheet } from "@/components/oink/Sheet";
-import { useAssets, useElections, useFeaturedAssets, useSaveElections } from "@/hooks/useOink";
+import { useAssets, useMix, useFeaturedAssets, useSaveMix } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
 import { railColor, rankedByWeight } from "@/lib/rail-palette";
-import type { ElectionItem, OinkToken } from "@/types/token";
+import type { MixItem, OinkToken } from "@/types/token";
 
-export const Route = createFileRoute("/app/election")({
-  component: ElectionPage,
+export const Route = createFileRoute("/app/mix")({
+  component: MixPage,
 });
 
-function ElectionPage() {
-  const { tag } = useWalletSession();
-  const stored = useElections(tag);
-  const save = useSaveElections(tag);
+function MixPage() {
+  const { accountId, tag } = useWalletSession();
+  const handle = tag ? `@${tag}` : "your account";
+  const stored = useMix(accountId);
+  const save = useSaveMix(accountId);
 
-  const [rows, setRows] = useState<ElectionItem[] | null>(null);
+  const [rows, setRows] = useState<MixItem[] | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (stored.data && rows === null) {
-      setRows(rankedByWeight(stored.data.elections));
+      setRows(rankedByWeight(stored.data.mix));
     }
   }, [stored.data, rows]);
 
@@ -33,7 +34,7 @@ function ElectionPage() {
   const total = working.reduce((sum, row) => sum + row.basisPoints, 0);
   const balanced = total === 10000;
   const dirty = useMemo(() => {
-    const original = stored.data?.elections ?? [];
+    const original = stored.data?.mix ?? [];
     if (original.length !== working.length) return true;
     const map = new Map(original.map((item) => [item.mint, item.basisPoints]));
     return working.some((row) => map.get(row.mint) !== row.basisPoints);
@@ -106,7 +107,7 @@ function ElectionPage() {
     setError(null);
     const result = await save.mutateAsync(working);
     if (result.ok) {
-      setRows(rankedByWeight(result.data.elections));
+      setRows(rankedByWeight(result.data.mix));
       setSaved(true);
     } else {
       setError(result.message);
@@ -119,17 +120,17 @@ function ElectionPage() {
     <main className="stage stage-wide">
       <header className="page-head">
         <h1 className="page-title">
-          Your <span className="serif">election</span>
+          Your <span className="serif">mix</span>
         </h1>
         <p className="page-sub">
-          Every payment that arrives at @{tag} is split this way, in one transaction, before it ever
+          Every payment that arrives at {handle} is split this way, in one transaction, before it ever
           sits still as cash.
         </p>
       </header>
 
       <div className="stack">
         <section>
-          <AllocationRail election={working} size="lg" showKey={false} label="Your election" />
+          <AllocationRail mix={working} size="lg" showKey={false} label="Your mix" />
           <div className="row-between" style={{ marginTop: "var(--s3)" }}>
             <span className="meta tnum">
               {(total / 100).toFixed(total % 100 === 0 ? 0 : 1)}% allocated
@@ -223,7 +224,7 @@ function ElectionPage() {
             <Plus size={14} aria-hidden="true" /> Add an asset
           </button>
           {working.length >= 10 && (
-            <p className="hint">Ten assets is the limit for one election.</p>
+            <p className="hint">Ten assets is the limit for one mix.</p>
           )}
         </section>
 
@@ -235,7 +236,7 @@ function ElectionPage() {
 
         {saved ? (
           <div className="callout" data-tone="seal">
-            <strong>Saved.</strong> From now on, payments to @{tag} land as{" "}
+            <strong>Saved.</strong> From now on, payments to {handle} land as{" "}
             {ranked.map((row, index) => (
               <span key={row.mint}>
                 {index > 0 ? (index === ranked.length - 1 ? " and " : ", ") : ""}
@@ -252,7 +253,7 @@ function ElectionPage() {
             disabled={!balanced || !dirty || working.length === 0 || save.isPending}
             onClick={() => void commit()}
           >
-            {save.isPending ? "Saving…" : "Save election"}
+            {save.isPending ? "Saving…" : "Save mix"}
           </button>
         )}
 

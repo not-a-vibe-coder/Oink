@@ -4,7 +4,7 @@ import { Share2 } from "lucide-react";
 import { AllocationRail } from "@/components/oink/AllocationRail";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { QrCode } from "@/components/oink/QrCode";
-import { useCreateInvoice, useElections, useWalletAddress } from "@/hooks/useOink";
+import { useCreateInvoice, useMix, useWalletAddress } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
 import { formatDateTime } from "@/lib/format";
 
@@ -15,11 +15,13 @@ export const Route = createFileRoute("/app/receive")({
 type Tab = "address" | "request";
 
 function ReceivePage() {
-  const { tag, publicKey } = useWalletSession();
+  const { accountId, tag, publicKey } = useWalletSession();
+  // Oink users can pay either form; the tag only exists once X is linked.
+  const handle = tag ? `@${tag}` : accountId;
   const [tab, setTab] = useState<Tab>("address");
   const address = useWalletAddress();
-  const elections = useElections(tag);
-  const election = elections.data?.elections ?? [];
+  const mixQuery = useMix(accountId);
+  const mix = mixQuery.data?.mix ?? [];
 
   return (
     <main className="stage stage-wide">
@@ -62,11 +64,11 @@ function ReceivePage() {
         <div className="stack">
           <QrCode
             value={address.data?.solanaPayUri ?? `solana:${publicKey}`}
-            alt={`QR code for @${tag}'s Solana address`}
+            alt={`QR code for ${handle}'s Solana address`}
           />
 
           <div>
-            <p className="eyebrow">@{tag}</p>
+            <p className="eyebrow">{handle}</p>
             <p className="mono" style={{ marginTop: 8, color: "var(--ink-2)" }}>
               {address.data?.publicKey ?? publicKey}
             </p>
@@ -76,21 +78,25 @@ function ReceivePage() {
                 label="Copy address"
                 className="btn btn-outline btn-sm"
               />
-              <CopyButton value={`@${tag}`} label="Copy tag" className="btn btn-quiet btn-sm" />
+              <CopyButton
+                value={handle}
+                label={tag ? "Copy tag" : "Copy account ID"}
+                className="btn btn-quiet btn-sm"
+              />
             </div>
           </div>
 
-          {election.length > 0 && (
+          {mix.length > 0 && (
             <section className="panel">
               <p className="eyebrow" style={{ marginBottom: 10 }}>
-                Payments to @{tag} settle into
+                Payments to {handle} settle into
               </p>
-              <AllocationRail election={election} />
+              <AllocationRail mix={mix} />
               <p className="footnote" style={{ marginTop: "var(--s3)" }}>
                 Anything sent straight to the address above arrives as it was sent. You can
                 rebalance it afterwards from{" "}
-                <Link to="/app/election" className="link">
-                  your election
+                <Link to="/app/mix" className="link">
+                  your mix
                 </Link>
                 .
               </p>
@@ -98,17 +104,17 @@ function ReceivePage() {
           )}
         </div>
       ) : (
-        <RequestForm tag={tag} />
+        <RequestForm handle={handle} />
       )}
     </main>
   );
 }
 
-function RequestForm({ tag }: { tag: string }) {
+function RequestForm({ handle }: { handle: string }) {
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("USDC");
   const [memo, setMemo] = useState("");
-  const [applyElection, setApplyElection] = useState(true);
+  const [applyMix, setApplyMix] = useState(true);
   const [created, setCreated] = useState<{
     id: string;
     payUrl: string;
@@ -129,7 +135,7 @@ function RequestForm({ tag }: { tag: string }) {
       amount,
       tokenSymbol: token,
       memo: memo || undefined,
-      applyElection,
+      applyMix,
     });
 
     if (result.ok) setCreated(result.data);
@@ -139,8 +145,8 @@ function RequestForm({ tag }: { tag: string }) {
   async function share() {
     if (!created) return;
     const data = {
-      title: `Pay @${tag}`,
-      text: memo || `${amount} ${token} to @${tag}`,
+      title: `Pay ${handle}`,
+      text: memo || `${amount} ${token} to ${handle}`,
       url: created.payUrl,
     };
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -236,10 +242,10 @@ function RequestForm({ tag }: { tag: string }) {
       <label className="check">
         <input
           type="checkbox"
-          checked={applyElection}
-          onChange={(event) => setApplyElection(event.target.checked)}
+          checked={applyMix}
+          onChange={(event) => setApplyMix(event.target.checked)}
         />
-        <span>Settle into my election. Leave this off and the payment arrives as {token}.</span>
+        <span>Settle into my mix. Leave this off and the payment arrives as {token}.</span>
       </label>
 
       {error && (

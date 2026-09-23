@@ -4,7 +4,7 @@
    The landing page is a white sheet of paper with ink on it. The wallet is the
    same sheet, used as a statement of account: one dominant figure, hairline
    ledger rules, tabular figures that never reflow, and a single seal-pink
-   accent that appears only where the election does. No cards stacked on cards,
+   accent that appears only where the mix does. No cards stacked on cards,
    no shadows except the one surface that genuinely floats (the sheet).
 
    Scale is Fibonacci — 13 / 21 / 34 / 55 / 89 in both type and space — so the
@@ -27,7 +27,7 @@
   --hairline: rgba(0, 0, 0, 0.08);
   --hairline-strong: rgba(0, 0, 0, 0.16);
 
-  /* The one accent. It marks the election and nothing else. */
+  /* The one accent. It marks the mix and nothing else. */
   --seal: #ec4e7c;
   --seal-deep: #b8325a;
   --seal-wash: #fdeaf0;
@@ -228,7 +228,7 @@
   margin-bottom: var(--s3);
 }
 
-/* The golden split: the balance and its ledger lead, the election follows. */
+/* The golden split: the balance and its ledger lead, the mix follows. */
 .split {
   display: grid;
   gap: var(--s6);

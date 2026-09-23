@@ -57,7 +57,7 @@ function ActivityPage() {
                   </span>
                   <span className="ledger-sub">
                     {timeAgo(transfer.confirmed_at ?? transfer.created_at)}
-                    {transfer.election_applied ? " · settled into your election" : ""}
+                    {transfer.mix_applied ? " · settled into your mix" : ""}
                     {transfer.fee_sponsored ? " · fee covered" : ""}
                   </span>
                 </span>

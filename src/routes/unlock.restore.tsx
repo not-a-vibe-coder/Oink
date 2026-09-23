@@ -4,7 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { PhraseInput, emptyPhrase } from "@/components/oink/PhraseInput";
 import { QrCode } from "@/components/oink/QrCode";
-import { CodeField, PasswordField, TagField } from "@/components/oink/fields";
+import { otpauthUri } from "@/lib/crypto/totp-uri";
+import { CodeField, IdentifierField, PasswordField } from "@/components/oink/fields";
 import { keypairFromEntropy } from "@/lib/crypto/derive";
 import { toEntropy, validateMnemonic } from "@/lib/crypto/mnemonic";
 import {
@@ -21,14 +22,16 @@ export const Route = createFileRoute("/unlock/restore")({
   component: RestorePage,
 });
 
-const PHRASE_MISMATCH = "That phrase doesn't match this tag.";
+const PHRASE_MISMATCH = "That phrase doesn't match this account.";
 const STEPS = ["Phrase", "New password", "New authenticator"] as const;
 
 function RestorePage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  const [tag, setTag] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  // Resolved from the identifier once the phrase checks out; the new keystore binds it.
+  const [account, setAccount] = useState<{ accountId: string; tag: string | null } | null>(null);
   const [words, setWords] = useState<string[]>(emptyPhrase);
   const [checking, setChecking] = useState(false);
   const [phraseError, setPhraseError] = useState<string | null>(null);
@@ -56,10 +59,10 @@ function RestorePage() {
   );
 
   const startEnrollment = useCallback(async () => {
-    const result = await enrollStart({ data: { tagHint: tag } });
+    const result = await enrollStart();
     if (result.ok) setEnrollment(result.data);
     else setFinishError(result.message);
-  }, [tag]);
+  }, []);
 
   useEffect(() => {
     if (step === 3 && !enrollment) void startEnrollment();
@@ -70,7 +73,7 @@ function RestorePage() {
 
   async function checkPhrase(event: FormEvent) {
     event.preventDefault();
-    if (checking || !phraseComplete || tag.length < 3) return;
+    if (checking || !phraseComplete || identifier.length < 3) return;
 
     setChecking(true);
     setPhraseError(null);
@@ -86,7 +89,7 @@ function RestorePage() {
 
       // The public profile carries the wallet's address, so the pairing can be
       // checked here rather than after the user has set a new password.
-      const profile = await getTagProfile({ data: { tag } }).catch(() => null);
+      const profile = await getTagProfile({ data: { identifier } }).catch(() => null);
       if (!profile || profile.publicKey !== derivedKey) {
         derivedEntropy.fill(0);
         setPhraseError(PHRASE_MISMATCH);
@@ -95,6 +98,7 @@ function RestorePage() {
 
       setEntropy(derivedEntropy);
       setPublicKey(derivedKey);
+      setAccount({ accountId: profile.accountId, tag: profile.tag });
       setStep(2);
     } catch {
       setPhraseError(PHRASE_MISMATCH);
@@ -105,7 +109,7 @@ function RestorePage() {
 
   async function finishRecovery(event: FormEvent) {
     event.preventDefault();
-    if (busy || !entropy || !enrollment || code.length !== 6) return;
+    if (busy || !entropy || !enrollment || !account || code.length !== 6) return;
 
     setBusy(true);
     setFinishError(null);
@@ -115,7 +119,7 @@ function RestorePage() {
     let authKey: Uint8Array | null = null;
 
     try {
-      const challenge = await recoverChallenge({ data: { tag } });
+      const challenge = await recoverChallenge({ data: { identifier: account.accountId } });
       if (!challenge.ok) {
         setFinishError(challenge.code === "RATE_LIMITED" ? challenge.message : PHRASE_MISMATCH);
         return;
@@ -131,7 +135,13 @@ function RestorePage() {
       encKey = derived.encKey;
       authKey = derived.authKey;
 
-      const keystore = await sealKeystore({ encKey, entropy, tag, publicKey, salt });
+      const keystore = await sealKeystore({
+        encKey,
+        entropy,
+        accountId: challenge.data.accountId,
+        publicKey,
+        salt,
+      });
 
       const result = await recoverComplete({
         data: {
@@ -148,7 +158,7 @@ function RestorePage() {
       if (!result.ok) {
         setFinishError(
           result.code === "INVALID_CREDENTIALS"
-            ? "That phrase or code doesn't match this tag."
+            ? "That phrase or code doesn't match this account."
             : result.message,
         );
         setCode("");
@@ -170,10 +180,11 @@ function RestorePage() {
       <main className="stage">
         <header className="page-head">
           <h1 className="page-title">
-            You're back in. <span className="serif">@{tag}</span>
+            You're back in.{" "}
+            <span className="serif">{account?.tag ? `@${account.tag}` : account?.accountId}</span>
           </h1>
           <p className="page-sub">
-            Same address, same balance, same election. Your new password and authenticator are the
+            Same address, same balance, same mix. Your new password and authenticator are the
             only things that changed.
           </p>
         </header>
@@ -225,11 +236,11 @@ function RestorePage() {
             <h1 className="page-title">Restore with your secret phrase</h1>
             <p className="page-sub">
               The 12 words are the wallet. They cover a forgotten password and a lost authenticator
-              alike — you keep your tag, your address and your balance.
+              alike — you keep your account ID, tag, address and balance.
             </p>
           </header>
 
-          <TagField id="restore-tag" label="Your tag" value={tag} onChange={setTag} autoFocus />
+          <IdentifierField id="restore-identifier" value={identifier} onChange={setIdentifier} autoFocus />
 
           <div className="field">
             <span className="field-label">Your 12 words</span>
@@ -246,7 +257,7 @@ function RestorePage() {
           <button
             type="submit"
             className="btn btn-primary btn-block"
-            disabled={checking || !phraseComplete || tag.length < 3}
+            disabled={checking || !phraseComplete || identifier.length < 3}
           >
             {checking ? "Checking…" : "Continue"}
           </button>
@@ -320,7 +331,15 @@ function RestorePage() {
 
           {enrollment ? (
             <>
-              <QrCode value={enrollment.otpauthUri} alt="New authenticator setup QR code" />
+              {/* Labelled with the recovered account, not the ID enroll/start reserved for a
+                  new wallet: this authenticator entry belongs to the existing one. */}
+              <QrCode
+                value={otpauthUri({
+                  accountId: account?.accountId ?? enrollment.accountId,
+                  secret: enrollment.totpSecret,
+                })}
+                alt="New authenticator setup QR code"
+              />
 
               <div className="row-between">
                 <div style={{ minWidth: 0 }}>

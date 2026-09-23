@@ -14,23 +14,25 @@ import { deriveKeys, fromBase64, openKeystore, zero } from "@/lib/wallet/credent
 import { unlockWith } from "@/lib/wallet/key-session";
 
 /** One message for every credential failure — see docs/02 §7. */
-export const CREDENTIAL_ERROR = "That tag, password or code doesn't match.";
+export const CREDENTIAL_ERROR = "That account, password or code doesn't match.";
 
 export interface SignInResult {
   ok: boolean;
-  tag?: string;
+  accountId?: string;
+  tag?: string | null;
   publicKey?: string;
   error?: string;
   retryAfterMessage?: string;
 }
 
 export async function signIn(args: {
-  tag: string;
+  /** Tag or account ID, as typed. */
+  identifier: string;
   password: string;
   totpCode: string;
   onProgress?: (progress: number) => void;
 }): Promise<SignInResult> {
-  const challenge = await authChallenge({ data: { tag: args.tag } });
+  const challenge = await authChallenge({ data: { identifier: args.identifier } });
   if (!challenge.ok) return { ok: false, error: CREDENTIAL_ERROR };
 
   const { challengeId, kdfSalt, kdfParams, keystore } = challenge.data;
@@ -67,8 +69,9 @@ export async function signIn(args: {
     entropy = await openKeystore({
       encKey,
       blob: keystore,
-      tag: unlocked.data.tag,
+      accountId: unlocked.data.accountId,
       publicKey: unlocked.data.publicKey,
+      tag: unlocked.data.tag,
     });
 
     // The server accepted the password but the blob will not open: a decoy, a
@@ -76,7 +79,12 @@ export async function signIn(args: {
     if (!entropy) return { ok: false, error: CREDENTIAL_ERROR };
 
     unlockWith(entropy);
-    return { ok: true, tag: unlocked.data.tag, publicKey: unlocked.data.publicKey };
+    return {
+      ok: true,
+      accountId: unlocked.data.accountId,
+      tag: unlocked.data.tag,
+      publicKey: unlocked.data.publicKey,
+    };
   } finally {
     zero(encKey, authKey, entropy);
   }
@@ -87,12 +95,13 @@ export async function signIn(args: {
  * Returns false for a wrong password and says nothing more than that.
  */
 export async function unlockKey(args: {
-  tag: string;
+  accountId: string;
+  tag?: string | null;
   publicKey: string;
   password: string;
   onProgress?: (progress: number) => void;
 }): Promise<boolean> {
-  const challenge = await authChallenge({ data: { tag: args.tag } });
+  const challenge = await authChallenge({ data: { identifier: args.accountId } });
   if (!challenge.ok) return false;
 
   let encKey: Uint8Array | null = null;
@@ -112,8 +121,9 @@ export async function unlockKey(args: {
     entropy = await openKeystore({
       encKey,
       blob: challenge.data.keystore,
-      tag: args.tag,
+      accountId: args.accountId,
       publicKey: args.publicKey,
+      tag: args.tag,
     });
 
     if (!entropy) return false;

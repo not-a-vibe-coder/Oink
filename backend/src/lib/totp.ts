@@ -83,7 +83,8 @@ export function verifyTotp(
   return { valid: false, step: 0 };
 }
 
-export function formatOtpauthUri(tag: string, secretBase32: string): string {
-  const cleanTag = tag.replace(/^[@$]/, "");
-  return `otpauth://totp/Oink:%40${cleanTag}?secret=${secretBase32}&issuer=Oink&algorithm=SHA1&digits=6&period=30`;
+// Labelled with the account ID, not the tag: the authenticator entry is created before any
+// tag exists, and the account ID is what the user types to unlock.
+export function formatOtpauthUri(accountId: string, secretBase32: string): string {
+  return `otpauth://totp/Oink:${encodeURIComponent(accountId)}?secret=${secretBase32}&issuer=Oink&algorithm=SHA1&digits=6&period=30`;
 }

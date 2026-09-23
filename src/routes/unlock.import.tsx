@@ -12,7 +12,7 @@ export const Route = createFileRoute("/unlock/import")({
 });
 
 /**
- * The Phantom / Solflare path. Oink claims a tag around a wallet that already
+ * The Phantom / Solflare path. Oink wraps a wallet that already
  * exists; it does not create a new one, and the phrase the user already keeps
  * stays the only backup.
  */
@@ -51,8 +51,8 @@ function ImportPage() {
           Import a wallet you <span className="serif">already have</span>
         </h1>
         <p className="page-sub">
-          Same keys, same address, same balance — plus a tag people can pay, and a password and
-          authenticator so you can get back in without typing these words again.
+          Same keys, same address, same balance — plus an Oink account people can pay, and a
+          password and authenticator so you can get back in without typing these words again.
         </p>
       </header>
 
@@ -83,7 +83,7 @@ function ImportPage() {
               className="btn btn-primary btn-block"
               onClick={() => void navigate({ to: "/create" })}
             >
-              Continue and claim a tag
+              Continue
             </button>
           </>
         ) : (

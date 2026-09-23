@@ -34,7 +34,7 @@ function PrivacyPage() {
           <li>Your tag, your public Solana address and when the account was made.</li>
           <li>Your encrypted keystore and the parameters needed to derive its key.</li>
           <li>Your authenticator secret, encrypted with a server key, for verifying codes.</li>
-          <li>Your election, your payment requests and the transfers you made through Oink.</li>
+          <li>Your mix, your payment requests and the transfers you made through Oink.</li>
           <li>
             Sessions: a hashed token, a truncated hash of your IP, and your browser's user agent.
           </li>
@@ -43,7 +43,7 @@ function PrivacyPage() {
         <h2>What is public no matter what we do</h2>
         <p>
           Solana is a public ledger. Your address, its balances and every transaction it makes are
-          visible to anyone, including the split your election produced. Your tag is deliberately
+          visible to anyone, including the split your mix produced. Your tag is deliberately
           public — that is how people pay you — and it is linked to your address.
         </p>
 

@@ -48,9 +48,17 @@ export function decryptKms(ciphertext: string, nonce: string): Uint8Array {
   return new Uint8Array(Buffer.concat([decipher.update(data), decipher.final()]));
 }
 
-export function generateDecoyChallenge(tag: string) {
+const ACCOUNT_ID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
+
+// Keyed on whatever the caller typed (tag or account ID), so repeated probes for the same
+// unknown identifier see the same salt, keystore and account ID a real wallet would return.
+export function generateDecoyChallenge(identifier: string) {
   const key = getDecoyKey();
-  const hmac = crypto.createHmac("sha256", key).update(tag.toLowerCase()).digest();
+  const hmac = crypto.createHmac("sha256", key).update(identifier.toLowerCase()).digest();
+  const idBytes = crypto.createHmac("sha256", hmac).update("account").digest();
+  let idBody = "";
+  for (let i = 0; i < 8; i++) idBody += ACCOUNT_ID_ALPHABET[idBytes[i] & 31];
+  const accountId = `oink-${idBody.slice(0, 4)}-${idBody.slice(4)}`;
 
   // Deterministic 16-byte salt and 12-byte nonce derived from HMAC
   const kdfSalt = crypto.createHmac("sha256", hmac).update("salt").digest().subarray(0, 16).toString("base64");
@@ -59,6 +67,7 @@ export function generateDecoyChallenge(tag: string) {
   const ciphertext = crypto.createHmac("sha256", hmac).update("ciphertext").digest().toString("base64");
 
   return {
+    accountId,
     kdfSalt,
     kdfParams: { alg: "argon2id" as const, v: 19 as const, m: 65536 as const, t: 3 as const, p: 1 as const, len: 32 as const },
     keystore: {

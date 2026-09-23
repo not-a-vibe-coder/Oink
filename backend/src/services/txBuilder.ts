@@ -18,7 +18,7 @@ import {
 import { getConfig } from "../config";
 import { fetchJupiterSwapInstructions } from "./jupiterService";
 import { getFeePayerKeypair, getFeePayerPublicKey } from "./feePayer";
-import type { StoredQuote } from "./electionEngine";
+import type { StoredQuote } from "./mixEngine";
 
 let connectionInstance: Connection | null = null;
 

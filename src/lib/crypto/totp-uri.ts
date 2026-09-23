@@ -1,6 +1,7 @@
-export type TotpUriOptions = { tag: string; secret: string };
+export type TotpUriOptions = { accountId: string; secret: string };
 
-export function otpauthUri({ tag, secret }: TotpUriOptions): string {
-  const cleanTag = tag.replace(/^[@$]/, "");
-  return `otpauth://totp/Oink:%40${cleanTag}?secret=${secret}&issuer=Oink&algorithm=SHA1&digits=6&period=30`;
+// Mirrors backend/src/lib/totp.ts: the entry is labelled with the account ID because it is
+// created before any tag exists.
+export function otpauthUri({ accountId, secret }: TotpUriOptions): string {
+  return `otpauth://totp/Oink:${encodeURIComponent(accountId)}?secret=${secret}&issuer=Oink&algorithm=SHA1&digits=6&period=30`;
 }

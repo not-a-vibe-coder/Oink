@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ArrowLeft } from "lucide-react";
-import { CodeField, PasswordField, TagField } from "@/components/oink/fields";
+import { CodeField, IdentifierField, PasswordField } from "@/components/oink/fields";
 import { signIn } from "@/lib/wallet/unlock";
 
 export const Route = createFileRoute("/unlock/")({
@@ -10,14 +10,14 @@ export const Route = createFileRoute("/unlock/")({
 
 function UnlockPage() {
   const navigate = useNavigate();
-  const [tag, setTag] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const ready = tag.length >= 3 && password.length > 0 && code.length === 6;
+  const ready = identifier.length >= 3 && password.length > 0 && code.length === 6;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -28,14 +28,14 @@ function UnlockPage() {
     setProgress(0);
 
     try {
-      const result = await signIn({ tag, password, totpCode: code, onProgress: setProgress });
+      const result = await signIn({ identifier, password, totpCode: code, onProgress: setProgress });
       if (result.ok) {
         setPassword("");
         setCode("");
         void navigate({ to: "/app" });
         return;
       }
-      setError(result.error ?? "That tag, password or code doesn't match.");
+      setError(result.error ?? "That account, password or code doesn't match.");
       setCode("");
     } catch {
       setError("Oink could not reach the network. Check your connection and try again.");
@@ -56,13 +56,14 @@ function UnlockPage() {
           Welcome <span className="serif">back</span>
         </h1>
         <p className="page-sub">
-          Your tag, your password and a code from your authenticator. Nothing else, on any device.
+          Your account ID or tag, your password and a code from your authenticator. Nothing else,
+          on any device.
         </p>
       </header>
 
       <form className="stack" onSubmit={submit}>
         <div className="stack-tight">
-          <TagField id="unlock-tag" value={tag} onChange={setTag} autoFocus />
+          <IdentifierField id="unlock-identifier" value={identifier} onChange={setIdentifier} autoFocus />
           <PasswordField
             id="unlock-password"
             label="Password"
@@ -105,7 +106,7 @@ function UnlockPage() {
         <p className="meta">
           Already have a wallet in Phantom or Solflare?{" "}
           <Link to="/unlock/import" className="link">
-            Import it and claim a tag
+            Import it into Oink
           </Link>
         </p>
         <p className="meta">

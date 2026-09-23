@@ -11,7 +11,7 @@ export interface OinkToken {
   priceUsd?: string | null;
 }
 
-export interface ElectionItem {
+export interface MixItem {
   symbol: string;
   mint: string;
   decimals?: number;

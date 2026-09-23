@@ -53,12 +53,13 @@ function AppLayout() {
   return (
     <WalletSessionProvider
       value={{
+        accountId: session.data.accountId,
         tag: session.data.tag,
         publicKey: session.data.publicKey,
         expiresAt: session.data.expiresAt,
       }}
     >
-      <AppShell tag={session.data.tag} avatarSeed={session.data.publicKey.slice(0, 8)}>
+      <AppShell tag={session.data.tag} accountId={session.data.accountId} avatarSeed={session.data.publicKey.slice(0, 8)}>
         <Outlet />
       </AppShell>
     </WalletSessionProvider>

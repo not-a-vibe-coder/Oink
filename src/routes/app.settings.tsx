@@ -24,7 +24,7 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function SettingsPage() {
-  const { tag, publicKey } = useWalletSession();
+  const { accountId, tag, publicKey } = useWalletSession();
   const navigate = useNavigate();
   const logout = useLogout();
 
@@ -38,8 +38,26 @@ function SettingsPage() {
       </header>
 
       <div className="stack">
-        <ChangePassword tag={tag} publicKey={publicKey} />
-        <RevealPhrase tag={tag} publicKey={publicKey} />
+        <section>
+          <h2 className="eyebrow" style={{ marginBottom: "var(--s3)" }}>
+            Account
+          </h2>
+          <div className="panel">
+            <div className="row-between">
+              <div>
+                <p className="ledger-title mono">{accountId}</p>
+                <p className="meta" style={{ marginTop: 4 }}>
+                  Your account ID. Sign in with it on any device
+                  {tag ? <>, or with @{tag}</> : null}.
+                </p>
+              </div>
+              <CopyButton value={accountId} label="Copy" className="btn btn-quiet btn-sm" />
+            </div>
+          </div>
+        </section>
+
+        <ChangePassword accountId={accountId} tag={tag} publicKey={publicKey} />
+        <RevealPhrase accountId={accountId} tag={tag} publicKey={publicKey} />
         <Devices />
 
         <section>
@@ -79,7 +97,7 @@ function SettingsPage() {
           <div className="panel">
             <p className="meta">
               There are no backup codes, by design. Your 12-word phrase restores the wallet with a
-              new password and a new authenticator, and keeps your tag, address and balance.
+              new password and a new authenticator, and keeps your account ID, tag, address and balance.
             </p>
             <Link
               to="/unlock/restore"
@@ -115,7 +133,15 @@ function SettingsPage() {
 
 // ── Change password ────────────────────────────────────────────────────────
 
-function ChangePassword({ tag, publicKey }: { tag: string; publicKey: string }) {
+function ChangePassword({
+  accountId,
+  tag,
+  publicKey,
+}: {
+  accountId: string;
+  tag: string | null;
+  publicKey: string;
+}) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -143,7 +169,7 @@ function ChangePassword({ tag, publicKey }: { tag: string; publicKey: string }) 
     let entropy: Uint8Array | null = null;
 
     try {
-      const challenge = await authChallenge({ data: { tag } });
+      const challenge = await authChallenge({ data: { identifier: accountId } });
       if (!challenge.ok) {
         setError("That password or code doesn't match.");
         return;
@@ -161,8 +187,9 @@ function ChangePassword({ tag, publicKey }: { tag: string; publicKey: string }) 
       entropy = await openKeystore({
         encKey: oldEnc,
         blob: challenge.data.keystore,
-        tag,
+        accountId,
         publicKey,
+        tag,
       });
       if (!entropy) {
         setError("That password or code doesn't match.");
@@ -177,7 +204,7 @@ function ChangePassword({ tag, publicKey }: { tag: string; publicKey: string }) 
       newEnc = newKeys.encKey;
       newAuth = newKeys.authKey;
 
-      const keystore = await sealKeystore({ encKey: newEnc, entropy, tag, publicKey, salt });
+      const keystore = await sealKeystore({ encKey: newEnc, entropy, accountId, publicKey, salt });
 
       const result = await rotateKeystore({
         data: {
@@ -299,7 +326,15 @@ function ChangePassword({ tag, publicKey }: { tag: string; publicKey: string }) 
 
 // ── Reveal the phrase ──────────────────────────────────────────────────────
 
-function RevealPhrase({ tag, publicKey }: { tag: string; publicKey: string }) {
+function RevealPhrase({
+  accountId,
+  tag,
+  publicKey,
+}: {
+  accountId: string;
+  tag: string | null;
+  publicKey: string;
+}) {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -320,7 +355,7 @@ function RevealPhrase({ tag, publicKey }: { tag: string; publicKey: string }) {
     let entropy: Uint8Array | null = null;
 
     try {
-      const challenge = await authChallenge({ data: { tag } });
+      const challenge = await authChallenge({ data: { identifier: accountId } });
       if (!challenge.ok) {
         setError("That password or code doesn't match.");
         return;
@@ -346,8 +381,9 @@ function RevealPhrase({ tag, publicKey }: { tag: string; publicKey: string }) {
       entropy = await openKeystore({
         encKey,
         blob: revealed.data.keystore,
-        tag,
+        accountId,
         publicKey,
+        tag,
       });
       if (!entropy) {
         setError("That password or code doesn't match.");

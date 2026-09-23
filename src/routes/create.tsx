@@ -3,8 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { ArrowLeft, Check, Download, ShieldAlert } from "lucide-react";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { QrCode } from "@/components/oink/QrCode";
-import { CodeField, PasswordField, TagField } from "@/components/oink/fields";
-import { useTagAvailability } from "@/hooks/useOink";
+import { CodeField, PasswordField } from "@/components/oink/fields";
 import { enrollComplete, enrollStart, enrollVerifyTotp } from "@/lib/oink-server-fns";
 import { keypairFromEntropy } from "@/lib/crypto/derive";
 import { generateMnemonic, toEntropy } from "@/lib/crypto/mnemonic";
@@ -17,8 +16,10 @@ export const Route = createFileRoute("/create")({
   component: CreateWalletPage,
 });
 
-const STEPS = ["Password", "Authenticator", "Tag", "Creating", "Secret phrase"] as const;
-type Step = 1 | 2 | 3 | 4 | 5;
+// No tag step: a tag is claimed afterwards by linking X (docs/12 §3). The account ID the
+// server issues in step 2 is what identifies the wallet until then.
+const STEPS = ["Password", "Authenticator", "Creating", "Secret phrase"] as const;
+type Step = 1 | 2 | 3 | 4;
 
 function CreateWalletPage() {
   const navigate = useNavigate();
@@ -49,20 +50,16 @@ function CreateWalletPage() {
   const [totpError, setTotpError] = useState<string | null>(null);
 
   // Step 3
-  const [tag, setTag] = useState("");
-  const [tagError, setTagError] = useState<string | null>(null);
-
-  // Step 4
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("Generating your wallet");
   const [createError, setCreateError] = useState<string | null>(null);
 
-  // Step 5
+  // Step 4
   const [phrase, setPhrase] = useState<string[] | null>(null);
 
   const startEnrollment = useCallback(async () => {
     setEnrollError(null);
-    const result = await enrollStart({ data: { tagHint: tag || undefined } });
+    const result = await enrollStart();
     if (result.ok) {
       setEnrollment(result.data);
     } else {
@@ -72,7 +69,7 @@ function CreateWalletPage() {
           : "Oink could not start enrollment. Try again in a moment.",
       );
     }
-  }, [tag]);
+  }, []);
 
   useEffect(() => {
     if (step === 2 && !enrollment) void startEnrollment();
@@ -146,16 +143,15 @@ function CreateWalletPage() {
       const keystore = await sealKeystore({
         encKey,
         entropy,
-        tag,
+        accountId: enrollment.accountId,
         publicKey,
         salt,
       });
 
-      mark("Claiming @" + tag);
+      mark("Creating " + enrollment.accountId);
       const result = await enrollComplete({
         data: {
           enrollmentId: enrollment.enrollmentId,
-          tag,
           publicKey,
           keystore,
           authKey: derived.authKeyBase64,
@@ -164,12 +160,11 @@ function CreateWalletPage() {
       });
 
       if (!result.ok) {
-        if (result.code === "TAG_TAKEN") {
-          setTagError("Someone claimed that tag a moment before you. Pick another.");
-          setStep(3);
-          return;
-        }
-        setCreateError(result.message);
+        setCreateError(
+          result.code === "WALLET_EXISTS"
+            ? "This wallet already has an Oink account. Use “Restore with my phrase” to get back into it."
+            : result.message,
+        );
         return;
       }
 
@@ -178,22 +173,22 @@ function CreateWalletPage() {
       // An imported wallet's owner already holds the phrase; showing it again
       // would be a second copy of the one thing that must exist in one place.
       setPhrase(mnemonic ? mnemonic.split(" ") : []);
-      setStep(5);
+      setStep(4);
     } catch (err) {
       // Name and message only: the error object itself can hold references to the
       // buffers above, and nothing near key material goes to the console (docs/02 §9).
       const reason = err instanceof Error ? `${err.name}: ${err.message}` : typeof err;
       console.error(`[oink:create] failed at "${at}" — ${reason}`);
-      setCreateError("Something went wrong creating your wallet. Nothing was claimed — try again.");
+      setCreateError("Something went wrong creating your wallet. Nothing was saved — try again.");
     } finally {
       zero(encKey, authKey, entropy);
     }
   }
 
   useEffect(() => {
-    if (step === 4) void createWallet();
+    if (step === 3) void createWallet();
     // createWallet closes over the state it needs and runs exactly once per entry
-    // into step 4; re-running it would spend the enrollment twice.
+    // into step 3; re-running it would spend the enrollment twice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
@@ -213,7 +208,8 @@ function CreateWalletPage() {
           <ArrowLeft size={15} aria-hidden="true" /> Oink
         </Link>
         <span className="step-count">
-          {String(step).padStart(2, "0")} / 05 · {STEPS[step - 1]}
+          {String(step).padStart(2, "0")} / {String(STEPS.length).padStart(2, "0")} ·{" "}
+          {STEPS[step - 1]}
         </span>
       </div>
 
@@ -227,11 +223,11 @@ function CreateWalletPage() {
         ))}
       </div>
 
-      {isImport && step < 5 && (
+      {isImport && step < 4 && (
         <div className="notice" style={{ marginBottom: "var(--s4)" }}>
           <span>
             Importing an existing wallet. Your 12 words stay in this browser — Oink only wraps the
-            same keys in a password, an authenticator and a tag.
+            same keys in a password and an authenticator.
           </span>
         </div>
       )}
@@ -363,20 +359,9 @@ function CreateWalletPage() {
       )}
 
       {step === 3 && (
-        <TagStep
-          tag={tag}
-          setTag={setTag}
-          externalError={tagError}
-          clearExternalError={() => setTagError(null)}
-          onBack={() => setStep(2)}
-          onContinue={() => setStep(4)}
-        />
-      )}
-
-      {step === 4 && (
         <div className="stack">
           <header className="page-head">
-            <h1 className="page-title">Building @{tag}</h1>
+            <h1 className="page-title">Building your wallet</h1>
             <p className="page-sub">
               This runs in your browser. Your keys are being encrypted before anything is sent.
             </p>
@@ -398,7 +383,7 @@ function CreateWalletPage() {
             <>
               <p className="form-error">{createError}</p>
               <div className="btn-row">
-                <button type="button" className="btn btn-outline" onClick={() => setStep(3)}>
+                <button type="button" className="btn btn-outline" onClick={() => setStep(2)}>
                   Back
                 </button>
                 <button
@@ -415,21 +400,22 @@ function CreateWalletPage() {
         </div>
       )}
 
-      {step === 5 && phrase && phrase.length > 0 && (
-        <PhraseStep words={phrase} tag={tag} onFinish={finish} />
+      {step === 4 && enrollment && phrase && phrase.length > 0 && (
+        <PhraseStep words={phrase} accountId={enrollment.accountId} onFinish={finish} />
       )}
 
-      {step === 5 && phrase && phrase.length === 0 && (
+      {step === 4 && enrollment && phrase && phrase.length === 0 && (
         <div className="stack">
           <header className="page-head">
             <h1 className="page-title">
-              @{tag} is yours, <span className="serif">same wallet</span>
+              It's yours, <span className="serif">same wallet</span>
             </h1>
             <p className="page-sub">
               Your imported keys are now encrypted under this password and authenticator. The
               address, the balance and the recovery phrase you already hold are unchanged.
             </p>
           </header>
+          <AccountIdCard accountId={enrollment.accountId} />
           <button type="button" className="btn btn-primary btn-block" onClick={finish}>
             Open my wallet
           </button>
@@ -439,143 +425,38 @@ function CreateWalletPage() {
   );
 }
 
-// ── Step 3 ─────────────────────────────────────────────────────────────────
+// ── Secret phrase ──────────────────────────────────────────────────────────
 
-function TagStep({
-  tag,
-  setTag,
-  externalError,
-  clearExternalError,
-  onBack,
-  onContinue,
-}: {
-  tag: string;
-  setTag: (value: string) => void;
-  externalError: string | null;
-  clearExternalError: () => void;
-  onBack: () => void;
-  onContinue: () => void;
-}) {
-  const [debounced, setDebounced] = useState(tag);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(tag), 300);
-    return () => clearTimeout(timer);
-  }, [tag]);
-
-  const formatValid = /^[a-z0-9_]{3,20}$/.test(tag);
-  const availability = useTagAvailability(debounced === tag ? tag : "");
-  const checking = formatValid && (availability.isFetching || debounced !== tag);
-  const result = availability.data;
-  const available = Boolean(result?.available) && result?.tag === tag;
-
-  const suggestions = useMemo(() => {
-    if (!tag || available) return [];
-    const base = tag.slice(0, 17);
-    return [`${base}1`, `${base}_`, `${base}${new Date().getFullYear() % 100}`].filter(
-      (candidate) => candidate !== tag,
-    );
-  }, [tag, available]);
-
-  const hint = (() => {
-    if (externalError) return externalError;
-    if (!tag) return "3–20 characters. Letters, numbers and underscores.";
-    if (!formatValid) return "Letters, numbers and underscores only, 3 to 20 characters.";
-    if (checking) return "Checking…";
-    if (!result) return " ";
-    if (result.available) return `@${tag} is yours to claim.`;
-    if (result.reason === "reserved") return "That tag is reserved.";
-    return "That tag is taken.";
-  })();
-
-  const tone: "ok" | "bad" | undefined = externalError
-    ? "bad"
-    : !tag || checking || !result
-      ? undefined
-      : available
-        ? "ok"
-        : "bad";
-
+/**
+ * The account ID is how the user signs in until they link X, so it sits next to the phrase
+ * and goes into the downloaded backup. It is not a secret.
+ */
+function AccountIdCard({ accountId }: { accountId: string }) {
   return (
-    <form
-      className="stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (available) onContinue();
-      }}
-    >
-      <header className="page-head">
-        <h1 className="page-title">
-          Claim your <span className="serif">tag</span>
-        </h1>
-        <p className="page-sub">
-          This is your account. People pay you at it, and it cannot be changed later.
-        </p>
-      </header>
-
-      <TagField
-        id="claim-tag"
-        value={tag}
-        onChange={(value) => {
-          clearExternalError();
-          setTag(value);
-        }}
-        hint={hint}
-        tone={tone}
-        autoFocus
-      />
-
-      {suggestions.length > 0 && formatValid && result && !result.available && (
-        <div>
-          <p className="eyebrow" style={{ marginBottom: 8 }}>
-            Still free
+    <div className="panel">
+      <div className="row-between">
+        <div style={{ minWidth: 0 }}>
+          <p className="eyebrow">Your account ID</p>
+          <p className="mono" style={{ marginTop: 4, fontSize: "1.1rem" }}>
+            {accountId}
           </p>
-          <div className="chip-row">
-            {suggestions.map((candidate) => (
-              <button
-                key={candidate}
-                type="button"
-                className="chip"
-                onClick={() => {
-                  clearExternalError();
-                  setTag(candidate);
-                }}
-              >
-                @{candidate}
-              </button>
-            ))}
-          </div>
         </div>
-      )}
-
-      <div className="notice">
-        <span>
-          People can pay you at <strong>@{tag || "yourtag"}</strong> — or at your raw Solana
-          address, which works from any wallet.
-        </span>
+        <CopyButton value={accountId} label="Copy" className="btn btn-outline btn-sm" />
       </div>
-
-      <div className="btn-row">
-        <button type="button" className="btn btn-outline" onClick={onBack}>
-          Back
-        </button>
-        <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={!available}>
-          Claim @{tag || "…"}
-        </button>
-      </div>
-    </form>
+      <p className="meta" style={{ marginTop: "var(--s2)" }}>
+        You sign in with this, your password and a code. Link X later and your @tag works too.
+      </p>
+    </div>
   );
 }
 
-// ── Step 5 ─────────────────────────────────────────────────────────────────
-
 function PhraseStep({
   words,
-  tag,
+  accountId,
   onFinish,
 }: {
   words: string[];
-  tag: string;
+  accountId: string;
   onFinish: () => void;
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -590,7 +471,7 @@ function PhraseStep({
   function download() {
     const body = [
       "Oink secret phrase",
-      `Tag: @${tag}`,
+      `Account ID: ${accountId}`,
       "",
       words.map((word, index) => `${index + 1}. ${word}`).join("\n"),
       "",
@@ -600,7 +481,7 @@ function PhraseStep({
     const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `oink-${tag}-secret-phrase.txt`;
+    anchor.download = `${accountId}-secret-phrase.txt`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -614,6 +495,8 @@ function PhraseStep({
           reset them. You need them if you ever lose your authenticator app.
         </p>
       </header>
+
+      <AccountIdCard accountId={accountId} />
 
       <div className="reveal-wrap">
         <div className="words" data-hidden={!revealed}>

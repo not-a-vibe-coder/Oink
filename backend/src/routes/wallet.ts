@@ -7,17 +7,17 @@ export const walletRouter = Router();
 
 // GET /api/v1/wallet [S]
 walletRouter.get("/", requireSession, async (req: Request, res: Response) => {
-  const tag = req.userTag!;
+  const accountId = req.accountId!;
 
   try {
-    const walletRes = await query("SELECT public_key FROM wallets WHERE tag = $1", [tag]);
+    const walletRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [accountId]);
     if (walletRes.rows.length === 0) {
       res.status(404).json({ error: "NOT_FOUND", message: "Wallet not found.", details: null });
       return;
     }
 
     const publicKey = walletRes.rows[0].public_key;
-    const balances = await getWalletBalances(tag, publicKey);
+    const balances = await getWalletBalances(accountId, publicKey);
 
     res.status(200).json(balances);
   } catch (err) {
@@ -28,10 +28,10 @@ walletRouter.get("/", requireSession, async (req: Request, res: Response) => {
 
 // GET /api/v1/wallet/address [S]
 walletRouter.get("/address", requireSession, async (req: Request, res: Response) => {
-  const tag = req.userTag!;
+  const accountId = req.accountId!;
 
   try {
-    const walletRes = await query("SELECT public_key FROM wallets WHERE tag = $1", [tag]);
+    const walletRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [accountId]);
     if (walletRes.rows.length === 0) {
       res.status(404).json({ error: "NOT_FOUND", message: "Wallet not found.", details: null });
       return;

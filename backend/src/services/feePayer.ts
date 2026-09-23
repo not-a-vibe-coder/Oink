@@ -30,7 +30,7 @@ export function getFeePayerPublicKey(): PublicKey | null {
 }
 
 export async function checkSponsorshipBudget(
-  tag: string,
+  accountId: string,
   estimatedLamports: bigint = 15000n,
 ): Promise<{ eligible: boolean; reason?: string; remainingToday: number }> {
   const config = getConfig();
@@ -44,16 +44,16 @@ export async function checkSponsorshipBudget(
   }
 
   try {
-    // 1. Tag daily count & lamport usage
-    const tagUsageRes = await query(
+    // 1. Per-account daily count & lamport usage
+    const accountUsageRes = await query(
       `SELECT COUNT(*) as count, COALESCE(SUM(lamports), 0) as total_lamports
        FROM fee_sponsorships
-       WHERE tag = $1 AND day = CURRENT_DATE`,
-      [tag.toLowerCase()],
+       WHERE account_id = $1 AND day = CURRENT_DATE`,
+      [accountId],
     );
 
-    const count = parseInt(tagUsageRes.rows[0]?.count || "0", 10);
-    const totalLamports = BigInt(tagUsageRes.rows[0]?.total_lamports || "0");
+    const count = parseInt(accountUsageRes.rows[0]?.count || "0", 10);
+    const totalLamports = BigInt(accountUsageRes.rows[0]?.total_lamports || "0");
 
     const maxTx = config.sponsorship.maxTxPerDay;
     const remainingToday = Math.max(0, maxTx - count);
@@ -69,7 +69,7 @@ export async function checkSponsorshipBudget(
     if (totalLamports + estimatedLamports > config.sponsorship.maxLamportsPerDay) {
       return {
         eligible: false,
-        reason: "Daily lamport budget exhausted for this tag.",
+        reason: "Daily lamport budget exhausted for this account.",
         remainingToday: 0,
       };
     }
@@ -98,15 +98,15 @@ export async function checkSponsorshipBudget(
 }
 
 export async function recordSponsorship(
-  tag: string,
+  accountId: string,
   signature: string,
   lamports: bigint,
 ): Promise<void> {
   try {
     await query(
-      `INSERT INTO fee_sponsorships (tag, signature, lamports, day, created_at)
+      `INSERT INTO fee_sponsorships (account_id, signature, lamports, day, created_at)
        VALUES ($1, $2, $3, CURRENT_DATE, NOW())`,
-      [tag.toLowerCase(), signature, lamports.toString()],
+      [accountId, signature, lamports.toString()],
     );
   } catch (err) {
     console.error("Record fee sponsorship error:", err);

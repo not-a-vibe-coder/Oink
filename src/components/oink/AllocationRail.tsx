@@ -1,25 +1,25 @@
 import { railColor, rankedByWeight } from "@/lib/rail-palette";
 import { formatBps } from "@/lib/format";
-import type { ElectionItem } from "@/types/token";
+import type { MixItem } from "@/types/token";
 
 /**
  * The signature element. One bar of apportionment, printed the same way on the
- * wallet home, the send preview, the election editor and the public pay page,
+ * wallet home, the send preview, the mix editor and the public pay page,
  * so a person learns to read their split in one place and recognises it in all
  * the others.
  */
 export function AllocationRail({
-  election,
+  mix,
   size = "sm",
   showKey = true,
   label,
 }: {
-  election: ElectionItem[];
+  mix: MixItem[];
   size?: "sm" | "lg";
   showKey?: boolean;
   label?: string;
 }) {
-  const ranked = rankedByWeight(election);
+  const ranked = rankedByWeight(mix);
   const total = ranked.reduce((sum, item) => sum + item.basisPoints, 0) || 10000;
 
   if (ranked.length === 0) {

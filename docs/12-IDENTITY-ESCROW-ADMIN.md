@@ -38,6 +38,13 @@ account ID exists before encryption and never changes, while a tag may arrive la
 aad = utf8("oink-keystore-v1|" + accountId + "|" + publicKeyBase58)
 ```
 
+**Wallets that predate account IDs** (two existed on mainnet when this shipped) keep their
+tag, receive a backfilled account ID in migration 005, and keep a keystore sealed against
+`"oink-keystore-v1|" + tag + "|" + publicKey`. The client tries the account-ID AAD first and
+falls back to the tag AAD only when the account has a tag; both bind the public key. A
+password change or recovery re-seals under the account ID, which retires the fallback for
+that wallet.
+
 The TOTP label becomes `Oink:<accountId>`. Recovery signs
 `"Oink account recovery\nAccount: <accountId>\nNonce: ...\nIssued: ..."`.
 The password may not contain the account ID's random part.

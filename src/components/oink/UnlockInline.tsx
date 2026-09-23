@@ -11,13 +11,15 @@ import { unlockKey } from "@/lib/wallet/unlock";
  * on every payment.
  */
 export function UnlockInline({
+  accountId,
   tag,
   publicKey,
   onUnlocked,
   reason = "Unlock to sign this transaction.",
   submitLabel = "Unlock",
 }: {
-  tag: string;
+  accountId: string;
+  tag: string | null;
   publicKey: string;
   onUnlocked: () => void;
   reason?: string;
@@ -37,7 +39,7 @@ export function UnlockInline({
     setProgress(0);
 
     try {
-      const ok = await unlockKey({ tag, publicKey, password, onProgress: setProgress });
+      const ok = await unlockKey({ accountId, tag, publicKey, password, onProgress: setProgress });
       if (ok) {
         setPassword("");
         onUnlocked();

@@ -2,11 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   authLogout,
   cancelInvoice,
-  checkTagAvailability,
   createInvoice,
   getAsset,
   getAssets,
-  getElections,
+  getMix,
   getFeaturedAssets,
   getInvoice,
   getSession,
@@ -18,20 +17,20 @@ import {
   listSessions,
   resolveTags,
   revokeSession,
-  saveElections,
+  saveMix,
 } from "@/lib/oink-server-fns";
-import type { ElectionItem } from "@/types/token";
+import type { MixItem } from "@/types/token";
 
 /**
  * Query keys are namespaced so a confirmed transfer can invalidate exactly the
- * views it changes: ['wallet'], ['activity'], ['elections', tag].
+ * views it changes: ['wallet'], ['activity'], ['mix', accountId].
  */
 export const queryKeys = {
   session: ["session"] as const,
   wallet: ["wallet"] as const,
   walletAddress: ["wallet", "address"] as const,
   activity: (limit: number, offset: number) => ["activity", limit, offset] as const,
-  elections: (tag: string) => ["elections", tag] as const,
+  mix: (accountId: string) => ["mix", accountId] as const,
   invoices: ["invoices"] as const,
   devices: ["devices"] as const,
 };
@@ -98,20 +97,12 @@ export function useAsset(symbolOrMint: string) {
 
 // ── Tags ───────────────────────────────────────────────────────────────────
 
-export function useTagAvailability(tag: string) {
+/** Profile by tag or account ID. */
+export function useTagProfile(identifier: string) {
   return useQuery({
-    queryKey: ["tagAvailability", tag],
-    queryFn: () => checkTagAvailability({ data: { tag } }),
-    enabled: /^[a-z0-9_]{3,20}$/.test(tag),
-    staleTime: 10_000,
-  });
-}
-
-export function useTagProfile(tag: string) {
-  return useQuery({
-    queryKey: ["tagProfile", tag],
-    queryFn: () => getTagProfile({ data: { tag } }),
-    enabled: Boolean(tag),
+    queryKey: ["tagProfile", identifier],
+    queryFn: () => getTagProfile({ data: { identifier } }),
+    enabled: Boolean(identifier),
     retry: false,
   });
 }
@@ -145,23 +136,23 @@ export function useWalletAddress(enabled = true) {
   });
 }
 
-// ── Elections ──────────────────────────────────────────────────────────────
+// ── Mix ──────────────────────────────────────────────────────────────
 
-export function useElections(tag: string) {
+export function useMix(accountId: string) {
   return useQuery({
-    queryKey: queryKeys.elections(tag),
-    queryFn: () => getElections({ data: { tag } }),
-    enabled: Boolean(tag),
+    queryKey: queryKeys.mix(accountId),
+    queryFn: () => getMix({ data: { identifier: accountId } }),
+    enabled: Boolean(accountId),
   });
 }
 
-export function useSaveElections(tag: string) {
+export function useSaveMix(accountId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (elections: ElectionItem[]) =>
-      saveElections({
+    mutationFn: (mix: MixItem[]) =>
+      saveMix({
         data: {
-          elections: elections.map((e) => ({
+          mix: mix.map((e) => ({
             symbol: e.symbol,
             mint: e.mint,
             basisPoints: e.basisPoints,
@@ -170,8 +161,8 @@ export function useSaveElections(tag: string) {
       }),
     onSuccess: (result) => {
       if (result.ok) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.elections(tag) });
-        queryClient.invalidateQueries({ queryKey: ["tagProfile", tag] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.mix(accountId) });
+        queryClient.invalidateQueries({ queryKey: ["tagProfile"] });
       }
     },
   });
@@ -213,7 +204,7 @@ export function useCreateInvoice() {
       amount: string;
       tokenSymbol?: string;
       memo?: string;
-      applyElection?: boolean;
+      applyMix?: boolean;
       expiresInHours?: number;
     }) => createInvoice({ data: params }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.invoices }),

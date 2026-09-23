@@ -39,9 +39,9 @@ function TermsPage() {
           send. A payment to the wrong address is not recoverable by us or by anyone else.
         </p>
 
-        <h2>Elections and market risk</h2>
+        <h2>Mix and market risk</h2>
         <p>
-          When a payment settles into your election, it is swapped through Jupiter into the assets
+          When a payment settles into your mix, it is swapped through Jupiter into the assets
           you chose. Those assets are tokenized instruments whose value moves with their underlying
           markets, and can fall. Routing depends on available liquidity: when the price impact on an
           elected asset exceeds a safe limit, that portion is settled into USDC instead and the

@@ -9,8 +9,8 @@ export const invoicesRouter = Router();
 
 // POST /api/v1/invoices [S]
 invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => {
-  const { amount, tokenSymbol = "USDC", memo, applyElection = true, expiresInHours = 72 } = req.body || {};
-  const creatorTag = req.userTag!;
+  const { amount, tokenSymbol = "USDC", memo, applyMix = true, expiresInHours = 72 } = req.body || {};
+  const creatorAccountId = req.accountId!;
 
   if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
     res.status(400).json({ error: "VALIDATION_FAILED", message: "Valid positive amount is required.", details: null });
@@ -24,7 +24,7 @@ invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => 
   }
 
   try {
-    const walletRes = await query("SELECT public_key FROM wallets WHERE tag = $1", [creatorTag]);
+    const walletRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [creatorAccountId]);
     if (walletRes.rows.length === 0) {
       res.status(404).json({ error: "NOT_FOUND", message: "Creator wallet not found.", details: null });
       return;
@@ -36,18 +36,18 @@ invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => 
 
     await query(
       `INSERT INTO invoices (
-        id, creator_tag, recipient_wallet, amount, token_mint, token_symbol,
-        memo, apply_election, status, expires_at, created_at
+        id, creator_account_id, recipient_wallet, amount, token_mint, token_symbol,
+        memo, apply_mix, status, expires_at, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, NOW())`,
       [
         invoiceId,
-        creatorTag,
+        creatorAccountId,
         recipientWallet,
         String(amount),
         token.mint,
         token.symbol,
         memo || null,
-        Boolean(applyElection),
+        Boolean(applyMix),
         expiresAt,
       ],
     );
@@ -70,16 +70,16 @@ invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => 
 
 // GET /api/v1/invoices [S] - Creator list
 invoicesRouter.get("/", requireSession, async (req: Request, res: Response) => {
-  const creatorTag = req.userTag!;
+  const creatorAccountId = req.accountId!;
 
   try {
     const rows = await query(
-      `SELECT id, amount, token_mint, token_symbol, memo, apply_election, status,
-              signature, payer_wallet, payer_tag, expires_at, paid_at, created_at
+      `SELECT id, amount, token_mint, token_symbol, memo, apply_mix, status,
+              signature, payer_wallet, payer_account_id, expires_at, paid_at, created_at
        FROM invoices
-       WHERE creator_tag = $1
+       WHERE creator_account_id = $1
        ORDER BY created_at DESC`,
-      [creatorTag],
+      [creatorAccountId],
     );
 
     res.status(200).json({ invoices: rows.rows });
@@ -94,7 +94,13 @@ invoicesRouter.get("/:id", async (req: Request, res: Response) => {
   const invoiceId = req.params.id;
 
   try {
-    const resRow = await query("SELECT * FROM invoices WHERE id = $1", [invoiceId]);
+    const resRow = await query(
+      `SELECT i.*, w.tag AS creator_tag
+       FROM invoices i
+       JOIN wallets w ON w.account_id = i.creator_account_id
+       WHERE i.id = $1`,
+      [invoiceId],
+    );
     if (resRow.rows.length === 0) {
       res.status(404).json({ error: "NOT_FOUND", message: "Invoice not found.", details: null });
       return;
@@ -108,17 +114,17 @@ invoicesRouter.get("/:id", async (req: Request, res: Response) => {
       invoice.status = "expired";
     }
 
-    // Load election if apply_election is true
-    let elections: any[] = [];
-    if (invoice.apply_election) {
-      const elecRes = await query(
+    // Load mix if apply_mix is true
+    let mix: any[] = [];
+    if (invoice.apply_mix) {
+      const mixRes = await query(
         `SELECT asset_symbol, asset_mint, basis_points
-         FROM elections
-         WHERE tag = $1 AND is_active = true
+         FROM mixes
+         WHERE account_id = $1 AND is_active = true
          ORDER BY basis_points DESC`,
-        [invoice.creator_tag],
+        [invoice.creator_account_id],
       );
-      elections = elecRes.rows.map((r) => ({
+      mix = mixRes.rows.map((r) => ({
         symbol: r.asset_symbol,
         mint: r.asset_mint,
         basisPoints: r.basis_points,
@@ -128,14 +134,15 @@ invoicesRouter.get("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json({
       id: invoice.id,
+      creatorAccountId: invoice.creator_account_id,
       creatorTag: invoice.creator_tag,
       recipientWallet: invoice.recipient_wallet,
       amount: invoice.amount,
       tokenSymbol: invoice.token_symbol,
       tokenMint: invoice.token_mint,
       memo: invoice.memo,
-      applyElection: invoice.apply_election,
-      election: elections,
+      applyMix: invoice.apply_mix,
+      mix,
       status: invoice.status,
       expiresAt: new Date(invoice.expires_at).toISOString(),
       createdAt: new Date(invoice.created_at).toISOString(),
@@ -151,12 +158,12 @@ invoicesRouter.get("/:id", async (req: Request, res: Response) => {
 // POST /api/v1/invoices/:id/cancel [S]
 invoicesRouter.post("/:id/cancel", requireSession, async (req: Request, res: Response) => {
   const invoiceId = req.params.id;
-  const creatorTag = req.userTag!;
+  const creatorAccountId = req.accountId!;
 
   try {
     const updateRes = await query(
-      "UPDATE invoices SET status = 'cancelled' WHERE id = $1 AND creator_tag = $2 AND status = 'pending' RETURNING id",
-      [invoiceId, creatorTag],
+      "UPDATE invoices SET status = 'cancelled' WHERE id = $1 AND creator_account_id = $2 AND status = 'pending' RETURNING id",
+      [invoiceId, creatorAccountId],
     );
 
     if (updateRes.rows.length === 0) {
@@ -174,7 +181,7 @@ invoicesRouter.post("/:id/cancel", requireSession, async (req: Request, res: Res
 // POST /api/v1/invoices/:id/confirm
 invoicesRouter.post("/:id/confirm", async (req: Request, res: Response) => {
   const invoiceId = req.params.id;
-  const { signature, payerWallet, payerTag } = req.body || {};
+  const { signature, payerWallet } = req.body || {};
 
   if (!signature || !payerWallet) {
     res.status(400).json({ error: "VALIDATION_FAILED", message: "signature and payerWallet are required.", details: null });
@@ -182,12 +189,15 @@ invoicesRouter.post("/:id/confirm", async (req: Request, res: Response) => {
   }
 
   try {
+    // The payer's account comes from their wallet, not from the request: this endpoint is
+    // unauthenticated, so a client-supplied account would let anyone claim to be the payer.
     const updateRes = await query(
       `UPDATE invoices
-       SET status = 'paid', signature = $1, payer_wallet = $2, payer_tag = $3, paid_at = NOW()
-       WHERE id = $4 AND status = 'pending'
+       SET status = 'paid', signature = $1, payer_wallet = $2,
+           payer_account_id = (SELECT account_id FROM wallets WHERE public_key = $2), paid_at = NOW()
+       WHERE id = $3 AND status = 'pending'
        RETURNING id`,
-      [signature, payerWallet, payerTag || null, invoiceId],
+      [signature, payerWallet, invoiceId],
     );
 
     if (updateRes.rows.length === 0) {

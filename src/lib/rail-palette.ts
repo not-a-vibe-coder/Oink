@@ -4,7 +4,7 @@
  * Deliberately *not* per-token brand colours: a wallet holding eight tickers
  * would turn into a fruit salad and the one accent would stop meaning anything.
  * The rail is ranked — the biggest allocation carries the seal, the rest step
- * down through ink tints — so the same election always draws the same bar and
+ * down through ink tints — so the same mix always draws the same bar and
  * the eye reads proportion before it reads identity.
  */
 const RAMP = [

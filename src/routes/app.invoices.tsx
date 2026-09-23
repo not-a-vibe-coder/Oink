@@ -66,7 +66,7 @@ function RequestsPage() {
                       : invoice.status === "pending"
                         ? `Expires ${formatDateTime(invoice.expires_at)}`
                         : `Created ${timeAgo(invoice.created_at)}`}
-                    {invoice.apply_election ? " · settles into your election" : ""}
+                    {invoice.apply_mix ? " · settles into your mix" : ""}
                   </span>
                 </span>
 

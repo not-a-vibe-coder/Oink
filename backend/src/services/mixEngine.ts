@@ -3,13 +3,13 @@ import { getConfig } from "../config";
 import { resolveSolanaToken, USDC, type SolanaTokenInfo } from "../lib/tokens";
 import { fetchJupiterQuote, type JupiterQuoteResponse } from "./jupiterService";
 
-export interface ElectionLeg {
+export interface MixLeg {
   symbol: string;
   mint: string;
   basisPoints: number; // 1 to 10000
 }
 
-export interface ElectionLegQuote {
+export interface MixLegQuote {
   symbol: string;
   mint: string;
   basisPoints: number;
@@ -22,22 +22,26 @@ export interface ElectionLegQuote {
   rawJupiterQuote?: JupiterQuoteResponse;
 }
 
+// An Oink recipient is keyed by account ID; the tag, when they have one, is only for display.
+export interface QuoteRecipient {
+  kind: "account" | "address";
+  accountId?: string;
+  tag?: string | null;
+  wallet: string;
+  displayName?: string;
+}
+
 export interface StoredQuote {
   quoteId: string;
-  senderTag?: string;
+  senderAccountId?: string;
   senderWallet: string;
-  recipient: {
-    kind: "tag" | "address";
-    tag?: string;
-    wallet: string;
-    displayName?: string;
-  };
+  recipient: QuoteRecipient;
   inputToken: SolanaTokenInfo;
   totalIn: string;
   totalInBase: string;
-  legs: ElectionLegQuote[];
+  legs: MixLegQuote[];
   networkFeeLamports: number;
-  applyElection: boolean;
+  applyMix: boolean;
   sponsorFee: boolean;
   expiresAt: string;
   createdAt: number;
@@ -85,19 +89,14 @@ export function parseTokenUnits(amountFormatted: string | number, decimals: numb
   return BigInt(combined).toString();
 }
 
-export async function calculateElectionQuotes(params: {
-  senderTag?: string;
+export async function calculateMixQuotes(params: {
+  senderAccountId?: string;
   senderWallet: string;
-  recipient: {
-    kind: "tag" | "address";
-    tag?: string;
-    wallet: string;
-    displayName?: string;
-  };
+  recipient: QuoteRecipient;
   fromSymbolOrMint: string;
   amountInFormatted: string; // e.g. "25.00"
-  elections: ElectionLeg[];
-  applyElection: boolean;
+  mix: MixLeg[];
+  applyMix: boolean;
   slippageBps?: number;
 }): Promise<StoredQuote> {
   const config = getConfig();
@@ -110,10 +109,10 @@ export async function calculateElectionQuotes(params: {
   const slippageBps = params.slippageBps ?? config.defaultSlippageBps;
   const safeSettleCap = config.safeSettlePriceImpactPct;
 
-  // If sending to raw address or applyElection is false, 1 single leg
-  const legsToCompute: ElectionLeg[] =
-    params.applyElection && params.elections.length > 0
-      ? params.elections
+  // If sending to raw address or applyMix is false, 1 single leg
+  const legsToCompute: MixLeg[] =
+    params.applyMix && params.mix.length > 0
+      ? params.mix
       : [{ symbol: inputToken.symbol, mint: inputToken.mint, basisPoints: 10000 }];
 
   // 1. Distribute amounts via BigInt integer math
@@ -240,7 +239,7 @@ export async function calculateElectionQuotes(params: {
 
   const result: StoredQuote = {
     quoteId,
-    senderTag: params.senderTag,
+    senderAccountId: params.senderAccountId,
     senderWallet: params.senderWallet,
     recipient: params.recipient,
     inputToken,
@@ -248,7 +247,7 @@ export async function calculateElectionQuotes(params: {
     totalInBase: totalInBaseBig.toString(),
     legs: computedLegs,
     networkFeeLamports: 15000,
-    applyElection: params.applyElection,
+    applyMix: params.applyMix,
     sponsorFee: true,
     expiresAt,
     createdAt: Date.now(),

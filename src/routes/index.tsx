@@ -12,7 +12,7 @@ const TICKER_ITEMS = [
   "Human-Readable @tag",
   "Password + TOTP Keystore",
   "Zero Seed-Phrase Onboarding",
-  "Portfolio Elections (SPYx, TSLAx)",
+  "Portfolio Mix (SPYx, TSLAx)",
   "Non-Custodial on Solana",
   "Gas-Sponsored Transfers",
 ];
@@ -33,7 +33,7 @@ const TRUSTED_COMPANIES = [
 const DRAWER_LINKS = [
   { label: "Create Wallet", href: "/create" },
   { label: "Unlock / Recover", href: "/unlock" },
-  { label: "Portfolio Elections", href: "/app/election" },
+  { label: "Portfolio Mix", href: "/app/mix" },
   { label: "Tokenized Equities", href: "#stocks" },
   { label: "Security & Keys", href: "#security" },
   { label: "Documentation", href: "https://github.com" },
@@ -203,9 +203,9 @@ function LandingPage() {
 
         {/* Subtitle */}
         <p className="alwayzz-hero-sub">
-          Hold a portfolio, not a currency. The self-custodial Solana wallet where your tag is your
-          account, onboarding needs no seed phrase, and inbound payments settle atomically into your
-          elected stock portfolio.
+          Hold a portfolio, not a currency. The self-custodial Solana wallet you open with a password
+          and a code instead of a seed phrase, where inbound payments settle atomically into your
+          stock mix.
         </p>
 
         {/* CTA Row */}

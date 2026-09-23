@@ -15,30 +15,30 @@ export function getClientIp(req: Request): string {
 }
 
 export async function recordLoginAttempt(
-  tag: string | null,
+  accountId: string | null,
   ipHash: string,
   kind: "unlock" | "enroll" | "totp" | "recover",
   succeeded: boolean,
 ): Promise<void> {
   try {
     await query(
-      "INSERT INTO login_attempts (tag, ip_hash, kind, succeeded, created_at) VALUES ($1, $2, $3, $4, NOW())",
-      [tag ? tag.toLowerCase() : null, ipHash, kind, succeeded],
+      "INSERT INTO login_attempts (account_id, ip_hash, kind, succeeded, created_at) VALUES ($1, $2, $3, $4, NOW())",
+      [accountId, ipHash, kind, succeeded],
     );
   } catch (err) {
     console.error("Failed to record login attempt:", err);
   }
 }
 
-export async function checkTagLockout(tag: string): Promise<{ locked: boolean; retryAfterSeconds?: number }> {
+export async function checkAccountLockout(accountId: string): Promise<{ locked: boolean; retryAfterSeconds?: number }> {
   try {
     const res = await query(
       `SELECT succeeded, created_at
        FROM login_attempts
-       WHERE tag = $1 AND kind IN ('unlock', 'totp', 'recover')
+       WHERE account_id = $1 AND kind IN ('unlock', 'totp', 'recover')
        ORDER BY created_at DESC
        LIMIT 25`,
-      [tag.toLowerCase()],
+      [accountId],
     );
 
     let consecutiveFailures = 0;
@@ -72,7 +72,7 @@ export async function checkTagLockout(tag: string): Promise<{ locked: boolean; r
       };
     }
   } catch (err) {
-    console.error("Check tag lockout error:", err);
+    console.error("Check account lockout error:", err);
   }
 
   return { locked: false };

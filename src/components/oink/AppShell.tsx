@@ -10,7 +10,7 @@ const NAV: Array<{
     | "/app"
     | "/app/send"
     | "/app/receive"
-    | "/app/election"
+    | "/app/mix"
     | "/app/activity"
     | "/app/invoices"
     | "/app/settings";
@@ -20,7 +20,7 @@ const NAV: Array<{
   { to: "/app", label: "Wallet", exact: true },
   { to: "/app/send", label: "Send" },
   { to: "/app/receive", label: "Receive" },
-  { to: "/app/election", label: "Election" },
+  { to: "/app/mix", label: "Mix" },
   { to: "/app/activity", label: "Activity" },
   { to: "/app/invoices", label: "Requests" },
   { to: "/app/settings", label: "Settings" },
@@ -28,10 +28,13 @@ const NAV: Array<{
 
 export function AppShell({
   tag,
+  accountId,
   avatarSeed,
   children,
 }: {
-  tag: string | undefined;
+  tag: string | null | undefined;
+  /** Shown in place of the tag until the user links X. */
+  accountId?: string;
   avatarSeed?: string;
   children: ReactNode;
 }) {
@@ -47,10 +50,10 @@ export function AppShell({
           </Link>
 
           <div className="row" style={{ marginLeft: "auto", gap: "var(--s3)" }}>
-            {tag && (
+            {(tag || accountId) && (
               <span className="identity">
-                <PigAvatar seed={avatarSeed ?? tag} size={30} />
-                <span className="identity-tag">@{tag}</span>
+                <PigAvatar seed={avatarSeed ?? tag ?? accountId ?? ""} size={30} />
+                <span className="identity-tag">{tag ? `@${tag}` : accountId}</span>
               </span>
             )}
             <button

@@ -35,7 +35,7 @@ type Phase = "compose" | "signing" | "submitting" | "sent";
 
 function SendPage() {
   const { token: tokenParam, to: toParam, amount: amountParam } = Route.useSearch();
-  const { tag, publicKey } = useWalletSession();
+  const { accountId, tag, publicKey } = useWalletSession();
   const { unlocked } = useKeySession();
   const wallet = useWallet();
   const queryClient = useQueryClient();
@@ -235,7 +235,7 @@ function SendPage() {
       <header className="page-head">
         <h1 className="page-title">Send</h1>
         <p className="page-sub">
-          Pay a tag and it settles into their election. Pay a raw address and it arrives exactly as
+          Pay a tag and it settles into their mix. Pay a raw address and it arrives exactly as
           sent.
         </p>
       </header>
@@ -265,7 +265,7 @@ function SendPage() {
 
           {recipientIsAddress ? (
             <p className="hint">
-              A raw address. This one has no election, so it receives {symbol || "your token"} as
+              A raw address. This one has no mix, so it receives {symbol || "your token"} as
               sent.
             </p>
           ) : (
@@ -368,7 +368,7 @@ function SendPage() {
             {quote && (
               <div className="panel">
                 <AllocationRail
-                  election={quote.legs.map((leg) => ({
+                  mix={quote.legs.map((leg) => ({
                     symbol: leg.symbol,
                     mint: leg.mint,
                     basisPoints: leg.basisPoints,
@@ -422,6 +422,7 @@ function SendPage() {
         {/* 4 — confirm */}
         {!unlocked ? (
           <UnlockInline
+            accountId={accountId}
             tag={tag}
             publicKey={publicKey}
             onUnlocked={() => setSendError(null)}

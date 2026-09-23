@@ -4,7 +4,7 @@
  * Enrollment, unlock, password rotation and phrase recovery all do the same four
  * things in different orders: derive `master` from the password with Argon2id,
  * split it into `encKey` / `authKey`, seal or open the keystore under an AAD
- * bound to the tag and public key, and hand only `authKey` to the server.
+ * bound to the account ID and public key, and hand only `authKey` to the server.
  *
  * `encKey`, the entropy and the mnemonic never leave this process. Callers get
  * `authKey` base64-encoded and nothing else that could decrypt a wallet.
@@ -43,8 +43,19 @@ export function zero(...buffers: Array<Uint8Array | null | undefined>): void {
 /**
  * Binds the ciphertext to the identity it belongs to, so a keystore swapped in
  * by a malicious server fails closed at decryption rather than at signing.
+ * The account ID, not the tag: it exists before sealing and never changes,
+ * while a tag arrives later through X (docs/12 §2).
  */
-export function keystoreAad(tag: string, publicKey: string): Uint8Array {
+export function keystoreAad(accountId: string, publicKey: string): Uint8Array {
+  return new TextEncoder().encode(`oink-keystore-v1|${accountId}|${publicKey}`);
+}
+
+/**
+ * Wallets created before account IDs existed were sealed against their tag. They open
+ * with this until the next password change or recovery re-seals them under the account
+ * ID. Both forms bind the public key, which is what stops a swapped blob.
+ */
+function legacyTagAad(tag: string, publicKey: string): Uint8Array {
   return new TextEncoder().encode(`oink-keystore-v1|${tag}|${publicKey}`);
 }
 
@@ -75,12 +86,12 @@ export async function deriveKeys(
 export async function sealKeystore(args: {
   encKey: Uint8Array;
   entropy: Uint8Array;
-  tag: string;
+  accountId: string;
   publicKey: string;
   salt: Uint8Array;
   params?: KdfParams;
 }): Promise<KeystoreBlobPayload> {
-  const blob = await seal(args.encKey, args.entropy, keystoreAad(args.tag, args.publicKey));
+  const blob = await seal(args.encKey, args.entropy, keystoreAad(args.accountId, args.publicKey));
   return {
     ciphertext: blob.ciphertext,
     nonce: blob.nonce,
@@ -99,11 +110,18 @@ export async function sealKeystore(args: {
 export async function openKeystore(args: {
   encKey: Uint8Array;
   blob: KeystoreBlob;
-  tag: string;
+  accountId: string;
   publicKey: string;
+  /** The account's tag, if any: lets a pre-account-ID keystore still open. */
+  tag?: string | null;
 }): Promise<Uint8Array | null> {
   try {
-    return await open(args.encKey, args.blob, keystoreAad(args.tag, args.publicKey));
+    return await open(args.encKey, args.blob, keystoreAad(args.accountId, args.publicKey));
+  } catch {
+    if (!args.tag) return null;
+  }
+  try {
+    return await open(args.encKey, args.blob, legacyTagAad(args.tag, args.publicKey));
   } catch {
     return null;
   }
