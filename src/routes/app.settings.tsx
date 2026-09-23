@@ -2,6 +2,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Eye, LogOut } from "lucide-react";
 import { CopyButton } from "@/components/oink/CopyButton";
+import { LinkedAccounts } from "@/components/oink/LinkedAccounts";
 import { CodeField, PasswordField } from "@/components/oink/fields";
 import { useDeviceSessions, useLogout, useRevokeSession } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
@@ -77,17 +78,11 @@ function SettingsPage() {
           <h2 className="eyebrow" style={{ marginBottom: "var(--s3)" }}>
             Connections
           </h2>
-          <div className="panel">
-            <div className="row-between">
-              <div>
-                <p className="ledger-title">X / Oinkbot</p>
-                <p className="meta" style={{ marginTop: 4 }}>
-                  Pay by mention, once it ships. Never required to use Oink.
-                </p>
-              </div>
-              <span className="badge">Coming soon</span>
-            </div>
-          </div>
+          <LinkedAccounts />
+          <p className="footnote" style={{ marginTop: "var(--s2)" }}>
+            Paying by X mention through Oinkbot is coming later. Neither link is needed to send,
+            receive or sign in.
+          </p>
         </section>
 
         <section>

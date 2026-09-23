@@ -63,8 +63,10 @@ function SendPage() {
   const selected = holdings.find((holding) => holding.symbol === symbol);
   const recipientIsAddress = isLikelyAddress(recipient);
   const recipientTag = recipientIsAddress ? "" : normalizeTagInput(recipient);
+  // Oink users without a tag are paid at their account ID.
+  const recipientIsAccountId = /^oink-[0-9a-hjkmnp-tv-z]{4}-[0-9a-hjkmnp-tv-z]{4}$/.test(recipientTag);
   const typeahead = useResolveTags(
-    recipientTag.length >= 2 && !recipientIsAddress ? recipientTag : "",
+    recipientTag.length >= 2 && !recipientIsAddress && !recipientIsAccountId ? recipientTag : "",
   );
 
   const amountValid = useMemo(() => {
@@ -82,7 +84,11 @@ function SendPage() {
 
     const result = await quoteTransfer({
       data: {
-        recipient: recipientIsAddress ? recipient.trim() : `@${recipientTag}`,
+        recipient: recipientIsAddress
+          ? recipient.trim()
+          : recipientIsAccountId
+            ? recipientTag
+            : `@${recipientTag}`,
         fromSymbolOrMint: symbol,
         amountIn: amount,
       },
@@ -95,7 +101,7 @@ function SendPage() {
       setQuote(null);
       setQuoteError(result.message);
     }
-  }, [canQuote, recipient, recipientIsAddress, recipientTag, symbol, amount]);
+  }, [canQuote, recipient, recipientIsAddress, recipientIsAccountId, recipientTag, symbol, amount]);
 
   // Debounced re-quote as the form changes.
   const quoteRef = useRef(requestQuote);
@@ -246,22 +252,17 @@ function SendPage() {
           <label className="field-label" htmlFor="recipient">
             To
           </label>
-          <div className="input-group">
-            <span className="input-lead" aria-hidden="true">
-              @
-            </span>
-            <input
-              id="recipient"
-              className="input"
-              value={recipient}
-              onChange={(event) => setRecipient(event.target.value)}
-              placeholder="tag or Solana address"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              autoComplete="off"
-            />
-          </div>
+          <input
+            id="recipient"
+            className="input"
+            value={recipient}
+            onChange={(event) => setRecipient(event.target.value)}
+            placeholder="@tag, account ID or Solana address"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="off"
+          />
 
           {recipientIsAddress ? (
             <p className="hint">
@@ -277,7 +278,7 @@ function SendPage() {
                     key={result.tag}
                     type="button"
                     className="chip"
-                    onClick={() => setRecipient(result.tag)}
+                    onClick={() => setRecipient(`@${result.tag}`)}
                   >
                     <PigAvatar seed={result.avatarSeed} size={18} />@{result.tag}
                   </button>

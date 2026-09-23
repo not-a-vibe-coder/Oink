@@ -13,8 +13,9 @@ export function generateAccountId(): string {
   return `oink-${out.slice(0, 4)}-${out.slice(4)}`;
 }
 
+// A leading "@" or "$" is tolerated because the send box used to force one onto every input.
 export function normalizeAccountId(raw: string): string {
-  return raw.trim().toLowerCase();
+  return raw.trim().replace(/^[@$]/, "").toLowerCase();
 }
 
 export function isAccountId(raw: string): boolean {

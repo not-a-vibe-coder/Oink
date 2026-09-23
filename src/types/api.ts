@@ -63,6 +63,8 @@ export interface SessionInfo {
   accountId: string;
   tag: string | null;
   publicKey: string;
+  email: string | null;
+  xUsername: string | null;
   expiresAt: string;
   createdAt: string;
 }
@@ -182,4 +184,86 @@ export interface PublicInvoice {
   createdAt: string;
   paidAt: string | null;
   signature: string | null;
+}
+
+export interface IdentityLinks {
+  /** False until Privy keys are set on the API; the UI then says linking isn't on yet. */
+  configured: boolean;
+  tag: string | null;
+  email: string | null;
+  emailLinkedAt: string | null;
+  x: { username: string; linkedAt: string } | null;
+}
+
+/** Whatever Postgres hands back as JSON; `unknown` will not cross a server function. */
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
+export interface AdminPage {
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AdminOverview {
+  wallets: number;
+  wallets_24h: number;
+  tagged: number;
+  emails_linked: number;
+  x_linked: number;
+  transfers: number;
+  transfers_24h: number;
+  transfers_failed: number;
+  failed_logins_24h: number;
+  flagged: number;
+  sponsored_lamports_today: string;
+  feePayer: string | null;
+  feePayerSol: string | null;
+}
+
+export interface AdminTransfer {
+  id: number;
+  signature: string;
+  direction: string;
+  source: string;
+  status: string;
+  input_symbol: string;
+  input_amount: string;
+  output_breakdown: Array<{ symbol: string; outAmountFormatted?: string; basisPoints?: number }> | null;
+  mix_applied: boolean;
+  fee_sponsored: boolean;
+  sender_account_id: string | null;
+  sender_tag: string | null;
+  sender_wallet: string;
+  recipient_account_id: string | null;
+  recipient_tag: string | null;
+  recipient_wallet: string;
+  created_at: string;
+  confirmed_at: string | null;
+  review_status: "reviewed" | "flagged" | null;
+  review_note: string | null;
+}
+
+export interface AdminActivityItem {
+  source: "event" | "login";
+  id: number;
+  account_id: string | null;
+  tag: string | null;
+  kind: string;
+  detail: { [key: string]: Json };
+  ip: string | null;
+  succeeded: boolean | null;
+  created_at: string;
+  review_status: "reviewed" | "flagged" | null;
+  review_note: string | null;
+  reviewed_by: string | null;
+}
+
+export interface AdminTableRows {
+  table: string;
+  columns: string[];
+  hiddenColumns: string[];
+  rows: Array<{ [column: string]: Json }>;
+  total: number;
+  limit: number;
+  offset: number;
 }

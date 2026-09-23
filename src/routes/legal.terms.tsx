@@ -57,8 +57,10 @@ function TermsPage() {
 
         <h2>Tags</h2>
         <p>
-          Tags are first come, first served, unique, and permanent once claimed. Reserved tags and
-          tags that impersonate others may be withheld or reclaimed.
+          Your tag is your X username, claimed by linking your X account. It belongs to that X
+          account: if someone else later proves they own that X username, the tag moves to them
+          and you keep your account ID. Reserved names can't be tags. Your account ID is
+          permanent and always works for signing in and being paid.
         </p>
 
         <h2>No warranty</h2>

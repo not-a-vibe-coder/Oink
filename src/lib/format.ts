@@ -145,3 +145,10 @@ export function describeDevice(userAgent: string | null): string {
             : "";
   return platform ? `${browser} on ${platform}` : browser;
 }
+
+/** Who a transfer was with: their @tag, else their Oink account ID, else the raw address. */
+export function counterparty(tag: string | null, accountId: string | null, wallet: string): string {
+  if (tag) return `@${tag}`;
+  if (accountId) return accountId;
+  return shortAddress(wallet);
+}

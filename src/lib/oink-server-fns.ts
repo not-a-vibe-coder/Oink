@@ -17,12 +17,18 @@ import { z } from "zod";
 import { OinkApiError, oinkFetch, oinkFetchRaw } from "@/server/oink-api";
 import type { OinkToken, MixItem, WalletHolding } from "@/types/token";
 import type {
+  AdminActivityItem,
+  AdminOverview,
+  AdminPage,
+  AdminTableRows,
+  AdminTransfer,
   AuthChallengeResponse,
   AuthUnlockResponse,
   BuiltTransfer,
   DeviceSession,
   EnrollCompleteResponse,
   EnrollStartResponse,
+  IdentityLinks,
   InvoiceRow,
   OinkResult,
   PublicInvoice,
@@ -550,5 +556,130 @@ export const confirmInvoice = createServerFn({ method: "POST" })
           },
         },
       ),
+    ),
+  );
+
+// ── Linked identities ──────────────────────────────────────────────────────
+// The identity token is Privy's proof that the browser just completed an email code or
+// X OAuth. It is a bearer credential for an hour, so it goes straight to the API and is
+// never stored or logged.
+
+export const getIdentityLinks = createServerFn({ method: "GET" }).handler(() =>
+  proxy(() => oinkFetch<IdentityLinks>("/api/v1/identity", { cookie: inboundCookie() })),
+);
+
+export const linkIdentity = createServerFn({ method: "POST" })
+  .validator(z.object({ kind: z.enum(["email", "x"]), identityToken: z.string().min(20).max(8192) }))
+  .handler(({ data }) =>
+    guard(() =>
+      oinkFetch<IdentityLinks & { tagOutcome?: "assigned" | "kept" | "invalid" | "reserved" }>(
+        `/api/v1/identity/${data.kind}`,
+        { method: "POST", body: { identityToken: data.identityToken }, cookie: inboundCookie() },
+      ),
+    ),
+  );
+
+export const unlinkIdentity = createServerFn({ method: "POST" })
+  .validator(z.object({ kind: z.enum(["email", "x"]) }))
+  .handler(({ data }) =>
+    guard(() =>
+      oinkFetch<IdentityLinks>(`/api/v1/identity/${data.kind}`, { method: "DELETE", cookie: inboundCookie() }),
+    ),
+  );
+
+// ── Admin ──────────────────────────────────────────────────────────────────
+// The oink_admin cookie is minted and cleared by the API and relayed like the wallet
+// session cookie; it never grants wallet access, and a wallet session never grants this.
+
+export const adminLogin = createServerFn({ method: "POST" })
+  .validator(z.object({ identityToken: z.string().min(20).max(8192) }))
+  .handler(({ data }) =>
+    guard(async () => {
+      const { data: body, setCookies } = await oinkFetchRaw<{ email: string; expiresAt: string }>(
+        "/api/v1/admin/login",
+        { method: "POST", body: data },
+      );
+      relaySetCookies(setCookies);
+      return body;
+    }),
+  );
+
+export const adminLogout = createServerFn({ method: "POST" }).handler(() =>
+  guard(async () => {
+    const { setCookies } = await oinkFetchRaw<Record<string, never>>("/api/v1/admin/logout", {
+      method: "POST",
+      cookie: inboundCookie(),
+    });
+    relaySetCookies(setCookies);
+    return { loggedOut: true };
+  }),
+);
+
+export const adminMe = createServerFn({ method: "GET" }).handler(() =>
+  guard(() => oinkFetch<{ email: string }>("/api/v1/admin/me", { cookie: inboundCookie() })),
+);
+
+export const adminOverview = createServerFn({ method: "GET" }).handler(() =>
+  proxy(() => oinkFetch<AdminOverview>("/api/v1/admin/overview", { cookie: inboundCookie() })),
+);
+
+const pageSchema = z.object({
+  limit: z.number().int().positive().max(200).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
+export const adminTransfers = createServerFn({ method: "GET" })
+  .validator(pageSchema.extend({ status: z.string().trim().optional(), q: z.string().trim().max(128).optional() }))
+  .handler(({ data }) =>
+    proxy(() =>
+      oinkFetch<AdminPage & { transfers: AdminTransfer[] }>("/api/v1/admin/transfers", {
+        query: data,
+        cookie: inboundCookie(),
+      }),
+    ),
+  );
+
+export const adminActivity = createServerFn({ method: "GET" })
+  .validator(pageSchema.extend({ filter: z.enum(["all", "unreviewed", "flagged", "failures"]).optional() }))
+  .handler(({ data }) =>
+    proxy(() =>
+      oinkFetch<AdminPage & { items: AdminActivityItem[] }>("/api/v1/admin/activity", {
+        query: data,
+        cookie: inboundCookie(),
+      }),
+    ),
+  );
+
+export const adminReview = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      source: z.enum(["event", "login", "transfer"]),
+      sourceId: z.number().int(),
+      status: z.enum(["reviewed", "flagged", "clear"]),
+      note: z.string().trim().max(500).optional(),
+    }),
+  )
+  .handler(({ data }) =>
+    guard(() =>
+      oinkFetch<{ status: string }>("/api/v1/admin/reviews", { method: "POST", body: data, cookie: inboundCookie() }),
+    ),
+  );
+
+export const adminTables = createServerFn({ method: "GET" }).handler(() =>
+  proxy(() =>
+    oinkFetch<{ tables: Array<{ name: string; approx_rows: number }> }>("/api/v1/admin/tables", {
+      cookie: inboundCookie(),
+    }),
+  ),
+);
+
+export const adminTable = createServerFn({ method: "GET" })
+  .validator(pageSchema.extend({ name: z.string().regex(/^[a-z_]+$/) }))
+  .handler(({ data }) =>
+    proxy(() =>
+      oinkFetch<AdminTableRows>(`/api/v1/admin/tables/${data.name}`, {
+        query: { limit: data.limit, offset: data.offset },
+        cookie: inboundCookie(),
+      }),
     ),
   );

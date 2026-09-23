@@ -189,3 +189,17 @@ Without the Privy settings the app still runs: linking, held payments and admin 
 4. Paying an email or X username; held payments.
 5. Claim, refund job, Resend emails.
 6. Live test against Privy and Resend once keys exist.
+
+---
+
+## 11. Client IPs and rate limits
+
+Every API call leaves from the frontend's server functions on Vercel, so the API used to see
+Vercel's address for every user: per-IP limits and lockout bookkeeping were effectively
+global. The proxy now forwards the browser IP (Vercel's `x-real-ip`) as `x-oink-client-ip`
+together with `OINK_PROXY_SECRET`; the API trusts that header only when the secret matches,
+and otherwise uses the last `X-Forwarded-For` hop, which its own platform proxy appends.
+
+The IP limiter also used to count `login_attempts` rows of its own kind, which only unlock
+and recovery wrote, so the challenge and `enroll/start` limits never engaged. It now counts
+its own admissions in `rate_limit_hits`.

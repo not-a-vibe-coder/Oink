@@ -16,6 +16,11 @@ OINK_API_FALLBACK_URL=https://<service>.onrender.com
 VITE_APP_URL=https://<domain>
 VITE_SOLANA_NETWORK=devnet          # devnet while building; mainnet-beta for the demo
 VITE_SOLANA_EXPLORER=https://solscan.io
+VITE_PRIVY_APP_ID=                  # public; without it linking and /admin sign-in show as off
+
+# Server-side. Same value as the backend's: lets the API trust the browser IP this proxy
+# forwards. Without it every user shares Vercel's IP for rate limits and lockouts.
+OINK_PROXY_SECRET=
 ```
 
 Deliberately **not** in the frontend env: the RPC URL (reads go through the API so the RPC
@@ -61,6 +66,16 @@ OINK_FEE_WALLET=
 # Settlement defaults
 DEFAULT_SLIPPAGE_BPS=100
 SAFE_SETTLE_PRICE_IMPACT_PCT=3
+
+# Must equal the frontend's OINK_PROXY_SECRET (see §1).
+OINK_PROXY_SECRET=
+
+# Privy proves email and X ownership for linking and admin sign-in (docs/12). Optional:
+# without these, those endpoints answer 503 NOT_CONFIGURED and everything else works.
+PRIVY_APP_ID=
+PRIVY_VERIFICATION_KEY=   # ES256 public key (PEM) from the Privy dashboard; "
+" escapes are fine
+ADMIN_EMAILS=             # comma-separated; the only addresses that can sign in to /admin
 
 # Phase 2 only
 X_BOT_ENABLED=false

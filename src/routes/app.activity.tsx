@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Sheet } from "@/components/oink/Sheet";
 import { useActivity } from "@/hooks/useOink";
-import { formatDateTime, formatTokenAmount, shortAddress, timeAgo } from "@/lib/format";
+import { formatDateTime, formatTokenAmount, shortAddress, timeAgo, counterparty } from "@/lib/format";
 import type { TransferRow } from "@/types/api";
 
 export const Route = createFileRoute("/app/activity")({
@@ -52,8 +52,8 @@ function ActivityPage() {
                 <span className="ledger-main">
                   <span className="ledger-title">
                     {transfer.isOutgoing
-                      ? `To @${transfer.recipient_tag ?? shortAddress(transfer.recipient_wallet)}`
-                      : `From @${transfer.sender_tag ?? shortAddress(transfer.sender_wallet)}`}
+                      ? `To ${counterparty(transfer.recipient_tag, transfer.recipient_account_id, transfer.recipient_wallet)}`
+                      : `From ${counterparty(transfer.sender_tag, transfer.sender_account_id, transfer.sender_wallet)}`}
                   </span>
                   <span className="ledger-sub">
                     {timeAgo(transfer.confirmed_at ?? transfer.created_at)}

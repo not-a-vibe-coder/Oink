@@ -19,6 +19,7 @@ describe("account IDs", () => {
 
   test("accepts any case and surrounding space", () => {
     expect(isAccountId("  OINK-K7P2-9XQM ")).toBe(true);
+    expect(isAccountId("@oink-k7p2-9xqm")).toBe(true);
     expect(isAccountId("oink-k7p2-9xq")).toBe(false);
     expect(isAccountId("oink-k7p2-9xqu")).toBe(false);
   });

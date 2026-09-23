@@ -1,13 +1,14 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUpRight, Fuel } from "lucide-react";
 import { AllocationRail } from "@/components/oink/AllocationRail";
 import { CopyButton } from "@/components/oink/CopyButton";
+import { ClaimTagAction } from "@/components/oink/LinkedAccounts";
 import { Monogram } from "@/components/oink/Monogram";
 import { Sheet } from "@/components/oink/Sheet";
 import { useActivity, useMix, useWallet, useWalletAddress } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
-import { formatTokenAmount, formatUsd, shortAddress, splitUsd, timeAgo } from "@/lib/format";
+import { formatTokenAmount, formatUsd, shortAddress, splitUsd, timeAgo, counterparty } from "@/lib/format";
 import type { WalletHolding } from "@/types/token";
 
 export const Route = createFileRoute("/app/")({
@@ -98,7 +99,7 @@ function WalletHome() {
               <div className="empty">
                 <p className="empty-title">No assets yet</p>
                 <p className="empty-note">
-                  Share your tag or your address and the first payment will land in your mix.
+                  Share your account ID, tag or address and the first payment will land in your mix.
                 </p>
                 <Link
                   to="/app/receive"
@@ -183,8 +184,8 @@ function WalletHome() {
                     <span className="ledger-main">
                       <span className="ledger-title">
                         {transfer.isOutgoing
-                          ? `To @${transfer.recipient_tag ?? shortAddress(transfer.recipient_wallet)}`
-                          : `From @${transfer.sender_tag ?? shortAddress(transfer.sender_wallet)}`}
+                          ? `To ${counterparty(transfer.recipient_tag, transfer.recipient_account_id, transfer.recipient_wallet)}`
+                          : `From ${counterparty(transfer.sender_tag, transfer.sender_account_id, transfer.sender_wallet)}`}
                       </span>
                       <span className="ledger-sub">
                         {timeAgo(transfer.confirmed_at ?? transfer.created_at)}
@@ -258,7 +259,56 @@ function WalletHome() {
           </div>
         )}
       </Sheet>
+
+      {!tag && <ClaimTagPrompt accountId={accountId} />}
     </main>
+  );
+}
+
+/**
+ * Wallets start without a tag; linking X is how one gets claimed (docs/12 §3). Offered once
+ * per account on this device, and always reachable later from Settings. It also has to
+ * be mounted when X's OAuth screen sends the user back here, to finish the link.
+ */
+function ClaimTagPrompt({ accountId }: { accountId: string }) {
+  const dismissKey = `oink:claim-tag-dismissed:${accountId}`;
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      setOpen(localStorage.getItem(dismissKey) !== "1");
+    } catch {
+      setOpen(true);
+    }
+  }, [dismissKey]);
+
+  function dismiss() {
+    try {
+      localStorage.setItem(dismissKey, "1");
+    } catch {
+      /* the prompt just comes back next visit */
+    }
+    setOpen(false);
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onClose={dismiss}
+      title="Claim your @tag"
+      description="Link your X account and your X username becomes your Oink tag."
+    >
+      <div className="stack">
+        <p className="meta">
+          People can then pay you at @yourname instead of your account ID. Linking is optional —
+          you can do it later from Settings.
+        </p>
+        <ClaimTagAction onDone={dismiss} />
+        <button type="button" className="btn btn-quiet btn-block" onClick={dismiss}>
+          Not now
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
