@@ -24,11 +24,13 @@ export interface MixLegQuote {
 
 // An Oink recipient is keyed by account ID; the tag, when they have one, is only for display.
 export interface QuoteRecipient {
-  kind: "account" | "address";
+  kind: "account" | "address" | "held";
   accountId?: string;
   tag?: string | null;
+  /** For a held payment, empty until /build creates the recipient's holding wallet. */
   wallet: string;
   displayName?: string;
+  held?: { kind: "email"; email: string } | { kind: "x"; username: string };
 }
 
 export interface StoredQuote {

@@ -1,8 +1,14 @@
 import crypto from "node:crypto";
 import { Router, type Request, type Response } from "express";
-import { PublicKey, VersionedTransaction } from "@solana/web3.js";
+import { VersionedTransaction } from "@solana/web3.js";
 import { query } from "../db";
-import { identifierLookup, parseIdentifier } from "../lib/accountId";
+import { identifierLookup } from "../lib/accountId";
+import { parseRecipient } from "../lib/recipient";
+import { getConfig } from "../config";
+import { sendEmail, heldPaymentEmail } from "../services/email";
+import { lookupXUser } from "../services/xUsers";
+import { heldPaymentsConfigured, HeldPaymentsNotConfiguredError, type HeldIdentity } from "../services/held/provider";
+import { ensureHoldingWallet, formatBaseUnits, recordHeldDeposit } from "../services/held/heldPayments";
 import { requireSession } from "../middleware/session";
 import {
   calculateMixQuotes,
@@ -27,15 +33,6 @@ setInterval(() => {
     }
   }
 }, 10_000);
-
-function isSolanaAddress(addr: string): boolean {
-  try {
-    new PublicKey(addr);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 // POST /api/v1/transfer/quote [S]
 transferRouter.post("/quote", requireSession, async (req: Request, res: Response) => {
@@ -66,22 +63,64 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
     let effectiveApplyMix = applyMix;
 
     const trimmedRecipient = String(recipient).trim();
-    if (isSolanaAddress(trimmedRecipient)) {
+    const parsed = parseRecipient(trimmedRecipient);
+    if (!parsed) {
+      res.status(404).json({ error: "NOT_FOUND", message: `Recipient ${trimmedRecipient} not found.`, details: null });
+      return;
+    }
+
+    // An email or X account pays its linked Oink wallet if there is one (mix and all), and
+    // otherwise becomes a held payment the owner can claim for 48 hours (docs/12 §5).
+    let recRes: { rows: any[] } = { rows: [] };
+    if (parsed.kind === "identifier") {
+      const lookup = identifierLookup(parsed.id);
+      recRes = await query(
+        `SELECT account_id, tag, public_key, display_name FROM wallets WHERE ${lookup.where} AND status = 'active'`,
+        [lookup.value],
+      );
+    } else if (parsed.kind === "email") {
+      recRes = await query(
+        "SELECT account_id, tag, public_key, display_name FROM wallets WHERE email = $1 AND status = 'active'",
+        [parsed.email],
+      );
+    } else if (parsed.kind === "x") {
+      recRes = await query(
+        "SELECT account_id, tag, public_key, display_name FROM wallets WHERE lower(x_username) = lower($1) AND status = 'active'",
+        [parsed.username],
+      );
+    }
+
+    if (parsed.kind === "address") {
       resolvedRecipient = {
         kind: "address",
-        wallet: trimmedRecipient,
+        wallet: parsed.address,
       };
       effectiveApplyMix = false; // Raw external address has no mix
+    } else if (recRes.rows.length === 0 && (parsed.kind === "email" || parsed.kind === "x")) {
+      if (!heldPaymentsConfigured()) {
+        res.status(503).json({
+          error: "NOT_CONFIGURED",
+          message: `${parsed.kind === "email" ? parsed.email : `@${parsed.username}`} isn't on Oink, and paying people who haven't joined isn't switched on yet.`,
+          details: null,
+        });
+        return;
+      }
+      if (parsed.kind === "x" && !getConfig().xBearerToken) {
+        res.status(503).json({
+          error: "X_LOOKUP_UNAVAILABLE",
+          message: `@${parsed.username} isn't on Oink yet. Paying X accounts that haven't joined isn't available yet — send to their email instead.`,
+          details: null,
+        });
+        return;
+      }
+      resolvedRecipient = {
+        kind: "held",
+        wallet: "", // the holding wallet is created at build, not on every re-quote
+        held: parsed.kind === "email" ? { kind: "email", email: parsed.email } : { kind: "x", username: parsed.username },
+        displayName: parsed.kind === "email" ? parsed.email : `@${parsed.username}`,
+      };
+      effectiveApplyMix = false; // no mix until someone owns the money
     } else {
-      const id = parseIdentifier(trimmedRecipient);
-      const recRes = id
-        ? await query(
-            `SELECT account_id, tag, public_key, display_name FROM wallets
-             WHERE ${identifierLookup(id).where} AND status = 'active'`,
-            [identifierLookup(id).value],
-          )
-        : { rows: [] as any[] };
-
       if (recRes.rows.length === 0) {
         res.status(404).json({ error: "NOT_FOUND", message: `Recipient ${trimmedRecipient} not found.`, details: null });
         return;
@@ -179,6 +218,34 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
   }
 
   try {
+    if (quote.recipient.kind === "held" && !quote.recipient.wallet) {
+      if (quote.inputToken.isNative) {
+        res.status(400).json({
+          error: "VALIDATION_FAILED",
+          message: "Send a token like USDC to someone who isn't on Oink yet — SOL can't be held for them.",
+          details: null,
+        });
+        return;
+      }
+      const held = quote.recipient.held!;
+      let identity: HeldIdentity;
+      if (held.kind === "email") {
+        identity = { kind: "email", email: held.email };
+      } else {
+        const found = await lookupXUser(held.username);
+        if (found.status !== "found") {
+          res.status(found.status === "not_found" ? 404 : 503).json({
+            error: found.status === "not_found" ? "NOT_FOUND" : "X_LOOKUP_UNAVAILABLE",
+            message: found.status === "not_found" ? `There's no X account called @${held.username}.` : "X couldn't be reached. Try again shortly.",
+            details: null,
+          });
+          return;
+        }
+        identity = { kind: "x", userId: found.id, username: found.username };
+      }
+      quote.recipient.wallet = (await ensureHoldingWallet(identity)).address;
+    }
+
     let shouldSponsor = sponsorFee;
     if (shouldSponsor) {
       const budget = await checkSponsorshipBudget(senderAccountId);
@@ -203,6 +270,10 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
       addressLookupTableAddresses: plan.addressLookupTableAddresses,
     });
   } catch (err: any) {
+    if (err instanceof HeldPaymentsNotConfiguredError) {
+      res.status(503).json({ error: "NOT_CONFIGURED", message: "Paying people who haven't joined isn't switched on yet.", details: null });
+      return;
+    }
     console.error("Transfer build error:", err);
     res.status(500).json({ error: "INTERNAL", message: err?.message || "Failed to build transaction.", details: null });
   }
@@ -293,8 +364,8 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
       `INSERT INTO transfers (
         signature, direction, sender_account_id, sender_wallet, recipient_account_id, recipient_wallet,
         input_mint, input_symbol, input_amount, output_breakdown, mix_applied, fee_sponsored,
-        fee_lamports, status, confirmed_at, created_at
-      ) VALUES ($1, 'send', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'confirmed', NOW(), NOW())
+        fee_lamports, source, status, confirmed_at, created_at
+      ) VALUES ($1, 'send', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'confirmed', NOW(), NOW())
       ON CONFLICT (signature) DO NOTHING
       RETURNING id`,
       [
@@ -310,6 +381,7 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
         quote.applyMix,
         plan.partiallySigned,
         15000,
+        quote.recipient.kind === "held" ? "held" : "app",
       ],
     );
 
@@ -320,11 +392,45 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
 
     const transferId = insertRes.rows[0]?.id;
 
+    let held: { expiresAt: string; recipient: string; notified: boolean } | undefined;
+    if (quote.recipient.kind === "held") {
+      const deposit = await recordHeldDeposit({
+        heldWalletAddress: quote.recipient.wallet,
+        senderAccountId,
+        senderWallet: quote.senderWallet,
+        mint: quote.inputToken.mint,
+        symbol: quote.inputToken.symbol,
+        decimals: quote.inputToken.decimals,
+        amountBase: BigInt(quote.totalInBase),
+        signature,
+      });
+      let notified = false;
+      if (deposit.recipientKind === "email") {
+        const sender = (await query("SELECT tag FROM wallets WHERE account_id = $1", [senderAccountId])).rows[0];
+        const senderLabel = sender?.tag
+          ? `@${sender.tag}`
+          : `An Oink user (${quote.senderWallet.slice(0, 4)}…${quote.senderWallet.slice(-4)})`;
+        notified = await sendEmail(
+          deposit.recipientDisplay,
+          heldPaymentEmail({
+            senderLabel,
+            amount: formatBaseUnits(BigInt(quote.totalInBase), quote.inputToken.decimals),
+            symbol: quote.inputToken.symbol,
+            expiresAt: deposit.expiresAt,
+            appUrl: getConfig().appUrl,
+          }),
+        );
+        if (notified) await query("UPDATE held_payments SET notified_at = NOW() WHERE id = $1", [deposit.id]);
+      }
+      held = { expiresAt: deposit.expiresAt.toISOString(), recipient: deposit.recipientDisplay, notified };
+    }
+
     res.status(200).json({
       signature,
       status: "confirmed",
       explorerUrl: `https://solscan.io/tx/${signature}`,
       transferId,
+      held,
     });
   } catch (err: any) {
     console.error("Transfer submit error:", err);

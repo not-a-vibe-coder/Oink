@@ -28,6 +28,15 @@ export type Config = {
   privyAppId: string | undefined;
   privyVerificationKey: string | undefined;
   adminEmails: string[];
+  // Held payments (docs/12 §5, §6). All optional: without them, paying an email or X account
+  // that is not on Oink answers NOT_CONFIGURED, and everything else works.
+  privyAppSecret: string | undefined;
+  privyAuthorizationKey: string | undefined;
+  privySignerId: string | undefined;
+  resendApiKey: string | undefined;
+  emailFrom: string;
+  xBearerToken: string | undefined;
+  heldPaymentHours: number;
 };
 
 const optional = (name: string, fallback: string): string => process.env[name] ?? fallback;
@@ -82,5 +91,12 @@ export function getConfig(): Config {
       .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean),
+    privyAppSecret: process.env.PRIVY_APP_SECRET || undefined,
+    privyAuthorizationKey: process.env.PRIVY_AUTHORIZATION_KEY || undefined,
+    privySignerId: process.env.PRIVY_SIGNER_ID || undefined,
+    resendApiKey: process.env.RESEND_API_KEY || undefined,
+    emailFrom: optional("EMAIL_FROM", "Oink <onboarding@resend.dev>"),
+    xBearerToken: process.env.X_BEARER_TOKEN || undefined,
+    heldPaymentHours: Number(optional("HELD_PAYMENT_HOURS", "48")),
   };
 }

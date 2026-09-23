@@ -10,7 +10,10 @@ export type AccountEventKind =
   | "x_linked"
   | "x_unlinked"
   | "tag_assigned"
-  | "tag_lost";
+  | "tag_lost"
+  | "held_sent"
+  | "held_claimed"
+  | "held_refunded";
 
 type Db = Pick<PoolClient, "query">;
 

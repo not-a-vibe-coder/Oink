@@ -11,6 +11,7 @@
     "test:integration": "DATABASE_URL=$TEST_DATABASE_URL bun test"
   },
   "dependencies": {
+    "@privy-io/node": "^0.35.0",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
     "bs58": "^6.0.0",

@@ -92,6 +92,8 @@ adminRouter.get("/overview", requireAdmin, async (_req: Request, res: Response) 
         (SELECT COUNT(*) FROM transfers WHERE status = 'failed')::int AS transfers_failed,
         (SELECT COUNT(*) FROM login_attempts WHERE NOT succeeded AND created_at > NOW() - INTERVAL '24 hours')::int AS failed_logins_24h,
         (SELECT COUNT(*) FROM admin_reviews WHERE status = 'flagged')::int AS flagged,
+        (SELECT COUNT(*) FROM held_payments WHERE status IN ('held','claiming','refunding'))::int AS held_pending,
+        (SELECT COUNT(*) FROM held_payments WHERE status = 'failed')::int AS held_failed,
         (SELECT COALESCE(SUM(lamports), 0) FROM fee_sponsorships WHERE day = CURRENT_DATE)::text AS sponsored_lamports_today`)
     ).rows[0];
 
@@ -187,7 +189,7 @@ adminRouter.get("/activity", requireAdmin, async (req: Request, res: Response) =
 adminRouter.post("/reviews", requireAdmin, async (req: Request, res: Response) => {
   const { source, sourceId, status, note } = req.body || {};
   const id = Number(sourceId);
-  if (!["event", "login", "transfer"].includes(source) || !Number.isSafeInteger(id) || !["reviewed", "flagged", "clear"].includes(status)) {
+  if (!["event", "login", "transfer", "held"].includes(source) || !Number.isSafeInteger(id) || !["reviewed", "flagged", "clear"].includes(status)) {
     res.status(400).json({ error: "VALIDATION_FAILED", message: "Invalid review.", details: null });
     return;
   }
@@ -207,6 +209,67 @@ adminRouter.post("/reviews", requireAdmin, async (req: Request, res: Response) =
   } catch (err) {
     console.error("Admin review error:", err);
     res.status(500).json({ error: "INTERNAL", message: "Failed to save review.", details: null });
+  }
+});
+
+// ── Held payments ──────────────────────────────────────────────────────────
+
+adminRouter.get("/held", requireAdmin, async (req: Request, res: Response) => {
+  const { limit, offset } = page(req);
+  const status = typeof req.query.status === "string" && req.query.status ? req.query.status : null;
+  try {
+    const total = (await query("SELECT COUNT(*)::int AS n FROM held_payments WHERE ($1::text IS NULL OR status = $1)", [status])).rows[0].n;
+    const rows = await query(
+      `SELECT hp.id, hp.recipient_kind, hp.recipient_display, hp.symbol, hp.decimals, hp.amount_base::text AS amount_base,
+              hp.status, hp.attempts, hp.last_error, hp.expires_at, hp.released_at, hp.created_at, hp.notified_at,
+              hp.deposit_signature, hp.release_signature, hp.sender_account_id, s.tag AS sender_tag,
+              hp.claimant_account_id, c.tag AS claimant_tag, hw.address AS holding_wallet
+       FROM held_payments hp
+       JOIN held_wallets hw ON hw.id = hp.held_wallet_id
+       LEFT JOIN wallets s ON s.account_id = hp.sender_account_id
+       LEFT JOIN wallets c ON c.account_id = hp.claimant_account_id
+       WHERE ($1::text IS NULL OR hp.status = $1)
+       ORDER BY hp.created_at DESC LIMIT $2 OFFSET $3`,
+      [status, limit, offset],
+    );
+    const pending = (
+      await query(
+        `SELECT symbol, COUNT(*)::int AS payments, SUM(amount_base)::text AS amount_base, MAX(decimals) AS decimals
+         FROM held_payments WHERE status IN ('held','claiming','refunding') GROUP BY symbol`,
+      )
+    ).rows;
+    res.status(200).json({ held: rows.rows, pending, total, limit, offset });
+  } catch (err) {
+    console.error("Admin held error:", err);
+    res.status(500).json({ error: "INTERNAL", message: "Failed to load held payments.", details: null });
+  }
+});
+
+// POST /api/v1/admin/held/:id/retry — a failed release goes back to `held`, and the worker
+// claims or refunds it on its next round depending on whether it has expired.
+adminRouter.post("/held/:id/retry", requireAdmin, async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id)) {
+    res.status(400).json({ error: "VALIDATION_FAILED", message: "Invalid id.", details: null });
+    return;
+  }
+  try {
+    const row = (
+      await query(
+        `UPDATE held_payments SET status = 'held', attempts = 0, claimant_account_id = NULL, last_error = NULL, updated_at = NOW()
+         WHERE id = $1 AND status = 'failed' RETURNING id`,
+        [id],
+      )
+    ).rows[0];
+    if (!row) {
+      res.status(409).json({ error: "VALIDATION_FAILED", message: "Only a failed payment can be retried.", details: null });
+      return;
+    }
+    await audit(req, "held_retry", { heldPaymentId: id });
+    res.status(200).json({ id, status: "held" });
+  } catch (err) {
+    console.error("Admin held retry error:", err);
+    res.status(500).json({ error: "INTERNAL", message: "Failed to retry.", details: null });
   }
 });
 
@@ -230,6 +293,8 @@ export const VIEWABLE_TABLES = [
   "admin_reviews",
   "admin_audit",
   "admin_sessions",
+  "held_wallets",
+  "held_payments",
 ] as const;
 
 export const HIDDEN_COLUMNS = new Set([

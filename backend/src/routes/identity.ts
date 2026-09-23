@@ -9,6 +9,7 @@ import {
   type VerifiedIdentity,
 } from "../lib/privy";
 import { validateTag } from "../lib/tagRules";
+import { claimableFor, claimForAccount } from "../services/held/heldPayments";
 import { getClientIp, hashIp, ipRateLimiter } from "../middleware/rateLimit";
 import { requireSession } from "../middleware/session";
 
@@ -30,6 +31,18 @@ async function identityState(accountId: string) {
     emailLinkedAt: row?.email_linked_at ?? null,
     x: row?.x_username ? { username: row.x_username, linkedAt: row.x_linked_at } : null,
   };
+}
+
+// Anything held for the identity just linked starts moving now instead of on the worker's
+// next round. The response only reports how many; the transfers land on their own.
+async function startClaims(accountId: string): Promise<number> {
+  const waiting = (await claimableFor(accountId)).length;
+  if (waiting > 0) {
+    void claimForAccount(accountId).catch((err) =>
+      console.error("Claim after link failed:", err instanceof Error ? err.message : err),
+    );
+  }
+  return waiting;
 }
 
 async function verifyOrRespond(req: Request, res: Response): Promise<VerifiedIdentity | null> {
@@ -87,7 +100,7 @@ identityRouter.post("/email", requireSession, ipRateLimiter("identity_link", 20,
     ]);
     await recordEvent(accountId, "email_linked", { email: identity.email }, ipHash, client);
     await client.query("COMMIT");
-    res.status(200).json(await identityState(accountId));
+    res.status(200).json({ ...(await identityState(accountId)), claiming: await startClaims(accountId) });
   } catch (err: any) {
     await client.query("ROLLBACK");
     if (err?.code === "23505") {
@@ -175,7 +188,7 @@ identityRouter.post("/x", requireSession, ipRateLimiter("identity_link", 20, 360
     }
 
     await client.query("COMMIT");
-    res.status(200).json({ ...(await identityState(accountId)), tagOutcome });
+    res.status(200).json({ ...(await identityState(accountId)), tagOutcome, claiming: await startClaims(accountId) });
   } catch (err: any) {
     await client.query("ROLLBACK");
     if (err?.code === "23505") {
