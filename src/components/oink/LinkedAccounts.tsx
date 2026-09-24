@@ -39,6 +39,7 @@ function useLinker(purposes: ProofPurpose[]) {
       const kind = purpose === "link-x" ? "x" : "email";
       const result = await linkIdentity({ data: { kind, identityToken } });
       if (!result.ok) {
+        console.error(`[oink:privy] API refused the ${kind} link — ${result.code}: ${result.message}`);
         setNotice({ tone: "danger", text: result.message });
         return;
       }

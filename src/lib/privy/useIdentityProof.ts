@@ -61,9 +61,17 @@ export function useIdentityProof({
       writePending(null);
       try {
         const token = await getIdentityToken();
-        if (!token) throw new Error("no identity token");
+        if (!token) {
+          // Privy only issues these when "Return user data in an identity token" is on in its
+          // dashboard; without one there is nothing the API can verify.
+          console.error("[oink:privy] signed in, but Privy returned no identity token — enable identity tokens in the Privy dashboard");
+          onError?.("Sign-in worked, but Oink couldn't get proof of it from Privy. Try again shortly.");
+          return;
+        }
         await onProof(purpose, token);
-      } catch {
+      } catch (err) {
+        // Name and message only; the token itself is never logged.
+        console.error(`[oink:privy] proof failed — ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
         onError?.("That sign-in didn't come through. Try again.");
       } finally {
         await logout().catch(() => undefined);
@@ -75,13 +83,18 @@ export function useIdentityProof({
       writePending(null);
       setBusy(false);
       // Closing the modal is a choice, not a failure.
-      if (String(error) !== "exited_auth_flow") onError?.("That sign-in didn't come through. Try again.");
+      if (String(error) === "exited_auth_flow") return;
+      console.error(`[oink:privy] login error — ${String(error)}`);
+      onError?.("That sign-in didn't come through. Try again.");
     },
   });
 
   const start = useCallback(
     async (purpose: ProofPurpose) => {
-      if (!ready) return;
+      if (!ready) {
+        console.error("[oink:privy] not ready yet — check this site is in Privy's allowed domains");
+        return;
+      }
       setBusy(true);
       // A leftover Privy session would complete instantly as the wrong person.
       if (authenticated) await logout().catch(() => undefined);

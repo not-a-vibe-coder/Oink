@@ -80,7 +80,10 @@ function SignInButton({ onSignedIn }: { onSignedIn: () => void }) {
     onProof: async (_purpose, identityToken) => {
       const result = await adminLogin({ data: { identityToken } });
       if (result.ok) onSignedIn();
-      else setError(result.message);
+      else {
+        console.error(`[oink:privy] API refused admin sign-in — ${result.code}: ${result.message}`);
+        setError(result.message);
+      }
     },
     onError: setError,
   });
