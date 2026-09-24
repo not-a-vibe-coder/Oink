@@ -149,7 +149,9 @@ export async function getWalletBalances(accountId: string, walletAddress: string
   let totalUsd = solPrice > 0 ? (Number(solFormatted) * solPrice) : 0;
 
   for (const holding of holdings) {
-    const priceStr = prices[holding.mint];
+    // Jupiter only prices mainnet mints, so devnet USDC comes back unpriced. A dollar
+    // stablecoin is worth a dollar; without this the balance reads as a dash on devnet.
+    const priceStr = prices[holding.mint] ?? (holding.symbol === "USDC" ? "1" : undefined);
     if (priceStr) {
       holding.priceUsd = priceStr;
       const holdingVal = Number(holding.amount) * parseFloat(priceStr);
@@ -165,7 +167,8 @@ export async function getWalletBalances(accountId: string, walletAddress: string
     publicKey: walletAddress,
     solBalance: solFormatted,
     solLamports: lamports,
-    totalValueUsd: totalUsd > 0 ? totalUsd.toFixed(2) : null,
+    // An empty wallet is worth $0.00, not "unknown": null is reserved for nothing at all.
+    totalValueUsd: totalUsd.toFixed(2),
     holdings,
     needsSol,
   };

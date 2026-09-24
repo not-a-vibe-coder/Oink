@@ -15,8 +15,8 @@
 :root {
   /* Surfaces — one hue, lightness only */
   --paper: #ffffff;
-  --paper-sunk: #fbfbfa; /* inputs are inset: they receive content */
-  --paper-tint: #f7f5f5; /* quiet strips and selected rows */
+  --paper-sunk: #f9fbfe; /* inputs are inset: they receive content */
+  --paper-tint: #f2f6fc; /* quiet strips and selected rows — a breath of the sky */
 
   /* Ink — four levels of text, never two */
   --ink: #0a0a0a;
@@ -25,8 +25,8 @@
   --ink-4: #9b9b9b;
 
   /* Structure */
-  --hairline: rgba(0, 0, 0, 0.08);
-  --hairline-strong: rgba(0, 0, 0, 0.16);
+  --hairline: rgba(20, 50, 110, 0.09);
+  --hairline-strong: rgba(20, 50, 110, 0.18);
 
   /* The one accent. It marks the mix and nothing else. */
   --seal: #ec4e7c;
@@ -34,10 +34,38 @@
   --seal-wash: #fdeaf0;
 
   /* Sky — the landing page's edge glow, carried into the app at a fraction of its strength */
-  --sky-cyan: rgba(99, 214, 236, 0.1);
-  --sky-blue: rgba(96, 146, 238, 0.09);
-  --sky-violet: rgba(160, 150, 240, 0.07);
-  --sky-wash: rgba(96, 146, 238, 0.08);
+  --sky-cyan: rgba(99, 200, 236, 0.26);
+  --sky-blue: rgba(96, 146, 238, 0.22);
+  --sky-violet: rgba(150, 150, 240, 0.16);
+  --sky-top: rgba(120, 170, 240, 0.16);
+  --sky-wash: rgba(96, 146, 238, 0.12);
+  --panel-glass: rgba(255, 255, 255, 0.8);
+
+  /* Surfaces that float, and the ink that sits on ink */
+  --on-ink: #ffffff;
+  --ink-hover: #262626;
+  --bar-glass: rgba(247, 251, 255, 0.7);
+  --dock-glass: rgba(255, 255, 255, 0.7);
+  --scrim: rgba(10, 10, 10, 0.32);
+  --shadow: rgba(20, 30, 50, 0.14);
+  --icon-filter: none;
+  --shimmer: #e8eef8;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* The phone pill: solid until it opens */
+  --pill: #ffffff;
+  --pill-open: rgba(255, 255, 255, 0.62);
+  --pill-shadow:
+    0 22px 44px -14px rgba(20, 40, 80, 0.28),
+    0 2px 6px rgba(20, 40, 80, 0.08),
+    inset -2px -4px 4px rgba(20, 40, 80, 0.06),
+    inset 0 2px 10px rgba(255, 255, 255, 0.9);
+  --lens-edge: rgba(255, 255, 255, 0.95);
+  --lens-fill: rgba(96, 146, 238, 0.1);
+
+  --callout-warn-ink: #6b4310;
+  --callout-danger-ink: #7e2422;
+  --callout-seal-ink: #7d2044;
 
   /* Semantics */
   --ledger-up: #17864b;
@@ -65,6 +93,70 @@
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --fast: 140ms;
   --base: 200ms;
+}
+
+/* Dark: the same sheet at night. Scoped to pages that carry the app shell, so the landing
+   page and the unlock screens keep their paper whatever the wallet was last set to. */
+html[data-theme="dark"]:has(.app) {
+  color-scheme: dark;
+
+  --paper: #0e1014;
+  --paper-sunk: #13161b;
+  --paper-tint: #191d24;
+
+  --ink: #eef0f3;
+  --ink-2: #c5c9d0;
+  --ink-3: #8f96a1;
+  --ink-4: #646b76;
+
+  --hairline: rgba(170, 195, 240, 0.1);
+  --hairline-strong: rgba(170, 195, 240, 0.2);
+
+  --seal-deep: #f58aa9;
+  --seal-wash: rgba(236, 78, 124, 0.14);
+
+  --sky-cyan: rgba(60, 160, 215, 0.14);
+  --sky-blue: rgba(70, 115, 230, 0.16);
+  --sky-violet: rgba(115, 105, 230, 0.12);
+  --sky-top: rgba(70, 120, 230, 0.12);
+  --sky-wash: rgba(110, 150, 240, 0.16);
+  --panel-glass: rgba(21, 24, 30, 0.78);
+
+  --on-ink: #0e1014;
+  --ink-hover: #d6d9df;
+  --bar-glass: rgba(14, 16, 20, 0.72);
+  --dock-glass: rgba(22, 25, 31, 0.72);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow: rgba(0, 0, 0, 0.5);
+  --icon-filter: invert(0.94);
+  --shimmer: #222834;
+
+  --pill: #1f2226;
+  --pill-open: rgba(31, 34, 38, 0.6);
+  --pill-shadow:
+    -20px 60px 120px -30px rgba(0, 0, 0, 0.9),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset -2px -4px 4px rgba(0, 0, 0, 0.35),
+    inset 0 2px 10px rgba(255, 255, 255, 0.08);
+  --lens-edge: rgba(255, 255, 255, 0.34);
+  --lens-fill: rgba(255, 255, 255, 0.03);
+
+  --callout-warn-ink: #f0c48a;
+  --callout-danger-ink: #f4a19f;
+  --callout-seal-ink: #f5a3bd;
+
+  --ledger-up: #3fbf7a;
+  --flag: #e0a050;
+  --flag-wash: rgba(224, 160, 80, 0.12);
+  --alarm: #ef6461;
+  --alarm-wash: rgba(239, 100, 97, 0.12);
+}
+
+html[data-theme="dark"]:has(.app),
+html[data-theme="dark"]:has(.app) body {
+  /* The root shell paints white inline to avoid a flash on the landing page. */
+  background: var(--paper) !important;
+  color: var(--ink) !important;
 }
 
 /* ── Primitives ─────────────────────────────────────────────────────────── */
@@ -109,7 +201,11 @@
 
 .app {
   min-height: 100dvh;
+  /* The landing hero is a sky photograph; the app keeps only its light: a pale band
+     across the top and three soft pools at the edges. Panels are slightly glassy so the
+     wash reads through them instead of stopping at their borders. */
   background:
+    linear-gradient(180deg, var(--sky-top), transparent 320px),
     radial-gradient(55vw 65vh at -8% 0%, var(--sky-cyan), transparent 70%),
     radial-gradient(45vw 70vh at 108% 38%, var(--sky-blue), transparent 70%),
     radial-gradient(50vw 45vh at 96% 108%, var(--sky-violet), transparent 70%),
@@ -123,7 +219,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--bar-glass);
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--hairline);
 }
@@ -168,13 +264,13 @@
   gap: 2px;
   padding: 10px 6px;
   border-radius: var(--r3);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--dock-glass);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
   border: 1px solid var(--hairline);
   box-shadow:
     0 18px 50px -20px rgba(40, 80, 160, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    inset 0 1px 0 var(--lens-edge);
   transform: translateY(-50%);
 }
 
@@ -207,6 +303,7 @@
   height: 100%;
   object-fit: contain;
   opacity: 0.72;
+  filter: var(--icon-filter);
   transition: opacity var(--fast) var(--ease);
   user-select: none;
 }
@@ -598,7 +695,7 @@ button.ledger-row:active {
   border: 1px solid var(--hairline);
   border-radius: var(--r2);
   padding: var(--s4);
-  background: var(--paper);
+  background: var(--panel-glass);
 }
 
 .panel-tint {
@@ -624,19 +721,19 @@ button.ledger-row:active {
 .callout[data-tone="warn"] {
   border-color: rgba(168, 99, 26, 0.24);
   background: var(--flag-wash);
-  color: #6b4310;
+  color: var(--callout-warn-ink);
 }
 
 .callout[data-tone="danger"] {
   border-color: rgba(200, 50, 47, 0.24);
   background: var(--alarm-wash);
-  color: #7e2422;
+  color: var(--callout-danger-ink);
 }
 
 .callout[data-tone="seal"] {
   border-color: rgba(236, 78, 124, 0.24);
   background: var(--seal-wash);
-  color: #7d2044;
+  color: var(--callout-seal-ink);
 }
 
 .notice {
@@ -687,11 +784,11 @@ button.ledger-row:active {
 
 .btn-primary {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--on-ink);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #262626;
+  background: var(--ink-hover);
 }
 
 .btn-outline {
@@ -1249,7 +1346,7 @@ textarea.input {
 .chip[data-selected="true"] {
   background: var(--ink);
   border-color: var(--ink);
-  color: #ffffff;
+  color: var(--on-ink);
 }
 
 .chip-row {
@@ -1381,7 +1478,8 @@ textarea.input {
   padding: var(--s4);
   border: 1px solid var(--hairline);
   border-radius: var(--r3);
-  background: var(--paper);
+  /* A QR code must stay dark-on-light to scan, whatever the theme. */
+  background: #ffffff;
 }
 
 .qr canvas,
@@ -1399,7 +1497,7 @@ textarea.input {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(10, 10, 10, 0.32);
+  background: var(--scrim);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1479,7 +1577,7 @@ textarea.input {
 
 .skeleton {
   border-radius: var(--r1);
-  background: linear-gradient(90deg, var(--paper-tint) 25%, #f1eeee 50%, var(--paper-tint) 75%);
+  background: linear-gradient(90deg, var(--paper-tint) 25%, var(--shimmer) 50%, var(--paper-tint) 75%);
   background-size: 200% 100%;
   animation: skeleton-slide 1.4s ease-in-out infinite;
 }
@@ -1581,6 +1679,384 @@ textarea.input {
   margin-bottom: var(--s2);
 }
 
+/* ── Glass lens ─────────────────────────────────────────────────────────
+   The one piece of glass in the chrome: a clear capsule a little larger than the pill it
+   sits on, lit from the top left. It marks a choice — the theme, the open section — and
+   travels on a spring that overshoots slightly before it settles. */
+
+.glass-lens {
+  position: absolute;
+  border-radius: var(--r-pill);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.04) 46%, rgba(255, 255, 255, 0.14)),
+    var(--lens-fill);
+  backdrop-filter: blur(1.5px) saturate(170%) brightness(1.06);
+  -webkit-backdrop-filter: blur(1.5px) saturate(170%) brightness(1.06);
+  box-shadow:
+    inset 0 0 0 1px var(--lens-edge),
+    inset 1px 2px 3px rgba(255, 255, 255, 0.45),
+    inset -2px -3px 6px rgba(0, 0, 0, 0.1),
+    0 10px 22px -8px var(--shadow);
+  pointer-events: none;
+  transition: transform 700ms var(--spring);
+}
+
+/* ── Top bar ends ───────────────────────────────────────────────────── */
+
+.topbar-end {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-left: auto;
+}
+
+.theme-toggle {
+  --tw: 88px;
+  --lw: 40px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: var(--tw);
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--pill);
+  box-shadow:
+    0 6px 16px -8px var(--shadow),
+    inset -1px -2px 3px rgba(0, 0, 0, 0.12),
+    inset 0 1px 5px rgba(255, 255, 255, 0.2);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.theme-toggle[data-theme-state="dark"] {
+  justify-content: flex-start;
+}
+
+.theme-toggle-word {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.theme-toggle-lens {
+  top: -5px;
+  left: -2px;
+  display: grid;
+  place-items: center;
+  width: var(--lw);
+  height: 42px;
+  color: var(--ink);
+}
+
+.theme-toggle[data-theme-state="dark"] .theme-toggle-lens {
+  transform: translateX(calc(var(--tw) - var(--lw) + 4px));
+}
+
+.theme-toggle[data-theme-state="dark"] .theme-toggle-lens svg {
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+}
+
+.theme-toggle:focus-visible,
+.account-pig:focus-visible,
+.tabbar-item:focus-visible,
+.tabbar-more-item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* ── Account bubble ─────────────────────────────────────────────────── */
+
+.account {
+  position: relative;
+}
+
+.account-pig {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--paper);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease);
+}
+
+.account-pig:active {
+  transform: scale(0.94);
+}
+
+.account-bubble {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 60;
+  width: min(330px, calc(100vw - 32px));
+  padding: var(--s3) var(--s3) var(--s2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r2);
+  background: var(--paper);
+  box-shadow: 0 22px 50px -18px var(--shadow);
+  transform-origin: calc(100% - 20px) 0;
+  animation: bubble-in 320ms var(--spring);
+}
+
+/* The nub that ties the bubble to the pig. */
+.account-bubble::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 15px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+  background: var(--paper);
+  transform: rotate(45deg);
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-4px);
+  }
+}
+
+.account-rows {
+  display: grid;
+  margin: 0;
+}
+
+.account-row {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 40px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.account-row dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.account-row dd {
+  grid-column: 2;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-row dd[data-empty] {
+  color: var(--ink-4);
+}
+
+.account-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--s2);
+  font-size: 13px;
+}
+
+/* ── Phone tab bar ──────────────────────────────────────────────────── */
+
+.tabbar,
+.tabbar-scrim {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .tabbar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    background: var(--scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 360ms var(--ease);
+  }
+
+  .tabbar-scrim[data-open="true"] {
+    opacity: 0.5;
+    pointer-events: auto;
+  }
+
+  .tabbar {
+    position: fixed;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    width: min(calc(100% - 32px), 380px);
+    border-radius: 31px;
+    background: var(--pill);
+    box-shadow: var(--pill-shadow);
+    transform: translateX(-50%);
+    transition:
+      background 420ms var(--ease),
+      border-radius 520ms var(--spring),
+      backdrop-filter 420ms var(--ease);
+  }
+
+  .tabbar[data-open="true"] {
+    border-radius: 28px;
+    background: var(--pill-open);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+  }
+
+  /* Grows upward: the bar is anchored at the bottom, so a taller tray lifts its top. */
+  .tabbar-tray {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 520ms var(--ease);
+  }
+
+  .tabbar[data-open="true"] .tabbar-tray {
+    grid-template-rows: 1fr;
+  }
+
+  .tabbar-tray-inner {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 10px;
+    transition: padding 520ms var(--ease);
+  }
+
+  .tabbar[data-open="true"] .tabbar-tray-inner {
+    padding: 14px 10px 8px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .tabbar-more-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 4px 10px;
+    border-radius: var(--r2);
+    color: var(--ink-2);
+    opacity: 0;
+    transform: translateY(14px) scale(0.9);
+    transition:
+      opacity 260ms var(--ease),
+      transform 560ms var(--spring),
+      background var(--fast) var(--ease);
+  }
+
+  .tabbar[data-open="true"] .tabbar-more-item {
+    opacity: 1;
+    transform: none;
+  }
+
+  .tabbar[data-open="true"] .tabbar-more-item:nth-child(2) {
+    transition-delay: 40ms;
+  }
+
+  .tabbar[data-open="true"] .tabbar-more-item:nth-child(3) {
+    transition-delay: 80ms;
+  }
+
+  .tabbar-more-item[data-active="true"] {
+    background: var(--sky-wash);
+    color: var(--ink);
+  }
+
+  .tabbar-more-item .dock-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .tabbar-more-item[data-active="true"] .dock-icon img {
+    opacity: 1;
+  }
+
+  .tabbar-more-item[data-active="true"] .dock-animated {
+    display: block;
+  }
+
+  .tabbar-more-item[data-active="true"] .dock-icon:has(.dock-animated) .dock-still {
+    display: none;
+  }
+
+  .tabbar-more-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .tabbar-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: 62px;
+    padding: 0 6px;
+  }
+
+  .tabbar-lens {
+    top: -6px;
+    left: 6px;
+    width: calc((100% - 12px) / 5);
+    height: 74px;
+    transform: translateX(calc(var(--lens-slot) * 100%));
+  }
+
+  .tabbar-item {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink-3);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tabbar-item .dock-icon {
+    width: 27px;
+    height: 27px;
+  }
+
+  .tabbar-item[data-active="true"] {
+    color: var(--ink);
+  }
+
+  .tabbar-item[data-active="true"] .dock-icon img {
+    opacity: 1;
+  }
+
+  .tabbar-plus svg {
+    transition: transform 520ms var(--spring);
+  }
+
+  .tabbar[data-open="true"] .tabbar-plus {
+    color: var(--ink);
+  }
+
+  .tabbar[data-open="true"] .tabbar-plus svg {
+    transform: rotate(135deg);
+  }
+}
+
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
@@ -1601,46 +2077,13 @@ textarea.input {
     padding: 0 16px var(--s2);
   }
 
+  /* Room for the floating pill and the gap beneath it. */
   .app {
-    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
   }
 
   .dock {
-    top: auto;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    flex-direction: row;
-    justify-content: space-around;
-    gap: 0;
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-    border-radius: var(--r3) var(--r3) 0 0;
-    border-bottom: 0;
-    transform: none;
-  }
-
-  .dock-item {
-    flex: 1;
-    width: auto;
-    min-width: 0;
-    padding: 6px 0 5px;
-    gap: 4px;
-  }
-
-  .dock-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .dock-label {
-    font-size: 10px;
-  }
-
-  .dock-item[data-active="true"]::after {
-    top: auto;
-    right: 50%;
-    bottom: -3px;
-    transform: translateX(50%);
+    display: none;
   }
 
   .page-title {
@@ -1659,6 +2102,20 @@ textarea.input {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .glass-lens,
+  .tabbar,
+  .tabbar-tray,
+  .tabbar-tray-inner,
+  .tabbar-more-item,
+  .tabbar-plus svg,
+  .tabbar-scrim {
+    transition: none;
+  }
+
+  .account-bubble {
+    animation: none;
+  }
+
   .skeleton,
   .spin {
     animation: none;

@@ -10,6 +10,7 @@ import {
 import { Toaster } from "sonner";
 import type { ReactNode } from "react";
 
+import { THEME_BOOT } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -80,8 +81,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" style={{ background: "#ffffff", color: "#0a0a0a" }}>
+    // The boot script sets data-theme before hydration, so React must not fight the attribute.
+    <html lang="en" style={{ background: "#ffffff", color: "#0a0a0a" }} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <HeadContent />
       </head>
       <body style={{ background: "#ffffff", color: "#0a0a0a" }}>

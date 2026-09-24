@@ -1,9 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Lock, LockOpen } from "lucide-react";
 import type { ReactNode } from "react";
-import { PigAvatar } from "@/components/oink/PigAvatar";
-import { useKeySession } from "@/hooks/useKeySession";
-import { lock } from "@/lib/wallet/key-session";
+import { AccountBubble } from "@/components/oink/AccountBubble";
+import { MobileTabBar } from "@/components/oink/MobileTabBar";
+import { ThemeToggle } from "@/components/oink/ThemeToggle";
 
 type NavTarget =
   | "/app"
@@ -17,36 +16,39 @@ type NavTarget =
 // Icons8 line icons, served from public/nav. Send has no icon of its own: it is Receive's
 // arrow turned upward (the `flip` flag), so the pair reads as one gesture in two directions.
 // Mix swaps its still frame for the animated one while hovered or open.
-const NAV: Array<{
+export type NavItem = {
   to: NavTarget;
   label: string;
   icon: string;
   animated?: string;
   flip?: boolean;
   exact?: boolean;
-}> = [
-  { to: "/app", label: "Wallet", icon: "/nav/wallet.png", exact: true },
-  { to: "/app/send", label: "Send", icon: "/nav/receive.png", flip: true },
-  { to: "/app/receive", label: "Receive", icon: "/nav/receive.png" },
-  { to: "/app/mix", label: "Mix", icon: "/nav/mix.png", animated: "/nav/mix.gif" },
-  { to: "/app/activity", label: "Activity", icon: "/nav/activity.png" },
-  { to: "/app/invoices", label: "Requests", icon: "/nav/requests.png" },
-  { to: "/app/settings", label: "Settings", icon: "/nav/settings.png" },
-];
+};
+
+const WALLET: NavItem = { to: "/app", label: "Wallet", icon: "/nav/wallet.png", exact: true };
+const SEND: NavItem = { to: "/app/send", label: "Send", icon: "/nav/receive.png", flip: true };
+const RECEIVE: NavItem = { to: "/app/receive", label: "Receive", icon: "/nav/receive.png" };
+const MIX: NavItem = { to: "/app/mix", label: "Mix", icon: "/nav/mix.png", animated: "/nav/mix.gif" };
+const ACTIVITY: NavItem = { to: "/app/activity", label: "Activity", icon: "/nav/activity.png" };
+const REQUESTS: NavItem = { to: "/app/invoices", label: "Requests", icon: "/nav/requests.png" };
+const SETTINGS: NavItem = { to: "/app/settings", label: "Settings", icon: "/nav/settings.png" };
+
+// Desktop dock order. On phones the pill carries the everyday four and the plus opens the rest.
+const NAV = [WALLET, SEND, RECEIVE, MIX, ACTIVITY, REQUESTS, SETTINGS];
+const PHONE_PRIMARY = [WALLET, SEND, RECEIVE, SETTINGS];
+const PHONE_MORE = [MIX, ACTIVITY, REQUESTS];
 
 export function AppShell({
-  tag,
   accountId,
+  address,
   avatarSeed,
   children,
 }: {
-  tag: string | null | undefined;
-  /** Shown in place of the tag until the user links X. */
   accountId?: string;
+  address?: string;
   avatarSeed?: string;
   children: ReactNode;
 }) {
-  const { unlocked } = useKeySession();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
@@ -57,30 +59,13 @@ export function AppShell({
             Oink
           </Link>
 
-          <div className="row" style={{ marginLeft: "auto", gap: "var(--s3)" }}>
-            {(tag || accountId) && (
-              <span className="identity">
-                <PigAvatar seed={avatarSeed ?? tag ?? accountId ?? ""} size={30} />
-                <span className="identity-tag">{tag ? `@${tag}` : accountId}</span>
-              </span>
+          <div className="topbar-end">
+            <ThemeToggle />
+            {accountId && address && (
+              <AccountBubble accountId={accountId} address={address} avatarSeed={avatarSeed ?? accountId} />
             )}
-            <button
-              type="button"
-              className="btn btn-quiet btn-sm"
-              onClick={() => lock()}
-              disabled={!unlocked}
-              title={unlocked ? "Lock the key held in this tab" : "The key is not in memory"}
-            >
-              {unlocked ? (
-                <LockOpen size={15} aria-hidden="true" />
-              ) : (
-                <Lock size={15} aria-hidden="true" />
-              )}
-              <span>{unlocked ? "Lock" : "Locked"}</span>
-            </button>
           </div>
         </div>
-
       </header>
 
       <nav className="dock" aria-label="Wallet sections">
@@ -103,6 +88,8 @@ export function AppShell({
           );
         })}
       </nav>
+
+      <MobileTabBar primary={PHONE_PRIMARY} more={PHONE_MORE} />
 
       {children}
 

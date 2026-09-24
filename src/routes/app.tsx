@@ -25,7 +25,7 @@ function AppLayout() {
 
   if (session.isPending) {
     return (
-      <AppShell tag={undefined}>
+      <AppShell>
         <main className="shell">
           <div className="stack">
             <div className="skeleton" style={{ height: 96, maxWidth: 320 }} />
@@ -39,7 +39,7 @@ function AppLayout() {
 
   if (!session.data) {
     return (
-      <AppShell tag={undefined}>
+      <AppShell>
         <main className="shell">
           <div className="empty">
             <p className="empty-title">Your session has ended</p>
@@ -59,7 +59,11 @@ function AppLayout() {
         expiresAt: session.data.expiresAt,
       }}
     >
-      <AppShell tag={session.data.tag} accountId={session.data.accountId} avatarSeed={session.data.publicKey.slice(0, 8)}>
+      <AppShell
+        accountId={session.data.accountId}
+        address={session.data.publicKey}
+        avatarSeed={session.data.publicKey.slice(0, 8)}
+      >
         <Outlet />
       </AppShell>
     </WalletSessionProvider>
