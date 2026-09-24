@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, Download, ShieldAlert } from "lucide-react";
 import { CopyButton } from "@/components/oink/CopyButton";
-import { QrCode } from "@/components/oink/QrCode";
+import { AuthenticatorSetup } from "@/components/oink/AuthenticatorSetup";
 import { CodeField, PasswordField } from "@/components/oink/fields";
 import { enrollComplete, enrollStart, enrollVerifyTotp } from "@/lib/oink-server-fns";
 import { keypairFromEntropy } from "@/lib/crypto/derive";
@@ -299,8 +299,8 @@ function CreateWalletPage() {
           <header className="page-head">
             <h1 className="page-title">Add your authenticator</h1>
             <p className="page-sub">
-              Scan this with Google Authenticator, Authy or 1Password. It is your second key when
-              you sign in on a new device.
+              Add Oink to Google Authenticator, Authy or 1Password. It is your second key when you
+              sign in on a new device.
             </p>
           </header>
 
@@ -315,17 +315,11 @@ function CreateWalletPage() {
 
           {enrollment ? (
             <>
-              <QrCode value={enrollment.otpauthUri} alt="Authenticator setup QR code" />
-
-              <div className="row-between">
-                <div style={{ minWidth: 0 }}>
-                  <p className="eyebrow">Or enter this key</p>
-                  <p className="mono" style={{ marginTop: 4 }}>
-                    {enrollment.totpSecret}
-                  </p>
-                </div>
-                <CopyButton value={enrollment.totpSecret} label="Copy key" />
-              </div>
+              <AuthenticatorSetup
+                uri={enrollment.otpauthUri}
+                secret={enrollment.totpSecret}
+                qrAlt="Authenticator setup QR code"
+              />
 
               <CodeField
                 id="enroll-totp"

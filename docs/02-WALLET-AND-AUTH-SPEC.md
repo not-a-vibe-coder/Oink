@@ -344,7 +344,8 @@ than generating fresh entropy.
 
 - The request logger ported from TENDER (`backend/src/app.ts`) redacts `privateKey` and
   `secret`. **Extend the redaction list to:** `authKey`, `totpCode`, `ciphertext`,
-  `kdfSalt`, `mnemonic`, `secretPhrase`, `password`, `totpSecret`, `signature`.
+  `kdfSalt`, `mnemonic`, `secretPhrase`, `password`, `totpSecret`, `otpauthUri` (it embeds
+  the secret), `signature`.
 - No endpoint ever returns a decrypted TOTP secret after enrollment.
 - `OINK_KMS_KEY` is required at boot; refuse to start without it in production.
 - Never write key material to an error message, a monitoring breadcrumb, or an audit row.

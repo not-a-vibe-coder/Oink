@@ -1,9 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft } from "lucide-react";
-import { CopyButton } from "@/components/oink/CopyButton";
 import { PhraseInput, emptyPhrase } from "@/components/oink/PhraseInput";
-import { QrCode } from "@/components/oink/QrCode";
+import { AuthenticatorSetup } from "@/components/oink/AuthenticatorSetup";
 import { otpauthUri } from "@/lib/crypto/totp-uri";
 import { CodeField, IdentifierField, PasswordField } from "@/components/oink/fields";
 import { keypairFromEntropy } from "@/lib/crypto/derive";
@@ -324,8 +323,8 @@ function RestorePage() {
           <header className="page-head">
             <h1 className="page-title">Add a new authenticator</h1>
             <p className="page-sub">
-              The old one stops working the moment this finishes. Scan the code with whichever app
-              you use now.
+              The old one stops working the moment this finishes. Add it to whichever authenticator
+              app you use now.
             </p>
           </header>
 
@@ -333,23 +332,14 @@ function RestorePage() {
             <>
               {/* Labelled with the recovered account, not the ID enroll/start reserved for a
                   new wallet: this authenticator entry belongs to the existing one. */}
-              <QrCode
-                value={otpauthUri({
+              <AuthenticatorSetup
+                uri={otpauthUri({
                   accountId: account?.accountId ?? enrollment.accountId,
                   secret: enrollment.totpSecret,
                 })}
-                alt="New authenticator setup QR code"
+                secret={enrollment.totpSecret}
+                qrAlt="New authenticator setup QR code"
               />
-
-              <div className="row-between">
-                <div style={{ minWidth: 0 }}>
-                  <p className="eyebrow">Or enter this key</p>
-                  <p className="mono" style={{ marginTop: 4 }}>
-                    {enrollment.totpSecret}
-                  </p>
-                </div>
-                <CopyButton value={enrollment.totpSecret} label="Copy key" />
-              </div>
 
               <CodeField
                 id="restore-code"

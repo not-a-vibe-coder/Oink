@@ -13,7 +13,7 @@ import { identityRouter } from "./routes/identity";
 import { adminRouter } from "./routes/admin";
 import { heldRouter } from "./routes/held";
 
-const redactedKeys = new Set(["privatekey", "secret", "authkey", "totpcode", "ciphertext", "kdfsalt", "mnemonic", "secretphrase", "password", "totpsecret", "signature", "identitytoken"]);
+const redactedKeys = new Set(["privatekey", "secret", "authkey", "totpcode", "ciphertext", "kdfsalt", "mnemonic", "secretphrase", "password", "totpsecret", "otpauthuri", "signature", "identitytoken"]);
 
 function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
