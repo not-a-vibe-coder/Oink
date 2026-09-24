@@ -9,7 +9,7 @@
  * sessionStorage so whichever screen mounts on return can finish the proof; the Privy
  * login callback fires there, not here.
  */
-import { getIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
+import { getIdentityToken, useLogin, usePrivy, useUser } from "@privy-io/react-auth";
 import { useCallback, useRef, useState } from "react";
 
 export type ProofMethod = "email" | "twitter";
@@ -37,6 +37,8 @@ function writePending(purpose: ProofPurpose | null) {
 
 const methodFor = (purpose: ProofPurpose): ProofMethod => (purpose === "link-x" ? "twitter" : "email");
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function useIdentityProof({
   purposes,
   onProof,
@@ -48,6 +50,19 @@ export function useIdentityProof({
   onError?: (message: string) => void;
 }) {
   const { ready, authenticated, logout } = usePrivy();
+  const { refreshUser } = useUser();
+
+  // The identity token can land a moment after login completes, so ask again a few times,
+  // forcing Privy to reissue it, before concluding the dashboard setting is off.
+  const fetchIdentityToken = useCallback(async (): Promise<string | null> => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const token = await getIdentityToken().catch(() => null);
+      if (token) return token;
+      await refreshUser().catch(() => undefined);
+      await sleep(400 * (attempt + 1));
+    }
+    return null;
+  }, [refreshUser]);
   const [busy, setBusy] = useState(false);
   const finishing = useRef(false);
 
@@ -60,7 +75,7 @@ export function useIdentityProof({
       finishing.current = true;
       writePending(null);
       try {
-        const token = await getIdentityToken();
+        const token = await fetchIdentityToken();
         if (!token) {
           // Privy only issues these when "Return user data in an identity token" is on in its
           // dashboard; without one there is nothing the API can verify.
