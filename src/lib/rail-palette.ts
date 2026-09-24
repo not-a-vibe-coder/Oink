@@ -2,22 +2,23 @@
  * Colours for the allocation rail.
  *
  * Deliberately *not* per-token brand colours: a wallet holding eight tickers
- * would turn into a fruit salad and the one accent would stop meaning anything.
- * The rail is ranked — the biggest allocation carries the seal, the rest step
- * down through ink tints — so the same mix always draws the same bar and
- * the eye reads proportion before it reads identity.
+ * would turn into a fruit salad. The rail is ranked — the biggest allocation
+ * takes the deepest ink, the rest step through muted, low-chroma tones that sit
+ * well next to each other — so the same mix always draws the same bar and the
+ * eye reads proportion before it reads identity. Neighbouring ranks alternate
+ * dark and light so thin slices stay distinguishable.
  */
 const RAMP = [
-  "#ec4e7c", // seal — the dominant allocation
-  "#171216",
-  "#5b5158",
-  "#b8325a",
-  "#9a8f95",
-  "#7d2044",
-  "#c9c0c4",
-  "#f2879f",
-  "#e2d9dd",
-  "#3f3f3f",
+  "#1f3a5f", // deep navy — the dominant allocation
+  "#8fa3b8", // mist blue
+  "#3e5c55", // deep teal
+  "#b59a6a", // antique gold
+  "#5a4a63", // plum
+  "#a7b09a", // sage
+  "#6b4f3f", // walnut
+  "#c8c2b6", // stone
+  "#2f3437", // graphite
+  "#7d8fa6", // slate
 ];
 
 export function railColor(rank: number): string {

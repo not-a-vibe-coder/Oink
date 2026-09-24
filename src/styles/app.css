@@ -3,9 +3,10 @@
    --------------------------------------------------------------------------
    The landing page is a white sheet of paper with ink on it. The wallet is the
    same sheet, used as a statement of account: one dominant figure, hairline
-   ledger rules, tabular figures that never reflow, and a single seal-pink
-   accent that appears only where the mix does. No cards stacked on cards,
-   no shadows except the one surface that genuinely floats (the sheet).
+   ledger rules, tabular figures that never reflow, and a faint wash of the
+   landing page's sky at the edges. The mix draws in muted inks (rail-palette.ts).
+   No cards stacked on cards, no shadows except the surfaces that genuinely
+   float (the sheet and the dock).
 
    Scale is Fibonacci — 13 / 21 / 34 / 55 / 89 in both type and space — so the
    steps are golden-ratio adjacent by construction rather than by eye.
@@ -31,6 +32,12 @@
   --seal: #ec4e7c;
   --seal-deep: #b8325a;
   --seal-wash: #fdeaf0;
+
+  /* Sky — the landing page's edge glow, carried into the app at a fraction of its strength */
+  --sky-cyan: rgba(99, 214, 236, 0.1);
+  --sky-blue: rgba(96, 146, 238, 0.09);
+  --sky-violet: rgba(160, 150, 240, 0.07);
+  --sky-wash: rgba(96, 146, 238, 0.08);
 
   /* Semantics */
   --ledger-up: #17864b;
@@ -102,7 +109,12 @@
 
 .app {
   min-height: 100dvh;
-  background: var(--paper);
+  background:
+    radial-gradient(55vw 65vh at -8% 0%, var(--sky-cyan), transparent 70%),
+    radial-gradient(45vw 70vh at 108% 38%, var(--sky-blue), transparent 70%),
+    radial-gradient(50vw 45vh at 96% 108%, var(--sky-violet), transparent 70%),
+    var(--paper);
+  background-attachment: fixed;
   display: flex;
   flex-direction: column;
 }
@@ -111,7 +123,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--hairline);
 }
@@ -142,41 +154,156 @@
   width: 100%;
 }
 
-.topbar-nav {
+/* The dock: the section icons stand on the right edge like a macOS dock turned on its side.
+   Hovering magnifies an icon and, less, its neighbours; the open section gets the dot. On
+   phones the same dock drops to the bottom edge, because a side rail would take a fifth of
+   the screen from the balance. */
+.dock {
+  position: fixed;
+  top: 50%;
+  right: 16px;
+  z-index: 45;
   display: flex;
-  align-items: center;
-  gap: var(--s1);
-  overflow-x: auto;
-  scrollbar-width: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: var(--r3);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border: 1px solid var(--hairline);
+  box-shadow:
+    0 18px 50px -20px rgba(40, 80, 160, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%);
 }
 
-.topbar-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.navlink {
-  display: inline-flex;
+.dock-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  min-height: 36px;
-  padding: 0 var(--s3);
-  border-radius: var(--r-pill);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  gap: 5px;
+  width: 74px;
+  padding: 9px 4px 7px;
+  border-radius: var(--r2);
   color: var(--ink-3);
   transition:
     color var(--fast) var(--ease),
     background var(--fast) var(--ease);
 }
 
-.navlink:hover {
-  color: var(--ink);
-  background: var(--paper-tint);
+.dock-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  transition: transform var(--base) var(--ease);
 }
 
-.navlink[data-active="true"] {
+.dock-icon img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.72;
+  transition: opacity var(--fast) var(--ease);
+  user-select: none;
+}
+
+.dock-icon[data-flip] img {
+  transform: rotate(180deg);
+}
+
+.dock-animated {
+  display: none;
+}
+
+.dock-item:hover .dock-animated,
+.dock-item[data-active="true"] .dock-animated {
+  display: block;
+}
+
+.dock-item:hover .dock-icon:has(.dock-animated) .dock-still,
+.dock-item[data-active="true"] .dock-icon:has(.dock-animated) .dock-still {
+  display: none;
+}
+
+.dock-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.dock-item:hover {
   color: var(--ink);
-  background: var(--paper-tint);
+}
+
+.dock-item:hover .dock-icon img,
+.dock-item[data-active="true"] .dock-icon img {
+  opacity: 1;
+}
+
+.dock-item[data-active="true"] {
+  color: var(--ink);
+  background: var(--sky-wash);
+}
+
+/* The "this one is open" dot, on the screen-edge side like the Mac's. */
+.dock-item[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink);
+  transform: translateY(-50%);
+}
+
+@media (hover: hover) {
+  .dock-item:hover .dock-icon {
+    transform: translateX(-6px) scale(1.24);
+  }
+
+  .dock-item:hover + .dock-item .dock-icon,
+  .dock-item:has(+ .dock-item:hover) .dock-icon {
+    transform: translateX(-3px) scale(1.1);
+  }
+}
+
+.dock-item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Keep page content clear of the dock wherever the two would meet. */
+@media (min-width: 721px) and (max-width: 1360px) {
+  .shell,
+  .app > .topbar-rail {
+    padding-right: 118px;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1000px) {
+  .stage {
+    padding-right: 118px;
+  }
+}
+
+/* Short windows: a tighter dock so it never reaches the top bar. */
+@media (min-width: 721px) and (max-height: 700px) {
+  .dock-item {
+    padding: 6px 4px 5px;
+    gap: 3px;
+  }
+
+  .dock-icon {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 .shell {
@@ -1474,14 +1601,46 @@ textarea.input {
     padding: 0 16px var(--s2);
   }
 
-  .topbar-nav {
-    gap: 0;
-    -webkit-overflow-scrolling: touch;
+  .app {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
   }
 
-  .navlink {
-    padding: 0 10px;
-    font-size: 13px;
+  .dock {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 0;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    border-radius: var(--r3) var(--r3) 0 0;
+    border-bottom: 0;
+    transform: none;
+  }
+
+  .dock-item {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    padding: 6px 0 5px;
+    gap: 4px;
+  }
+
+  .dock-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .dock-label {
+    font-size: 10px;
+  }
+
+  .dock-item[data-active="true"]::after {
+    top: auto;
+    right: 50%;
+    bottom: -3px;
+    transform: translateX(50%);
   }
 
   .page-title {

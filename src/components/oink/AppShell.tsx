@@ -5,25 +5,33 @@ import { PigAvatar } from "@/components/oink/PigAvatar";
 import { useKeySession } from "@/hooks/useKeySession";
 import { lock } from "@/lib/wallet/key-session";
 
+type NavTarget =
+  | "/app"
+  | "/app/send"
+  | "/app/receive"
+  | "/app/mix"
+  | "/app/activity"
+  | "/app/invoices"
+  | "/app/settings";
+
+// Icons8 line icons, served from public/nav. Send has no icon of its own: it is Receive's
+// arrow turned upward (the `flip` flag), so the pair reads as one gesture in two directions.
+// Mix swaps its still frame for the animated one while hovered or open.
 const NAV: Array<{
-  to:
-    | "/app"
-    | "/app/send"
-    | "/app/receive"
-    | "/app/mix"
-    | "/app/activity"
-    | "/app/invoices"
-    | "/app/settings";
+  to: NavTarget;
   label: string;
+  icon: string;
+  animated?: string;
+  flip?: boolean;
   exact?: boolean;
 }> = [
-  { to: "/app", label: "Wallet", exact: true },
-  { to: "/app/send", label: "Send" },
-  { to: "/app/receive", label: "Receive" },
-  { to: "/app/mix", label: "Mix" },
-  { to: "/app/activity", label: "Activity" },
-  { to: "/app/invoices", label: "Requests" },
-  { to: "/app/settings", label: "Settings" },
+  { to: "/app", label: "Wallet", icon: "/nav/wallet.png", exact: true },
+  { to: "/app/send", label: "Send", icon: "/nav/receive.png", flip: true },
+  { to: "/app/receive", label: "Receive", icon: "/nav/receive.png" },
+  { to: "/app/mix", label: "Mix", icon: "/nav/mix.png", animated: "/nav/mix.gif" },
+  { to: "/app/activity", label: "Activity", icon: "/nav/activity.png" },
+  { to: "/app/invoices", label: "Requests", icon: "/nav/requests.png" },
+  { to: "/app/settings", label: "Settings", icon: "/nav/settings.png" },
 ];
 
 export function AppShell({
@@ -73,19 +81,28 @@ export function AppShell({
           </div>
         </div>
 
-        <nav className="topbar-rail" aria-label="Wallet sections">
-          <div className="topbar-nav">
-            {NAV.map((item) => {
-              const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-              return (
-                <Link key={item.to} to={item.to} className="navlink" data-active={active}>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
       </header>
+
+      <nav className="dock" aria-label="Wallet sections">
+        {NAV.map((item) => {
+          const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="dock-item"
+              data-active={active}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className="dock-icon" data-flip={item.flip || undefined}>
+                <img src={item.icon} alt="" className="dock-still" draggable={false} />
+                {item.animated && <img src={item.animated} alt="" className="dock-animated" draggable={false} />}
+              </span>
+              <span className="dock-label">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
       {children}
 
@@ -102,7 +119,11 @@ export function AppShell({
           ·{" "}
           <Link to="/legal/privacy" className="link">
             Privacy
-          </Link>
+          </Link>{" "}
+          · Icons by{" "}
+          <a href="https://icons8.com" target="_blank" rel="noreferrer" className="link">
+            Icons8
+          </a>
         </p>
       </footer>
     </div>
