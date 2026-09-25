@@ -33,6 +33,7 @@ key is not public), any secret, any key.
 ```bash
 NODE_ENV=production
 PORT=3001
+# KEEPALIVE_URL=https://api.example.com   # optional; Render uses RENDER_EXTERNAL_URL. Pings /health every minute so the host never idles the API.
 APP_URL=https://<domain>                 # CORS allowlist + invoice links
 DATABASE_URL=postgresql://...
 

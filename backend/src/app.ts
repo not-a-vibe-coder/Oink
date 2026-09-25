@@ -39,6 +39,8 @@ app.use((_request, response, next) => {
 app.use((request: Request, response: Response, next: NextFunction) => {
   const startedAt = performance.now();
   response.on("finish", () => {
+    // The keep-alive hits /health every minute; logging each one would bury everything else.
+    if (request.path === "/health" && response.statusCode === 200) return;
     console.info(JSON.stringify({ action: "request", method: request.method, path: request.path, status: response.statusCode, durationMs: Math.round(performance.now() - startedAt) }));
   });
   if (request.method !== "GET" && request.body && Object.keys(request.body).length > 0) console.info(JSON.stringify({ action: "request_payload", path: request.path, payload: redact(request.body) }));
