@@ -8,6 +8,8 @@ import { PigAvatar } from "@/components/oink/PigAvatar";
 import { UnlockInline } from "@/components/oink/UnlockInline";
 import { useKeySession } from "@/hooks/useKeySession";
 import { queryKeys, useResolveTags, useWallet } from "@/hooks/useOink";
+import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendly-error";
 import { useWalletSession } from "@/lib/app-session";
 import { buildTransfer, quoteTransfer, submitTransfer } from "@/lib/oink-server-fns";
 import {
@@ -110,7 +112,7 @@ function SendPage() {
       setQuote(result.data);
     } else {
       setQuote(null);
-      setQuoteError(result.message);
+      setQuoteError(friendlyError(result.message));
     }
   }, [canQuote, recipientIsAddress, recipientIsRaw, trimmedRecipient, recipientIsAccountId, recipientTag, symbol, amount]);
 
@@ -144,6 +146,13 @@ function SendPage() {
     return () => clearInterval(timer);
   }, [quote, phase]);
 
+  // One toast per failure, replacing the last, plus the same words under the button.
+  function failSend(message: string | null) {
+    const text = friendlyError(message);
+    setSendError(text);
+    toast.error(text, { id: "send-error" });
+  }
+
   async function send() {
     if (!quote) return;
     setSendError(null);
@@ -154,7 +163,7 @@ function SendPage() {
         data: { quoteId: quote.quoteId, sponsorFee: quote.sponsorship.available },
       });
       if (!built.ok) {
-        setSendError(built.message);
+        failSend(built.message);
         setPhase("compose");
         return;
       }
@@ -169,7 +178,7 @@ function SendPage() {
       });
 
       if (!submitted.ok) {
-        setSendError(submitted.message);
+        failSend(submitted.message);
         setPhase("compose");
         return;
       }
@@ -183,10 +192,12 @@ function SendPage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: ["activity"] });
     } catch (err) {
-      setSendError(
+      failSend(
         err instanceof Error && err.message === "Wallet is locked."
           ? "Your wallet locked while you were away. Unlock and try again."
-          : "That transaction did not go through. Nothing was sent.",
+          : err instanceof Error
+            ? err.message
+            : null,
       );
       setPhase("compose");
     }
@@ -508,7 +519,9 @@ function SendPage() {
  */
 function maxSpendable(symbol: string, amount: string): string {
   if (symbol !== "SOL") return amount;
-  const reserve = 0.002;
+  // Matches SOL_RESERVE_LAMPORTS in backend/src/routes/transfer.ts: fees plus the rent for
+  // the token accounts a swap may open.
+  const reserve = 0.006;
   const spendable = Math.max(0, Number(amount) - reserve);
   return spendable.toFixed(6);
 }

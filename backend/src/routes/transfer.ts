@@ -18,7 +18,13 @@ import {
 } from "../services/mixEngine";
 import { checkSponsorshipBudget, recordSponsorship } from "../services/feePayer";
 import { buildSettlementTransaction, type BuiltTransactionPlan } from "../services/txBuilder";
-import { broadcastAndConfirmTransaction } from "../services/rpc";
+import { broadcastAndConfirmTransaction, getConnection } from "../services/rpc";
+import { formatTokenUnits, parseTokenUnits } from "../services/mixEngine";
+import { resolveSolanaToken } from "../lib/tokens";
+import { PublicKey } from "@solana/web3.js";
+
+// Fee + priority fee + a temporary wSOL account + one recipient token account, with margin.
+const SOL_RESERVE_LAMPORTS = 6_000_000n;
 
 export const transferRouter = Router();
 
@@ -150,6 +156,25 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
 
     // 3. Sponsorship check
     const sponsorship = await checkSponsorshipBudget(senderAccountId);
+
+    // Sending SOL spends the same SOL that pays for the transaction: the fee, the temporary
+    // wrapped-SOL account a swap opens, and any token account the recipient lacks (~0.002
+    // SOL rent each). Spending it all fails in simulation with "insufficient lamports", so
+    // refuse up front and say how much can go.
+    const inputToken = resolveSolanaToken(String(fromSymbolOrMint));
+    if (inputToken?.isNative) {
+      const balance = BigInt(await getConnection().getBalance(new PublicKey(senderWallet)));
+      const wanted = BigInt(parseTokenUnits(String(amountIn), 9));
+      if (wanted + SOL_RESERVE_LAMPORTS > balance) {
+        const most = balance > SOL_RESERVE_LAMPORTS ? balance - SOL_RESERVE_LAMPORTS : 0n;
+        res.status(400).json({
+          error: "INSUFFICIENT_SOL",
+          message: `Keep about 0.006 SOL for network fees and account setup. You can send up to ${formatTokenUnits(most, 9)} SOL.`,
+          details: null,
+        });
+        return;
+      }
+    }
 
     // 4. Calculate quotes
     const quote = await calculateMixQuotes({

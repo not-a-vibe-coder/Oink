@@ -100,7 +100,8 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <Toaster richColors />
+      {/* Top, so a toast never lands under the phone tab bar. */}
+      <Toaster richColors position="top-center" />
     </QueryClientProvider>
   );
 }
