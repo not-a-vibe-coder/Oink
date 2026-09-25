@@ -3,6 +3,8 @@ import { getConfig } from "../config";
 import { resolveSolanaToken, USDC, type SolanaTokenInfo } from "../lib/tokens";
 import { fetchJupiterQuote, type JupiterQuoteResponse } from "./jupiterService";
 
+const WRAPPED_SOL_MINT = "So11111111111111111111111111111111111111112";
+
 export interface MixLeg {
   symbol: string;
   mint: string;
@@ -161,13 +163,16 @@ export async function calculateMixQuotes(params: {
         };
       }
 
-      // Need Jupiter swap quote
+      // Need Jupiter swap quote. Native SOL is registered under the System Program address,
+      // which is not a mint; Jupiter knows SOL only as wrapped SOL, and wraps it itself
+      // (wrapAndUnwrapSol in txBuilder).
+      const jupiterInputMint = inputToken.isNative ? WRAPPED_SOL_MINT : inputToken.mint;
       const targetToken = resolveSolanaToken(leg.mint);
       const targetDecimals = targetToken?.decimals ?? 8;
 
       try {
         const jupQuote = await fetchJupiterQuote({
-          inputMint: inputToken.mint,
+          inputMint: jupiterInputMint,
           outputMint: leg.mint,
           amount: legInStr,
           slippageBps,
@@ -198,7 +203,7 @@ export async function calculateMixQuotes(params: {
 
           // Swap from input to USDC instead
           const safeQuote = await fetchJupiterQuote({
-            inputMint: inputToken.mint,
+            inputMint: jupiterInputMint,
             outputMint: USDC.mint,
             amount: legInStr,
             slippageBps,

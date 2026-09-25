@@ -1,7 +1,7 @@
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getConfig } from "../config";
-import { resolveSolanaToken, type SolanaTokenInfo } from "../lib/tokens";
+import { resolveSolanaToken, SOL, type SolanaTokenInfo } from "../lib/tokens";
 import { formatTokenUnits } from "./mixEngine";
 
 let connectionInstance: Connection | null = null;
@@ -187,6 +187,23 @@ export async function getWalletBalances(accountId: string, walletAddress: string
 
   const needsSol = lamports < 5_000_000n; // < 0.005 SOL
 
+  // SOL is not a token account, but it is money the user can send: list it with the tokens
+  // (after valuation, so it is not counted twice) or Send offers "nothing to send".
+  const solValueUsd = solPrice > 0 ? (Number(solFormatted) * solPrice).toFixed(2) : null;
+  if (lamports > 0n) {
+    holdings.push({
+      symbol: SOL.symbol,
+      name: SOL.name,
+      mint: SOL.mint,
+      decimals: SOL.decimals,
+      amount: solFormatted,
+      amountBase: lamports.toString(),
+      valueUsd: solValueUsd,
+      priceUsd: solPrice > 0 ? String(solPrice) : null,
+      iconUrl: SOL.iconUrl,
+    });
+  }
+
   const data: WalletBalances = {
     accountId,
     publicKey: walletAddress,
@@ -194,7 +211,7 @@ export async function getWalletBalances(accountId: string, walletAddress: string
     solLamports: lamports,
     // An empty wallet is worth $0.00, not "unknown": null is reserved for nothing at all.
     totalValueUsd: totalUsd.toFixed(2),
-    solValueUsd: solPrice > 0 ? (Number(solFormatted) * solPrice).toFixed(2) : null,
+    solValueUsd,
     holdings,
     needsSol,
   };
