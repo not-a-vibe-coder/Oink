@@ -2180,3 +2180,18 @@ textarea.input {
     order: 1;
   }
 }
+
+.qr-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  max-width: 100%;
+  text-align: center;
+}
+
+/* The QR panel stays white in dark mode, so its fallback text must stay dark too. */
+.qr-failed .meta {
+  color: #6b6b6b;
+}

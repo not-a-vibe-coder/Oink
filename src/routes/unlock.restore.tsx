@@ -8,13 +8,13 @@ import { CodeField, IdentifierField, PasswordField } from "@/components/oink/fie
 import { keypairFromEntropy } from "@/lib/crypto/derive";
 import { toEntropy, validateMnemonic } from "@/lib/crypto/mnemonic";
 import {
-  enrollStart,
   getTagProfile,
   recoverChallenge,
   recoverComplete,
 } from "@/lib/oink-server-fns";
 import { deriveKeys, randomSalt, sealKeystore, zero, KDF_V1 } from "@/lib/wallet/credentials";
 import { signMessage, unlockWith } from "@/lib/wallet/key-session";
+import { startEnrollmentWithRetry } from "@/lib/enroll-start";
 import type { EnrollStartResponse } from "@/types/api";
 
 export const Route = createFileRoute("/unlock/restore")({
@@ -58,7 +58,7 @@ function RestorePage() {
   );
 
   const startEnrollment = useCallback(async () => {
-    const result = await enrollStart();
+    const result = await startEnrollmentWithRetry();
     if (result.ok) setEnrollment(result.data);
     else setFinishError(result.message);
   }, []);

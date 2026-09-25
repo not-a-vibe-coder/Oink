@@ -7,9 +7,12 @@ import { useEffect, useState } from "react";
  */
 export function QrCode({ value, size = 244, alt }: { value: string; size?: number; alt: string }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setFailed(false);
     void (async () => {
       const QRCode = (await import("qrcode")).default;
       const url = await QRCode.toDataURL(value, {
@@ -20,17 +23,29 @@ export function QrCode({ value, size = 244, alt }: { value: string; size?: numbe
       });
       if (!cancelled) setDataUrl(url);
     })().catch(() => {
-      if (!cancelled) setDataUrl(null);
+      // Most often the qrcode chunk 404ing in a tab opened before a redeploy. Say so and
+      // offer a retry, rather than leaving a skeleton up forever.
+      if (!cancelled) {
+        setDataUrl(null);
+        setFailed(true);
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [value, size]);
+  }, [value, size, attempt]);
 
   return (
     <div className="qr">
       {dataUrl ? (
         <img src={dataUrl} alt={alt} width={size} height={size} />
+      ) : failed ? (
+        <div className="qr-failed" style={{ width: size, height: size }}>
+          <p className="meta">The QR code didn't load.</p>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setAttempt((n) => n + 1)}>
+            Retry
+          </button>
+        </div>
       ) : (
         <div className="skeleton" style={{ width: size, height: size, borderRadius: 8 }} />
       )}

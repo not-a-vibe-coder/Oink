@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, Download, ShieldAlert } from "lucide-react";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { AuthenticatorSetup } from "@/components/oink/AuthenticatorSetup";
 import { CodeField, PasswordField } from "@/components/oink/fields";
-import { enrollComplete, enrollStart, enrollVerifyTotp } from "@/lib/oink-server-fns";
+import { enrollComplete, enrollVerifyTotp } from "@/lib/oink-server-fns";
+import { startEnrollmentWithRetry } from "@/lib/enroll-start";
 import { keypairFromEntropy } from "@/lib/crypto/derive";
 import { generateMnemonic, toEntropy } from "@/lib/crypto/mnemonic";
 import { deriveKeys, randomSalt, sealKeystore, zero, KDF_V1 } from "@/lib/wallet/credentials";
@@ -45,6 +46,8 @@ function CreateWalletPage() {
   // Step 2
   const [enrollment, setEnrollment] = useState<EnrollStartResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [enrollSlow, setEnrollSlow] = useState(false);
+  const enrolling = useRef(false);
   const [totpCode, setTotpCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [totpError, setTotpError] = useState<string | null>(null);
@@ -58,22 +61,48 @@ function CreateWalletPage() {
   const [phrase, setPhrase] = useState<string[] | null>(null);
 
   const startEnrollment = useCallback(async () => {
+    if (enrolling.current) return;
+    enrolling.current = true;
     setEnrollError(null);
-    const result = await enrollStart();
-    if (result.ok) {
-      setEnrollment(result.data);
-    } else {
-      setEnrollError(
-        result.code === "RATE_LIMITED"
-          ? result.message
-          : "Oink could not start enrollment. Try again in a moment.",
-      );
+    // Past a few seconds this is a cold API booting, not a hang; say so.
+    const slow = setTimeout(() => setEnrollSlow(true), 4000);
+    try {
+      const result = await startEnrollmentWithRetry();
+      if (result.ok) {
+        setEnrollment(result.data);
+      } else {
+        setEnrollError(
+          result.code === "RATE_LIMITED"
+            ? result.message
+            : "Oink could not start enrollment. Try again in a moment.",
+        );
+      }
+    } finally {
+      clearTimeout(slow);
+      setEnrollSlow(false);
+      enrolling.current = false;
     }
   }, []);
 
+  // Started on arrival, while the password is being typed, rather than on reaching step 2:
+  // by the time they press Continue the secret (and the QR library) are usually ready.
   useEffect(() => {
-    if (step === 2 && !enrollment) void startEnrollment();
-  }, [step, enrollment, startEnrollment]);
+    void startEnrollment();
+    void import("qrcode");
+  }, [startEnrollment]);
+
+  // On reaching step 2, try again if the early start failed, or replace it if it went stale
+  // (an enrollment lives 15 minutes) while they lingered on step 1. Keyed on the step alone:
+  // re-running on every enrollment change would loop on a persistent failure.
+  const enrollmentRef = useRef(enrollment);
+  enrollmentRef.current = enrollment;
+  useEffect(() => {
+    if (step !== 2) return;
+    const current = enrollmentRef.current;
+    if (current && Date.parse(current.expiresAt) - Date.now() > 60_000) return;
+    setEnrollment(null);
+    void startEnrollment();
+  }, [step, startEnrollment]);
 
   const passwordProblem = useMemo(() => {
     if (password.length === 0) return null;
@@ -347,7 +376,16 @@ function CreateWalletPage() {
               </div>
             </>
           ) : (
-            !enrollError && <div className="skeleton" style={{ height: 280, borderRadius: 22 }} />
+            !enrollError && (
+              <>
+                <div className="skeleton" style={{ height: 280, borderRadius: 22 }} />
+                {enrollSlow && (
+                  <p className="meta" role="status">
+                    Waking the server up. This can take up to a minute the first time.
+                  </p>
+                )}
+              </>
+            )
           )}
         </form>
       )}
