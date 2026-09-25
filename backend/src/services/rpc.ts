@@ -1,3 +1,4 @@
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getConfig } from "../config";
 import { resolveSolanaToken, type SolanaTokenInfo } from "../lib/tokens";
@@ -109,37 +110,58 @@ export async function getWalletBalances(accountId: string, walletAddress: string
   const holdings: TokenHolding[] = [];
   const mintsForPrice: string[] = ["So11111111111111111111111111111111111111112"];
 
-  try {
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
-      programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-    });
+  // Both token programs: USDC is classic SPL, but every xStock (the Xs… mints, SPYx
+  // included) is Token-2022. Reading only Tokenkeg made received stocks invisible.
+  const programs = [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID];
+  const accountLists = await Promise.all(
+    programs.map((programId) =>
+      connection
+        .getParsedTokenAccountsByOwner(pubkey, { programId })
+        .then((result) => result.value)
+        .catch((err) => {
+          console.warn(`Could not fetch token accounts for program ${programId.toBase58()}:`, err);
+          return [];
+        }),
+    ),
+  );
 
-    for (const { account } of tokenAccounts.value) {
-      const parsedInfo = account.data.parsed?.info;
-      if (!parsedInfo) continue;
-      const mint = parsedInfo.mint;
-      const amountBase = parsedInfo.tokenAmount?.amount || "0";
-      if (amountBase === "0") continue;
+  for (const { account } of accountLists.flat()) {
+    const parsedInfo = account.data.parsed?.info;
+    if (!parsedInfo) continue;
+    const mint: string = parsedInfo.mint;
+    const amountBase: string = parsedInfo.tokenAmount?.amount || "0";
+    if (amountBase === "0") continue;
+    const decimals: number = parsedInfo.tokenAmount?.decimals ?? 0;
 
-      const tokenMeta = resolveSolanaToken(mint);
-      if (tokenMeta) {
-        mintsForPrice.push(mint);
-        holdings.push({
-          symbol: tokenMeta.symbol,
-          name: tokenMeta.name,
-          mint,
-          decimals: parsedInfo.tokenAmount?.decimals ?? tokenMeta.decimals,
-          amount: parsedInfo.tokenAmount?.uiAmountString || formatTokenUnits(amountBase, tokenMeta.decimals),
-          amountBase,
-          valueUsd: null,
-          priceUsd: null,
-          iconUrl: tokenMeta.iconUrl,
-          underlyingTicker: tokenMeta.underlyingTicker,
-        });
-      }
+    const tokenMeta = resolveSolanaToken(mint);
+    if (tokenMeta) {
+      mintsForPrice.push(mint);
+      holdings.push({
+        symbol: tokenMeta.symbol,
+        name: tokenMeta.name,
+        mint,
+        decimals: parsedInfo.tokenAmount?.decimals ?? tokenMeta.decimals,
+        amount: parsedInfo.tokenAmount?.uiAmountString || formatTokenUnits(amountBase, tokenMeta.decimals),
+        amountBase,
+        valueUsd: null,
+        priceUsd: null,
+        iconUrl: tokenMeta.iconUrl,
+        underlyingTicker: tokenMeta.underlyingTicker,
+      });
+    } else {
+      // Not in Oink's list. Shown, so a transfer never silently vanishes, but never priced:
+      // airdropped spam often carries a quoted price, and it must not inflate the total.
+      holdings.push({
+        symbol: `${mint.slice(0, 4)}…${mint.slice(-4)}`,
+        name: "Unlisted token",
+        mint,
+        decimals,
+        amount: parsedInfo.tokenAmount?.uiAmountString || formatTokenUnits(amountBase, decimals),
+        amountBase,
+        valueUsd: null,
+        priceUsd: null,
+      });
     }
-  } catch (err) {
-    console.warn("Could not fetch SPL token accounts:", err);
   }
 
   // 3. Fetch prices
@@ -149,6 +171,7 @@ export async function getWalletBalances(accountId: string, walletAddress: string
   let totalUsd = solPrice > 0 ? (Number(solFormatted) * solPrice) : 0;
 
   for (const holding of holdings) {
+    if (!resolveSolanaToken(holding.mint)) continue; // unlisted: shown, never valued
     // Jupiter only prices mainnet mints, so devnet USDC comes back unpriced. A dollar
     // stablecoin is worth a dollar; without this the balance reads as a dash on devnet.
     const priceStr = prices[holding.mint] ?? (holding.symbol === "USDC" ? "1" : undefined);
