@@ -41,6 +41,8 @@ export interface WalletBalances {
   solBalance: string;
   solLamports: bigint;
   totalValueUsd: string | null;
+  /** SOL is not a token account, so it rides beside the holdings with its own value. */
+  solValueUsd: string | null;
   holdings: TokenHolding[];
   needsSol: boolean;
 }
@@ -192,6 +194,7 @@ export async function getWalletBalances(accountId: string, walletAddress: string
     solLamports: lamports,
     // An empty wallet is worth $0.00, not "unknown": null is reserved for nothing at all.
     totalValueUsd: totalUsd.toFixed(2),
+    solValueUsd: solPrice > 0 ? (Number(solFormatted) * solPrice).toFixed(2) : null,
     holdings,
     needsSol,
   };

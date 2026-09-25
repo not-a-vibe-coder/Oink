@@ -15,6 +15,28 @@ export const Route = createFileRoute("/app/")({
   component: WalletHome,
 });
 
+const SOL_ROW = {
+  symbol: "SOL",
+  name: "Solana",
+  mint: "So11111111111111111111111111111111111111112",
+  decimals: 9,
+  iconUrl: "https://assets.relay.link/icons/792703809/light.png",
+};
+
+function withSol(
+  tokens: WalletHolding[],
+  solBalance: string | undefined,
+  solValueUsd: string | null | undefined,
+): WalletHolding[] {
+  if (!solBalance || Number(solBalance) <= 0 || tokens.some((token) => token.mint === SOL_ROW.mint)) {
+    return tokens;
+  }
+  return [
+    ...tokens,
+    { ...SOL_ROW, amount: solBalance, amountBase: "", valueUsd: solValueUsd ?? null, priceUsd: null },
+  ];
+}
+
 function WalletHome() {
   const { accountId, tag, publicKey } = useWalletSession();
   const wallet = useWallet();
@@ -23,7 +45,9 @@ function WalletHome() {
   const activity = useActivity({ limit: 5 });
   const [openHolding, setOpenHolding] = useState<WalletHolding | null>(null);
 
-  const holdings = wallet.data?.holdings ?? [];
+  // SOL sent from another wallet is money too; list it with the tokens rather than only
+  // in the fee line, or a SOL-only wallet reads as empty.
+  const holdings = withSol(wallet.data?.holdings ?? [], wallet.data?.solBalance, wallet.data?.solValueUsd);
   const mix = mixQuery.data?.mix ?? [];
   const balance = splitUsd(wallet.data?.totalValueUsd ?? null);
   const recent = activity.data?.transfers ?? [];

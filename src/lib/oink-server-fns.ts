@@ -404,6 +404,7 @@ export const getWallet = createServerFn({ method: "GET" }).handler(() =>
       accountId: string;
       publicKey: string;
       solBalance: string;
+      solValueUsd?: string | null;
       totalValueUsd: string | null;
       holdings: WalletHolding[];
       needsSol: boolean;
