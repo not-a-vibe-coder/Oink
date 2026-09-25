@@ -4,6 +4,7 @@ import { getConfig } from "../config";
 import { query } from "../db";
 import { resolveSolanaToken, USDC } from "../lib/tokens";
 import { requireSession } from "../middleware/session";
+import { payRequestUri } from "./pay";
 
 export const invoicesRouter = Router();
 
@@ -54,7 +55,10 @@ invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => 
 
     const config = getConfig();
     const payUrl = `${config.appUrl}/pay/${invoiceId}`;
-    const solanaPayUri = `solana:${recipientWallet}?amount=${amount}&spl-token=${token.mint}&memo=${encodeURIComponent(memo || invoiceId)}`;
+    // A request that settles into the mix hands the payer's wallet an Oink-built transaction
+    // (routes/pay.ts); otherwise it stays a plain Solana Pay transfer any wallet understands.
+    const plainUri = `solana:${recipientWallet}?amount=${amount}&spl-token=${token.mint}&memo=${encodeURIComponent(memo || invoiceId)}`;
+    const solanaPayUri = (applyMix && payRequestUri(creatorAccountId, String(amount), token.symbol)) || plainUri;
 
     res.status(201).json({
       id: invoiceId,
@@ -148,6 +152,10 @@ invoicesRouter.get("/:id", async (req: Request, res: Response) => {
       createdAt: new Date(invoice.created_at).toISOString(),
       paidAt: invoice.paid_at ? new Date(invoice.paid_at).toISOString() : null,
       signature: invoice.signature,
+      // Null unless paying this request settles into the mix via a transaction request.
+      solanaPayUri: invoice.apply_mix
+        ? payRequestUri(invoice.creator_account_id, String(invoice.amount), invoice.token_symbol)
+        : null,
     });
   } catch (err) {
     console.error("Get invoice error:", err);

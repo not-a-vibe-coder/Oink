@@ -93,12 +93,12 @@ function ReceivePage() {
               </p>
               <AllocationRail mix={mix} />
               <p className="footnote" style={{ marginTop: "var(--s3)" }}>
-                Anything sent straight to the address above arrives as it was sent. You can
-                rebalance it afterwards from{" "}
-                <Link to="/app/mix" className="link">
-                  your mix
-                </Link>
-                .
+                A plain address can only move tokens, so anything sent straight to it arrives as it
+                was sent. To have a payment from any wallet settle into your mix, make a{" "}
+                <button type="button" className="link" onClick={() => setTab("request")}>
+                  request
+                </button>{" "}
+                and have them scan its QR in Phantom, Solflare or Backpack.
               </p>
             </section>
           )}

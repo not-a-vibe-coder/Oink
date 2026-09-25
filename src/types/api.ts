@@ -172,6 +172,8 @@ export interface InvoiceRow {
 
 export interface PublicInvoice {
   id: string;
+  /** A Solana Pay transaction request that settles into the mix, when the request asks for it. */
+  solanaPayUri?: string | null;
   creatorAccountId: string;
   creatorTag: string | null;
   recipientWallet: string;

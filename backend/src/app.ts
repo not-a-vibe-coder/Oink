@@ -2,6 +2,7 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { healthRouter } from "./routes/health";
 import { enrollRouter } from "./routes/enroll";
+import { payRouter } from "./routes/pay";
 import { authRouter } from "./routes/auth";
 import { tagsRouter } from "./routes/tags";
 import { mixRouter } from "./routes/mix";
@@ -27,6 +28,9 @@ const allowedOrigins = [process.env.APP_URL, process.env.NODE_ENV === "productio
 
 export const app = express();
 
+// Solana Pay transaction requests are called by wallets, not by the app, and the spec asks
+// for an open origin. Mounted ahead of the allowlist, cookie-free, so nothing else widens.
+app.use("/api/v1/pay", cors(), express.json({ limit: "4kb" }), payRouter);
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "64kb" }));
 app.use((_request, response, next) => {

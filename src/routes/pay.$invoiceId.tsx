@@ -45,7 +45,9 @@ function PayPage() {
   const data = invoice.data;
   const open = data.status === "pending";
   const handle = data.creatorTag ? `@${data.creatorTag}` : data.creatorAccountId;
-  const solanaPayUri = `solana:${data.recipientWallet}?amount=${data.amount}&spl-token=${data.tokenMint}&memo=${encodeURIComponent(data.memo || data.id)}`;
+  const solanaPayUri =
+    data.solanaPayUri ??
+    `solana:${data.recipientWallet}?amount=${data.amount}&spl-token=${data.tokenMint}&memo=${encodeURIComponent(data.memo || data.id)}`;
 
   return (
     <main className="stage">
