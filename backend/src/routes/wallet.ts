@@ -1,7 +1,16 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "../db";
 import { requireSession } from "../middleware/session";
-import { getWalletBalances } from "../services/rpc";
+import { getWalletBalances, type WalletBalances } from "../services/rpc";
+
+/**
+ * Lamports stay a BigInt inside the API and cross the wire as a decimal string: res.json
+ * cannot serialise a BigInt (every balance request 500'd until this existed), and a JS
+ * number would lose precision.
+ */
+export function walletResponse(balances: WalletBalances) {
+  return { ...balances, solLamports: balances.solLamports.toString() };
+}
 
 export const walletRouter = Router();
 
@@ -19,7 +28,7 @@ walletRouter.get("/", requireSession, async (req: Request, res: Response) => {
     const publicKey = walletRes.rows[0].public_key;
     const balances = await getWalletBalances(accountId, publicKey);
 
-    res.status(200).json(balances);
+    res.status(200).json(walletResponse(balances));
   } catch (err) {
     console.error("Get wallet balances error:", err);
     res.status(500).json({ error: "INTERNAL", message: "Failed to fetch wallet balances.", details: null });
