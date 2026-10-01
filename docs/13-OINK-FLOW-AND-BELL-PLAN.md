@@ -3,7 +3,7 @@
 Status: proposed product direction, pending customer validation and technical specification.
 Created: October 1, 2026.
 
-This document records the brainstorming decision to combine Oink Flow and Bell into one product. It does not replace Oink's existing security requirements or authorize implementation changes. Design and implementation are separate next steps.
+This document records the brainstorming decision to combine Oink Flow and Bell into one product. It preserves Oink's existing security requirements. The user subsequently authorized implementation of Phases 1 and 2 in ten commits each; later phases remain outside that build scope.
 
 ## 1. Product thesis
 

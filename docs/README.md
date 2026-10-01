@@ -35,3 +35,13 @@ password and a 6-digit code. No secret phrase typed, no extension.
 
 The 12-word phrase still exists — it is the backup, and the fallback if the password or the
 authenticator is lost. It is just not what you use to log in.
+
+## Oink Flow + Bell
+
+The new income-allocation direction is described in [the five-phase plan](13-OINK-FLOW-AND-BELL-PLAN.md). Its phase numbers are separate from the original wallet rewrite above. Phases 1 and 2 build on the existing wallet rather than replace its custody requirements.
+
+- [Product and accounting specification](flow/01-SPECIFICATION.md)
+- [Integration feasibility and reuse audit](flow/02-INTEGRATIONS.md)
+- [API and persistence specification](flow/03-API-AND-DATA.md)
+- [Customer validation checklist](flow/04-VALIDATION.md)
+- [Build progress, checks, and setup](flow/05-PROGRESS.md)

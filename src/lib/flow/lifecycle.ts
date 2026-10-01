@@ -4,7 +4,13 @@ const next: Record<PurchaseState, readonly PurchaseState[]> = {
   deferred: ["pending", "cancelled"],
   approved: ["pending", "submitted", "cancelled"],
   submitted: ["confirmed", "failed"],
-  confirmed: [], failed: ["pending", "cancelled"], cancelled: [],
+  confirmed: [],
+  failed: ["pending", "cancelled"],
+  cancelled: [],
 };
-export function canTransition(from: PurchaseState, to: PurchaseState): boolean { return next[from].includes(to); }
-export function reservesCash(state: PurchaseState): boolean { return state !== "confirmed" && state !== "cancelled"; }
+export function canTransition(from: PurchaseState, to: PurchaseState): boolean {
+  return next[from].includes(to);
+}
+export function reservesCash(state: PurchaseState): boolean {
+  return state !== "confirmed" && state !== "cancelled";
+}

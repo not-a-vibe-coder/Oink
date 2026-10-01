@@ -1,7 +1,17 @@
 /** JSON boundaries use integer micro-USDC strings; calculations use BigInt. */
-export interface FlowWeight { symbol: string; basisPoints: number }
-export interface FlowSettings { cashTargetBase: string; weights: FlowWeight[]; revision: number }
-export interface FlowPurchase { symbol: string; amountBase: string }
+export interface FlowWeight {
+  symbol: string;
+  basisPoints: number;
+}
+export interface FlowSettings {
+  cashTargetBase: string;
+  weights: FlowWeight[];
+  revision: number;
+}
+export interface FlowPurchase {
+  symbol: string;
+  amountBase: string;
+}
 export interface FlowAllocation {
   paymentBase: string;
   cashBase: string;
@@ -24,4 +34,5 @@ export interface FlowPayment extends FlowAllocation {
   settingsRevision: number;
   createdAt: string;
 }
-export type PurchaseState = "pending" | "deferred" | "approved" | "submitted" | "confirmed" | "failed" | "cancelled";
+export type PurchaseState =
+  "pending" | "deferred" | "approved" | "submitted" | "confirmed" | "failed" | "cancelled";
