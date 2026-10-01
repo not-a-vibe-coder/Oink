@@ -10,6 +10,7 @@ type NavTarget =
   | "/app/receive"
   | "/app/mix"
   | "/app/activity"
+  | "/app/income"
   | "/app/invoices"
   | "/app/settings";
 
@@ -34,9 +35,10 @@ const REQUESTS: NavItem = { to: "/app/invoices", label: "Requests", icon: "/nav/
 const SETTINGS: NavItem = { to: "/app/settings", label: "Settings", icon: "/nav/settings.png" };
 
 // Desktop dock order. On phones the pill carries the everyday four and the plus opens the rest.
-const NAV = [WALLET, SEND, RECEIVE, MIX, ACTIVITY, REQUESTS, SETTINGS];
+const INCOME: NavItem = { to: "/app/income", label: "Income", icon: "/nav/requests.png" };
+const NAV = [WALLET, INCOME, SEND, RECEIVE, MIX, ACTIVITY, REQUESTS, SETTINGS];
 const PHONE_PRIMARY = [WALLET, SEND, RECEIVE, SETTINGS];
-const PHONE_MORE = [MIX, ACTIVITY, REQUESTS];
+const PHONE_MORE = [INCOME, MIX, ACTIVITY, REQUESTS];
 
 export function AppShell({
   accountId,
