@@ -138,7 +138,10 @@ export function createBellQuote(
         quote = {
           ...quote,
           outAmount: build.outAmount,
-          minimumOutput: build.otherAmountThreshold,
+          minimumOutput: (
+            (BigInt(build.outAmount) * BigInt(10000 - policy.slippageBps)) /
+            10000n
+          ).toString(),
           priceImpact: typeof build.priceImpactPct === "string" ? build.priceImpactPct : null,
           route: build.routePlan.map((step) => step.swapInfo.label),
         };
