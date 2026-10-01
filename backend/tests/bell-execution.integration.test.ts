@@ -17,6 +17,7 @@ import { getSolanaConnection } from "../src/services/txBuilder";
 import { USDC, resolveSolanaToken } from "../src/lib/tokens";
 import { DEFAULT_BELL_POLICY } from "../../src/lib/bell/policy";
 import { fixtureBuild } from "./helpers/bell-fixture";
+import { pilotReport } from "../scripts/pilot-report";
 import type { BellPrepared } from "../../src/lib/bell/types";
 const suite =
   process.env.TEST_DATABASE_URL && process.env.TEST_DATABASE_URL === process.env.DATABASE_URL
@@ -281,6 +282,25 @@ suite("Bell execution lifecycle (PostgreSQL, mocked chain, no spending)", () => 
     await post(`attempts/${plan.attempt.id}/submit`, {
       signedTransaction: plan.transaction,
     }).expect(400);
+    const interrupted = plan;
+    await post(`purchases/${purchase}/retry`).expect(200);
+    const freshQuote = await post(`purchases/${purchase}/quote`, {
+      policy: DEFAULT_BELL_POLICY,
+    }).expect(200);
+    plan = (
+      await post(`purchases/${purchase}/prepare`, { quoteId: freshQuote.body.id }).expect(200)
+    ).body;
+    expect(plan.attempt.id).not.toBe(interrupted.attempt.id);
+    const oldTx = VersionedTransaction.deserialize(Buffer.from(interrupted.transaction, "base64"));
+    oldTx.sign([signer]);
+    expect(
+      (
+        await post(`attempts/${interrupted.attempt.id}/submit`, {
+          signedTransaction: Buffer.from(oldTx.serialize()).toString("base64"),
+        }).expect(200)
+      ).body.state,
+    ).toBe("superseded");
+    expect(broadcasts).toBe(0);
     const tx = VersionedTransaction.deserialize(Buffer.from(plan.transaction, "base64"));
     tx.sign([signer]);
     signed = Buffer.from(tx.serialize()).toString("base64");
@@ -371,7 +391,18 @@ suite("Bell execution lifecycle (PostgreSQL, mocked chain, no spending)", () => 
       .get("/api/v1/flow/receipts")
       .set("Cookie", cookie)
       .expect(200);
-    expect(history.body.attempts).toHaveLength(2);
+    expect(history.body.attempts).toHaveLength(3);
     expect(history.body.attempts.some((a: { state: string }) => a.state === "expired")).toBe(true);
+    const report = await pilotReport([account]);
+    expect(report.received_payments).toBe("1");
+    expect(report.allocated_payments).toBe("1");
+    expect(report.allocated_usdc_base).toBe("500000000");
+    expect(report.cash_allocation_base).toBe("200000000");
+    expect(report.finalized_fills).toBe("1");
+    expect(report.actual_usdc_spent_base).toBe("180000000");
+    expect(report.released_usdc_base).toBe("120000000");
+    expect(report.reserved_usdc_base).toBe("0");
+    expect(report.finalized_fee_lamports).toBe("5000");
+    expect(report.repeat_users).toBe("0");
   });
 });

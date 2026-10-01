@@ -11,6 +11,11 @@ export const Route = createFileRoute("/demo")({
     meta: [
       { title: "Oink Flow + Bell — simulated product walkthrough" },
       { name: "robots", content: "noindex" },
+      {
+        name: "description",
+        content:
+          "An explicitly simulated walkthrough of cash-first USDC income allocation and reviewed tokenized-stock purchases.",
+      },
     ],
   }),
 });

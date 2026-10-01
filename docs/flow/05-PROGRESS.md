@@ -59,3 +59,11 @@ The Income screen now offers quote review, simulated trade review, inline wallet
 ### Remaining pilot gates
 
 No mainnet funds were spent. Live evidence covers read-only routes; transaction execution uses deterministic mocked chain evidence and local PostgreSQL. Browser interaction checks with a funded wallet, customer interviews, provider eligibility review, and a reliable equity reference feed remain before a public pilot. Required premium checks remain unavailable. Phase 5 covers those pilot and hackathon submission tasks.
+
+## Phase 5 — verification, pilot tools, and submission package
+
+Ten local commits deliver verified contest requirements, provider hardening, a combined payment-to-portfolio integration check, an isolated simulated `/demo`, receipt/expiry polish, consented-cohort reporting, desktop/phone browser evidence and recording, pitch/demo/reuse documents, reviewer setup/CI, and final acceptance evidence.
+
+Verification: 85 main-suite tests passed (63 optional integration checks skipped), plus ten PostgreSQL checks in separate Flow/Bell runs. Frontend/backend TypeScript, targeted lint, and production build passed. Browser rehearsal passed at 1280×900 and 390×844 with no financial requests, page errors, or horizontal overflow; the phone check verifies expiry blocks simulated approval. Resetting an interrupted signing plan prevents its broadcast, and the pilot report’s exact totals match the workflow fixtures.
+
+See [submission draft](../submission/04-SUBMISSION-DRAFT.md), [evidence and remaining gates](../submission/06-EVIDENCE.md), and [recording/screenshots](../submission/artifacts/README.md). Real users, funded mainnet execution, authenticated browser/recovery checks, founder details, narration, hosting, repository publication/access, and actual contest submission remain pending. The local development package is complete; full pilot/submission completion is not claimed.
