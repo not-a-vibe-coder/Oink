@@ -6,6 +6,7 @@ import type { FlowPayment, FlowPurchase, FlowSettings } from "../../../../src/li
 import { flowUsdcMint, freshUsdcBalance } from "./chain";
 import { invoiceRecord } from "./invoices";
 import { FlowError, inFlowTransaction, lockSettings } from "./settings";
+import { requireSettledReservations } from "./reservations";
 interface PaymentRow {
   id: string;
   invoice_id: string;
@@ -51,6 +52,7 @@ export function previewFlowIncome(accountId: string, amount: unknown) {
       "SELECT public_key FROM wallets WHERE account_id = $1",
       [accountId],
     );
+    await requireSettledReservations(client, accountId);
     const reserved = await reservedCash(client, accountId);
     const balance = await freshUsdcBalance(wallet.rows[0].public_key, flowUsdcMint());
     if (balance < reserved)
@@ -84,6 +86,7 @@ export function allocateFlowInvoice(accountId: string, invoiceId: string): Promi
         "Confirm the received payment before allocating it.",
         409,
       );
+    await requireSettledReservations(client, accountId);
     const reserved = await reservedCash(client, accountId);
     const balance = await freshUsdcBalance(
       invoice.recipient_wallet,
