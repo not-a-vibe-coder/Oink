@@ -26,7 +26,10 @@ const account = "oink-k7p2-9xqr",
   signer = Keypair.generate(),
   wallet = signer.publicKey.toBase58(),
   mint = resolveSolanaToken("SPYx")!.mint;
-const purchase = "purchase_bellexec00000001";
+let purchase = "",
+  deferredPurchase = "";
+let incomeEvidence: ParsedTransactionWithMeta | null = null;
+const incomeSignature = bs58.encode(Buffer.alloc(64, 91));
 let cookie = "",
   height = 900,
   broadcasts = 0,
@@ -54,18 +57,6 @@ suite("Bell execution lifecycle (PostgreSQL, mocked chain, no spending)", () => 
     await query(
       "INSERT INTO wallets (account_id,public_key,ciphertext,nonce,kdf_salt,kdf_params,auth_key_hash,totp_secret_enc,totp_nonce) VALUES ($1,$2,'test','test','test','{}','test','test','test')",
       [account, wallet],
-    );
-    await query(
-      "INSERT INTO flow_invoices (id,account_id,recipient_wallet,amount_base,token_mint,reference,signature,receipt_slot,status,expires_at,received_at) VALUES ('bell_exec_invoice',$1,$2,180000000,$3,$4,'bell_exec_income_sig',42,'paid',NOW()+INTERVAL '1 day',NOW())",
-      [account, wallet, USDC.mint, Keypair.generate().publicKey.toBase58()],
-    );
-    await query(
-      "INSERT INTO flow_payments (id,invoice_id,account_id,signature,payment_base,cash_base,investment_base,settings_snapshot) VALUES ('bell_exec_payment','bell_exec_invoice',$1,'bell_exec_income_sig',180000000,0,180000000,'{}')",
-      [account],
-    );
-    await query(
-      "INSERT INTO flow_purchases (id,payment_id,symbol,amount_base) VALUES ($1,'bell_exec_payment','SPYx',180000000)",
-      [purchase],
     );
     cookie = `oink_session=${(await createSession(account)).token}`;
     const fetchMock = spyOn(globalThis, "fetch").mockImplementation(
@@ -190,7 +181,8 @@ suite("Bell execution lifecycle (PostgreSQL, mocked chain, no spending)", () => 
       throw new Error("Lost broadcast response");
     });
     restores.push(() => send.mockRestore());
-    const parsed = spyOn(rpc, "getParsedTransaction").mockImplementation(async () => {
+    const parsed = spyOn(rpc, "getParsedTransaction").mockImplementation(async (signature) => {
+      if (signature === incomeSignature) return incomeEvidence;
       if (rpcFailure) throw new Error("RPC unavailable");
       return null;
     });
@@ -200,6 +192,68 @@ suite("Bell execution lifecycle (PostgreSQL, mocked chain, no spending)", () => 
       value: [null],
     });
     restores.push(() => status.mockRestore());
+    await request(app)
+      .put("/api/v1/flow/settings")
+      .set("Cookie", cookie)
+      .send({
+        cashTargetBase: "700000000",
+        weights: [
+          { symbol: "SPYx", basisPoints: 6000 },
+          { symbol: "AAPLx", basisPoints: 4000 },
+        ],
+        revision: 0,
+      })
+      .expect(200);
+    const invoice = await post("invoices", { amountBase: "500000000" }).expect(201);
+    incomeEvidence = {
+      slot: 42,
+      blockTime: Math.ceil(Date.now() / 1000),
+      transaction: {
+        signatures: [incomeSignature],
+        message: {
+          accountKeys: [
+            { pubkey: new PublicKey(invoice.body.reference), signer: false, writable: false },
+          ],
+          recentBlockhash: wallet,
+          instructions: [],
+        },
+      },
+      meta: {
+        err: null,
+        fee: 5000,
+        preBalances: [],
+        postBalances: [],
+        preTokenBalances: [],
+        postTokenBalances: [
+          {
+            accountIndex: 0,
+            mint: USDC.mint,
+            owner: wallet,
+            uiTokenAmount: { amount: "500000000", decimals: 6, uiAmount: null },
+          },
+        ],
+      },
+    };
+    await post(`invoices/${invoice.body.id}/confirm`, { signature: incomeSignature }).expect(200);
+    const allocations = await Promise.all([
+      post(`invoices/${invoice.body.id}/allocate`),
+      post(`invoices/${invoice.body.id}/allocate`),
+    ]);
+    expect(allocations.map((result) => result.status)).toEqual([200, 200]);
+    expect(allocations[0].body.id).toBe(allocations[1].body.id);
+    expect(allocations[0].body.cashBase).toBe("200000000");
+    const orders = await request(app)
+      .get("/api/v1/flow/purchases")
+      .set("Cookie", cookie)
+      .expect(200);
+    purchase = orders.body.purchases.find((p: { symbol: string }) => p.symbol === "SPYx").id;
+    deferredPurchase = orders.body.purchases.find(
+      (p: { symbol: string }) => p.symbol === "AAPLx",
+    ).id;
+    const deferred = await post(`purchases/${deferredPurchase}/quote`, {
+      policy: { ...DEFAULT_BELL_POLICY, maxTokenPriceBase: "1" },
+    }).expect(200);
+    expect(deferred.body.decision.reason).toBe("PRICE_LIMIT");
   }, 30000);
   afterAll(async () => {
     for (const restore of restores.reverse()) restore();
@@ -311,13 +365,8 @@ suite("Bell execution lifecycle (PostgreSQL, mocked chain, no spending)", () => 
     parsed.mockRestore();
     await post(`purchases/${purchase}/retry`).expect(409);
     await post(`purchases/${purchase}/cancel`).expect(409);
-    const cancellable = "purchase_bellexec00000002";
-    await query(
-      "INSERT INTO flow_purchases (id,payment_id,symbol,amount_base) VALUES ($1,'bell_exec_payment','AAPLx',1)",
-      [cancellable],
-    );
-    await post(`purchases/${cancellable}/cancel`).expect(200);
-    await post(`purchases/${cancellable}/cancel`).expect(200);
+    await post(`purchases/${deferredPurchase}/cancel`).expect(200);
+    await post(`purchases/${deferredPurchase}/cancel`).expect(200);
     const history = await request(app)
       .get("/api/v1/flow/receipts")
       .set("Cookie", cookie)
