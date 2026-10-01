@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { BellPurchases } from "@/components/bell/BellPurchases";
 import { CopyButton } from "@/components/oink/CopyButton";
 import {
   useAllocateFlowInvoice,
@@ -214,6 +215,7 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
           ))
         )}
       </section>
+      <BellPurchases />
       <section className="stack">
         <h2 className="eyebrow">Received income</h2>
         {payments.isError && <p role="alert">{payments.error.message}</p>}
