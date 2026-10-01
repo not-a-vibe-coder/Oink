@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UnlockInline } from "@/components/oink/UnlockInline";
 import { useKeySession } from "@/hooks/useKeySession";
@@ -13,22 +13,31 @@ import {
   submitBellOrder,
 } from "@/lib/flow/server-fns";
 import { displayTokenAmount } from "@/lib/bell/policy";
-import type { BellAttempt, BellPrepared, BellPurchase } from "@/lib/bell/types";
+import type { BellAttempt, BellPrepared, BellPurchase, BellQuote } from "@/lib/bell/types";
 function signedAmount(value: string, decimals: number) {
   return value.startsWith("-")
     ? `-${displayTokenAmount(value.slice(1), decimals)}`
     : displayTokenAmount(value, decimals);
 }
-function AttemptReceipt({ attempt }: { attempt: BellAttempt }) {
+function AttemptReceipt({ attempt, quote }: { attempt: BellAttempt; quote?: BellQuote | null }) {
   return (
     <div className="stack-tight">
       <p className="meta">
         Attempt: {attempt.state}
-        {attempt.reason ? ` · ${attempt.reason}` : ""}
+        {attempt.reason ? ` · ${attempt.reason.replaceAll("_", " ").toLowerCase()}` : ""}
       </p>
       {attempt.signature && (
         <p className="footnote" style={{ overflowWrap: "anywhere" }}>
-          Signature: {attempt.signature}
+          <a
+            className="link"
+            href={`https://explorer.solana.com/tx/${attempt.signature}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View chain transaction
+          </a>
+          <br />
+          {attempt.signature}
         </p>
       )}
       {attempt.receipt && (
@@ -38,8 +47,11 @@ function AttemptReceipt({ attempt }: { attempt: BellAttempt }) {
             {displayTokenAmount(attempt.receipt.networkFeeLamports, 9)} SOL
           </p>
           <p className="meta">
-            Received: {attempt.receipt.outputBase} token base units · Finalized slot:{" "}
-            {attempt.receipt.slot}
+            Received:{" "}
+            {quote
+              ? `${signedAmount(attempt.receipt.outputBase, quote.outputDecimals)} ${quote.symbol}`
+              : `${attempt.receipt.outputBase} token base units`}{" "}
+            · Finalized slot: {attempt.receipt.slot}
           </p>
           {!attempt.receipt.withinLimits && (
             <p role="alert">
@@ -59,6 +71,11 @@ export function BellExecution({ purchase }: { purchase: BellPurchase }) {
   const [plan, setPlan] = useState<BellPrepared | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   async function act(work: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -70,6 +87,7 @@ export function BellExecution({ purchase }: { purchase: BellPurchase }) {
       setBusy(false);
       await client.invalidateQueries({ queryKey: ["flow"] });
       await client.invalidateQueries({ queryKey: ["wallet"] });
+      await client.invalidateQueries({ queryKey: ["balances"] });
     }
   }
   const actionable = ["pending", "deferred", "approved", "failed"].includes(purchase.state);
@@ -79,9 +97,10 @@ export function BellExecution({ purchase }: { purchase: BellPurchase }) {
     plan && plan.quote.id === purchase.quote?.id && ["pending", "approved"].includes(purchase.state)
       ? plan
       : null;
+  const expired = activePlan ? now >= Date.parse(activePlan.attempt.expiresAt) : false;
   return (
     <div className="stack-tight">
-      {purchase.attempt && <AttemptReceipt attempt={purchase.attempt} />}
+      {purchase.attempt && <AttemptReceipt attempt={purchase.attempt} quote={purchase.quote} />}
       {preparable && !activePlan && (
         <button
           className="btn btn-outline"
@@ -117,10 +136,15 @@ export function BellExecution({ purchase }: { purchase: BellPurchase }) {
             {new Date(activePlan.attempt.expiresAt).toLocaleTimeString()}. Signing submits this
             exact trade.
           </p>
+          {expired && (
+            <p role="status">
+              Quote expired. Reset the order to review fresh prices before signing.
+            </p>
+          )}
           {!key.unlocked && <UnlockInline {...session} onUnlocked={() => {}} />}
           <button
             className="btn btn-primary"
-            disabled={busy || !key.unlocked}
+            disabled={busy || !key.unlocked || expired}
             onClick={() =>
               void act(async () => {
                 if (key.publicKey !== session.publicKey)

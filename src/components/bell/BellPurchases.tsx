@@ -147,6 +147,8 @@ export function BellPurchases() {
     queryKey: ["flow", "purchases"],
     queryFn: () => getBellPurchases(),
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.purchases.some((p) => p.state === "submitted") ? 10000 : false,
   });
   return (
     <section className="stack">
