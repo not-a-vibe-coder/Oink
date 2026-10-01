@@ -33,3 +33,11 @@ For database regression checks, use a disposable migrated PostgreSQL database an
 ### Remaining gates
 
 Customer interviews, live wallet payment confirmation, browser interaction checks, and live stock execution have not been performed. Phase 3 must verify supported trading routes and usable order sizes. Licensed equity reference data is still unavailable. Flow reservations do not prevent spending from another wallet client. Any future execution must recheck backing and user authorization.
+
+## Phase 3 — Bell quotes and execution decisions
+
+Ten commits cover the execution specification, shared contracts, exact policy arithmetic, quote migration, Swap v2 adapter, instrument allowlist, quote persistence, protected API access, order briefs, and regression verification.
+
+Verified: two policy tests and two PostgreSQL quote/API integration tests passed. Frontend/backend type checks and targeted frontend lint passed. Read-only live $10 mainnet builds returned routes for SPYx, AAPLx, and NVDAx; no signing or spending was performed. Deferred orders remain in USDC, and required premium checks return unavailable because no dependable equity reference feed is configured.
+
+See `docs/bell/01-EXECUTION-SPEC.md` and `docs/bell/02-LIVE-ROUTES.md`. Phase 4 can now extend the verified quote workflow with durable attempts and local signing. Mainnet quote availability is not a guarantee of a successful trade.
