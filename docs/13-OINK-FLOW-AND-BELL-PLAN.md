@@ -3,7 +3,7 @@
 Status: proposed product direction, pending customer validation and technical specification.
 Created: October 1, 2026.
 
-This document records the brainstorming decision to combine Oink Flow and Bell into one product. It preserves Oink's existing security requirements. The user authorized implementation of Phases 1–4, with ten commits per phase. Phase 5 remains the pilot and submission stage.
+This document records the brainstorming decision to combine Oink Flow and Bell into one product. It preserves Oink's existing security requirements. The user authorized all five phases, continuing ten commits per phase. Phase 5 prepares verification, pilot measurement, and submission delivery; real participant and submission evidence must be recorded separately.
 
 ## 1. Product thesis
 
