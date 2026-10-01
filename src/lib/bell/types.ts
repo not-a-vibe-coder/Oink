@@ -48,6 +48,7 @@ export interface BellPurchase {
   amountBase: string;
   state: PurchaseState;
   quote: BellQuote | null;
+  attempt: BellAttempt | null;
 }
 export interface BellSimulation {
   inputBase: string;

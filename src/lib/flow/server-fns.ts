@@ -89,3 +89,44 @@ export const quoteBellPurchase = createServerFn({ method: "POST" })
       body: { policy: data.policy },
     }),
   );
+
+const attemptId = z.object({ id: z.string().regex(/^attempt_[A-Za-z0-9_-]{16}$/) });
+export const prepareBellOrder = createServerFn({ method: "POST" })
+  .inputValidator(purchaseId.extend({ quoteId: z.string().regex(/^quote_[A-Za-z0-9_-]{16}$/) }))
+  .handler(({ data }) =>
+    oinkFetch<import("../bell/types").BellPrepared>(`/api/v1/flow/purchases/${data.id}/prepare`, {
+      method: "POST",
+      cookie: cookie(),
+      body: { quoteId: data.quoteId },
+    }),
+  );
+export const submitBellOrder = createServerFn({ method: "POST" })
+  .inputValidator(attemptId.extend({ signedTransaction: z.string().max(2000) }))
+  .handler(({ data }) =>
+    oinkFetch<import("../bell/types").BellAttempt>(`/api/v1/flow/attempts/${data.id}/submit`, {
+      method: "POST",
+      cookie: cookie(),
+      body: { signedTransaction: data.signedTransaction },
+    }),
+  );
+export const reconcileBellOrder = createServerFn({ method: "POST" })
+  .inputValidator(attemptId)
+  .handler(({ data }) =>
+    oinkFetch<import("../bell/types").BellAttempt>(`/api/v1/flow/attempts/${data.id}/reconcile`, {
+      method: "POST",
+      cookie: cookie(),
+    }),
+  );
+export const changeBellOrder = createServerFn({ method: "POST" })
+  .inputValidator(purchaseId.extend({ action: z.enum(["retry", "cancel"]) }))
+  .handler(({ data }) =>
+    oinkFetch<{ state: "pending" | "cancelled" }>(
+      `/api/v1/flow/purchases/${data.id}/${data.action}`,
+      { method: "POST", cookie: cookie() },
+    ),
+  );
+export const getBellReceipts = createServerFn({ method: "GET" }).handler(() =>
+  oinkFetch<{ attempts: import("../bell/types").BellAttempt[] }>("/api/v1/flow/receipts", {
+    cookie: cookie(),
+  }),
+);

@@ -9,6 +9,7 @@ import type { BellPolicy, BellPurchase, BellQuote } from "../../../../src/lib/be
 import type { PurchaseState } from "../../../../src/lib/flow/types";
 import { FlowError, inFlowTransaction, lockSettings } from "../flow/settings";
 import { bellAsset, bellNetworkSupported } from "./assets";
+import type { BellAttempt } from "../../../../src/lib/bell/types";
 import { fetchBellBuild, type BellProviderBuild } from "./provider";
 export interface PurchaseRecord {
   id: string;
@@ -61,8 +62,9 @@ export async function listBellPurchases(accountId: string): Promise<{ purchases:
       amount_base: string;
       state: PurchaseState;
       brief: BellQuote | null;
+      attempt: BellAttempt | null;
     }>(
-      "SELECT p.*, q.brief FROM flow_purchases p JOIN flow_payments f ON f.id=p.payment_id LEFT JOIN bell_quotes q ON q.id=p.quote_id WHERE f.account_id=$1 ORDER BY p.created_at DESC LIMIT 100",
+      "SELECT p.*, q.brief, CASE WHEN a.id IS NULL THEN NULL ELSE jsonb_build_object('id',a.id,'purchaseId',a.purchase_id,'quoteId',a.quote_id,'state',a.state,'signature',a.signature,'reason',a.reason,'simulation',a.simulation,'receipt',a.receipt,'expiresAt',a.expires_at) END AS attempt FROM flow_purchases p JOIN flow_payments f ON f.id=p.payment_id LEFT JOIN bell_quotes q ON q.id=p.quote_id LEFT JOIN bell_attempts a ON a.id=p.attempt_id WHERE f.account_id=$1 ORDER BY p.created_at DESC LIMIT 100",
       [accountId],
     );
     return {

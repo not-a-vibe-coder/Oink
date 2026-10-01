@@ -16,6 +16,10 @@ import {
 } from "../services/flow/allocation";
 import { inFlowTransaction } from "../services/flow/settings";
 import { createBellQuote, listBellPurchases } from "../services/bell/quotes";
+import { prepareBellPurchase } from "../services/bell/attempts";
+import { submitBellAttempt } from "../services/bell/submit";
+import { reconcileBellAttempt } from "../services/bell/reconcile";
+import { changeBellPurchase } from "../services/bell/lifecycle";
 export const flowRouter = Router();
 // Keep infrastructure failures opaque and validation errors actionable.
 const endpoint =
@@ -143,5 +147,58 @@ flowRouter.post(
   ipRateLimiter("bell_quote", 120, 3600),
   endpoint(async (req, res) => {
     res.json(await createBellQuote(req.accountId!, String(req.params.id), req.body?.policy));
+  }),
+);
+
+flowRouter.post(
+  "/purchases/:id/prepare",
+  requireSession,
+  ipRateLimiter("bell_prepare", 120, 3600),
+  endpoint(async (req, res) => {
+    if (typeof req.body?.quoteId !== "string")
+      throw new FlowError("VALIDATION_FAILED", "A reviewed quote is required.");
+    res.json(await prepareBellPurchase(req.accountId!, String(req.params.id), req.body.quoteId));
+  }),
+);
+flowRouter.post(
+  "/attempts/:id/submit",
+  requireSession,
+  ipRateLimiter("bell_submit", 120, 3600),
+  endpoint(async (req, res) => {
+    res.json(
+      await submitBellAttempt(req.accountId!, String(req.params.id), req.body?.signedTransaction),
+    );
+  }),
+);
+flowRouter.post(
+  "/attempts/:id/reconcile",
+  requireSession,
+  ipRateLimiter("bell_reconcile", 240, 3600),
+  endpoint(async (req, res) => {
+    res.json(await reconcileBellAttempt(req.accountId!, String(req.params.id)));
+  }),
+);
+for (const action of ["retry", "cancel"] as const)
+  flowRouter.post(
+    `/purchases/:id/${action}`,
+    requireSession,
+    endpoint(async (req, res) => {
+      res.json(await changeBellPurchase(req.accountId!, String(req.params.id), action));
+    }),
+  );
+flowRouter.get(
+  "/receipts",
+  requireSession,
+  endpoint(async (req, res) => {
+    res.json(
+      await inFlowTransaction(async (client) => {
+        const result = await client.query<import("../services/bell/attempts").AttemptRecord>(
+          "SELECT * FROM bell_attempts WHERE account_id=$1 ORDER BY created_at DESC LIMIT 100",
+          [req.accountId!],
+        );
+        const { attemptResponse } = await import("../services/bell/attempts");
+        return { attempts: result.rows.map(attemptResponse) };
+      }),
+    );
   }),
 );
