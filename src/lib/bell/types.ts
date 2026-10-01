@@ -49,3 +49,33 @@ export interface BellPurchase {
   state: PurchaseState;
   quote: BellQuote | null;
 }
+export interface BellSimulation {
+  inputBase: string;
+  outputBase: string;
+  networkFeeLamports: string;
+  solDebitLamports: string;
+}
+export interface BellReceipt {
+  inputBase: string;
+  outputBase: string;
+  networkFeeLamports: string;
+  solChangeLamports: string;
+  withinLimits: boolean;
+  slot: number;
+}
+export interface BellAttempt {
+  id: string;
+  purchaseId: string;
+  quoteId: string;
+  state: "prepared" | "submitted" | "confirmed" | "failed" | "expired" | "superseded" | "cancelled";
+  signature: string | null;
+  reason: string | null;
+  simulation: BellSimulation;
+  receipt: BellReceipt | null;
+  expiresAt: string;
+}
+export interface BellPrepared {
+  attempt: BellAttempt;
+  quote: BellQuote;
+  transaction: string;
+}
