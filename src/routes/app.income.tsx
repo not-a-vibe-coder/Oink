@@ -1,3 +1,4 @@
+import { IncomeInvestmentStatus } from "@/components/bell/BellExecution";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -228,15 +229,16 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
             <article className="panel stack" key={payment.id}>
               <p className="figure">{displayUsdc(payment.paymentBase)} USDC</p>
               <p>
-                {displayUsdc(payment.cashBase)} cash · {displayUsdc(payment.investmentBase)} pending
-                investments
+                {displayUsdc(payment.cashBase)} cash · {displayUsdc(payment.investmentBase)}{" "}
+                originally assigned to investments
               </p>
               {payment.purchases.map((purchase) => (
                 <p className="meta" key={purchase.symbol}>
-                  {purchase.symbol}: {displayUsdc(purchase.amountBase)} USDC reserved
+                  {purchase.symbol}: {displayUsdc(purchase.amountBase)} USDC originally allocated
                 </p>
               ))}
               <CopyButton value={payment.signature} label="Copy payment signature" />
+              <IncomeInvestmentStatus paymentId={payment.id} />
             </article>
           ))
         )}

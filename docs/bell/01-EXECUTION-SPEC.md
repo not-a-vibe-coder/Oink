@@ -27,3 +27,7 @@ Income history retains immutable original allocations while individual purchases
 ## Limits
 
 Network fee and account rent use SOL supplied by the user. Quote fees do not include an invented platform fee. Reserves are accounting records, not escrow; spending through other wallet clients can still reduce backing. Mainnet broadcasting is implemented but is not exercised with real user funds during development. Customer interviews and provider eligibility review remain external launch gates.
+
+## Route encoding evidence
+
+The current live build uses Jupiter `route_v2` with the input amount, quoted output, slippage, and zero fee fields in its instruction header. Guard its discriminator, exact amounts, token programs, wallet authority, and destination accounts. The [generated route_v2 decoder](https://docs.rs/jupiter-solana-client/latest/src/jupiter_solana_client/generated/instructions/route_v2.rs.html) matches the live build header. Reject unsupported route formats. Minimum output is conservatively rounded down from quoted output and encoded slippage; provider rounded display thresholds are not treated as a stronger on-chain guarantee.

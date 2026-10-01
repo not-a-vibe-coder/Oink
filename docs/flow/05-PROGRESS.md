@@ -41,3 +41,21 @@ Ten commits cover the execution specification, shared contracts, exact policy ar
 Verified: two policy tests and two PostgreSQL quote/API integration tests passed. Frontend/backend type checks and targeted frontend lint passed. Read-only live $10 mainnet builds returned routes for SPYx, AAPLx, and NVDAx; no signing or spending was performed. Deferred orders remain in USDC, and required premium checks return unavailable because no dependable equity reference feed is configured.
 
 See `docs/bell/01-EXECUTION-SPEC.md` and `docs/bell/02-LIVE-ROUTES.md`. Phase 4 can now extend the verified quote workflow with durable attempts and local signing. Mainnet quote availability is not a guarantee of a successful trade.
+
+## Phase 4 — authorized execution and lifecycle
+
+Ten commits implement durable attempts, guarded transaction assembly, simulation/backing checks, local-signature validation, submission recorded before broadcast, finalized reconciliation, explicit retry/cancel, account-owned APIs, browser approval/signing, and regression verification.
+
+The Income screen now offers quote review, simulated trade review, inline wallet unlock, explicit local signing, finalized receipt checks, reset/cancel, and retained execution history. It shows completed, reserved, and released investment amounts separately from the immutable original allocation. The user supplies SOL for network fees and account creation; execution is capped at an estimated 0.01 SOL debit. No new server signing key was introduced.
+
+### Verification
+
+- Main suite: 84 passed, 63 skipped, zero failures. Optional database integration suites skip without test configuration.
+- Disposable PostgreSQL: Flow (5 tests), Bell quotes (2), and Bell execution lifecycle (3) passed in separate runs. Migrations through 010 applied successfully.
+- Lifecycle checks cover simulation rejection, unsigned submission rejection, immutable preparation, concurrent duplicate submit, signature saved before broadcast, lost network responses, RPC outages retaining reservations, proved blockhash expiry, manual retry, finalized successful fill, idempotent reconciliation, completed-order rejection, cancellation, and receipt history.
+- Dedicated instruction/signature/receipt tests reject altered routes and messages, wrong-wallet signatures, missing ownership evidence, and failed transaction evidence. Actual receipt mismatches are surfaced rather than treated as a new order.
+- Frontend/backend TypeScript checks, targeted frontend lint, and production build passed.
+
+### Remaining pilot gates
+
+No mainnet funds were spent. Live evidence covers read-only routes; transaction execution uses deterministic mocked chain evidence and local PostgreSQL. Browser interaction checks with a funded wallet, customer interviews, provider eligibility review, and a reliable equity reference feed remain before a public pilot. Required premium checks remain unavailable. Phase 5 covers those pilot and hackathon submission tasks.

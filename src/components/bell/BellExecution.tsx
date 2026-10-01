@@ -6,6 +6,7 @@ import { useWalletSession } from "@/lib/app-session";
 import { signTransaction } from "@/lib/wallet/key-session";
 import {
   changeBellOrder,
+  getBellPurchases,
   getBellReceipts,
   prepareBellOrder,
   reconcileBellOrder,
@@ -205,5 +206,31 @@ export function BellReceiptHistory() {
         </article>
       ))}
     </details>
+  );
+}
+
+export function IncomeInvestmentStatus({ paymentId }: { paymentId: string }) {
+  const purchases = useQuery({
+    queryKey: ["flow", "purchases"],
+    queryFn: () => getBellPurchases(),
+    retry: false,
+  });
+  if (!purchases.data) return null;
+  const matching = purchases.data.purchases.filter((p) => p.paymentId === paymentId);
+  if (!matching.length) return null;
+  let completed = 0n,
+    reserved = 0n,
+    released = 0n;
+  for (const p of matching) {
+    if (p.state === "confirmed") completed += BigInt(p.amountBase);
+    else if (p.state === "cancelled") released += BigInt(p.amountBase);
+    else reserved += BigInt(p.amountBase);
+  }
+  return (
+    <p className="meta">
+      Investments: {displayTokenAmount(completed.toString(), 6)} USDC completed ·{" "}
+      {displayTokenAmount(reserved.toString(), 6)} reserved ·{" "}
+      {displayTokenAmount(released.toString(), 6)} released.
+    </p>
   );
 }
