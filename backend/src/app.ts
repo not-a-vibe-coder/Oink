@@ -13,6 +13,7 @@ import { invoicesRouter } from "./routes/invoices";
 import { identityRouter } from "./routes/identity";
 import { adminRouter } from "./routes/admin";
 import { heldRouter } from "./routes/held";
+import { flowRouter } from "./routes/flow";
 
 const redactedKeys = new Set(["privatekey", "secret", "authkey", "totpcode", "ciphertext", "kdfsalt", "mnemonic", "secretphrase", "password", "totpsecret", "otpauthuri", "signature", "identitytoken"]);
 
@@ -63,6 +64,7 @@ app.use("/api/v1/invoices", invoicesRouter);
 app.use("/api/v1/identity", identityRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/held", heldRouter);
+app.use("/api/v1/flow", flowRouter);
 
 app.use((_request, response) => response.status(404).json({ error: "NOT_FOUND", message: "The requested resource does not exist.", details: null }));
 
