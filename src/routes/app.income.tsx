@@ -178,8 +178,8 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
         </p>
       )}
       <p className="notice">
-        Investments remain pending in USDC until Bell execution is available. Reserved amounts stay
-        in your wallet and can still be spent elsewhere.
+        Investments remain in USDC until you approve and sign a Bell trade. Reserved amounts stay in
+        your wallet and can still be spent elsewhere.
       </p>
       <section className="stack">
         <h2 className="eyebrow">Payment requests</h2>

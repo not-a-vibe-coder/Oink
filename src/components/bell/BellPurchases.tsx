@@ -4,6 +4,7 @@ import { displayUsdc, parseUsdc } from "@/lib/flow/amounts";
 import { getBellPurchases, quoteBellPurchase } from "@/lib/flow/server-fns";
 import { DEFAULT_BELL_POLICY, displayImpactPercent, displayTokenAmount } from "@/lib/bell/policy";
 import type { BellPurchase, BellQuote } from "@/lib/bell/types";
+import { BellExecution, BellReceiptHistory } from "./BellExecution";
 export function BellQuoteBrief({ quote }: { quote: BellQuote }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -137,6 +138,7 @@ function PurchaseQuote({ purchase }: { purchase: BellPurchase }) {
       )}
       {error && <p role="alert">{error}</p>}
       {purchase.quote && <BellQuoteBrief quote={purchase.quote} />}
+      <BellExecution purchase={purchase} />
     </article>
   );
 }
@@ -164,6 +166,7 @@ export function BellPurchases() {
           <PurchaseQuote key={purchase.id} purchase={purchase} />
         ))
       )}
+      <BellReceiptHistory />
     </section>
   );
 }
