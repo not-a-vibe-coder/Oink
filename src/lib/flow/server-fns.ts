@@ -67,3 +67,25 @@ export const getIncomePayments = createServerFn({ method: "GET" }).handler(() =>
 export const getIncomeInvoices = createServerFn({ method: "GET" }).handler(() =>
   oinkFetch<{ invoices: FlowInvoice[] }>("/api/v1/flow/invoices", { cookie: cookie() }),
 );
+
+const purchaseId = z.object({ id: z.string().regex(/^purchase_[A-Za-z0-9_-]{16}$/) });
+const bellPolicy = z.object({
+  slippageBps: z.number().int().min(1).max(500),
+  maxTokenPriceBase: integer.nullable(),
+  maxPriceImpactBps: z.number().int().min(0).max(10000).nullable(),
+  maxPremiumBps: z.number().int().min(0).max(10000).nullable(),
+});
+export const getBellPurchases = createServerFn({ method: "GET" }).handler(() =>
+  oinkFetch<{ purchases: import("../bell/types").BellPurchase[] }>("/api/v1/flow/purchases", {
+    cookie: cookie(),
+  }),
+);
+export const quoteBellPurchase = createServerFn({ method: "POST" })
+  .inputValidator(purchaseId.extend({ policy: bellPolicy }))
+  .handler(({ data }) =>
+    oinkFetch<import("../bell/types").BellQuote>(`/api/v1/flow/purchases/${data.id}/quote`, {
+      method: "POST",
+      cookie: cookie(),
+      body: { policy: data.policy },
+    }),
+  );

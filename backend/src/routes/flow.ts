@@ -15,6 +15,7 @@ import {
   previewFlowIncome,
 } from "../services/flow/allocation";
 import { inFlowTransaction } from "../services/flow/settings";
+import { createBellQuote, listBellPurchases } from "../services/bell/quotes";
 export const flowRouter = Router();
 // Keep infrastructure failures opaque and validation errors actionable.
 const endpoint =
@@ -37,22 +38,18 @@ const endpoint =
         return;
       }
       if (error && typeof error === "object" && "code" in error && error.code === "23505") {
-        res
-          .status(409)
-          .json({
-            error: "CONFLICT",
-            message: "This payment has already been recorded.",
-            details: null,
-          });
-        return;
-      }
-      res
-        .status(503)
-        .json({
-          error: "UNAVAILABLE",
-          message: "Income services are temporarily unavailable. Try again later.",
+        res.status(409).json({
+          error: "CONFLICT",
+          message: "This payment has already been recorded.",
           details: null,
         });
+        return;
+      }
+      res.status(503).json({
+        error: "UNAVAILABLE",
+        message: "Income services are temporarily unavailable. Try again later.",
+        details: null,
+      });
     }
   };
 flowRouter.get(
@@ -130,5 +127,21 @@ flowRouter.get(
   requireSession,
   endpoint(async (req, res) => {
     res.json(await listFlowPayments(req.accountId!));
+  }),
+);
+
+flowRouter.get(
+  "/purchases",
+  requireSession,
+  endpoint(async (req, res) => {
+    res.json(await listBellPurchases(req.accountId!));
+  }),
+);
+flowRouter.post(
+  "/purchases/:id/quote",
+  requireSession,
+  ipRateLimiter("bell_quote", 120, 3600),
+  endpoint(async (req, res) => {
+    res.json(await createBellQuote(req.accountId!, String(req.params.id), req.body?.policy));
   }),
 );
