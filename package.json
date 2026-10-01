@@ -1,7 +1,10 @@
 {
   "name": "oink",
   "private": true,
-  "sideEffects": ["./src/lib/browser-globals.ts", "**/*.css"],
+  "sideEffects": [
+    "./src/lib/browser-globals.ts",
+    "**/*.css"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -9,7 +12,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "bun test"
+    "test": "bun test",
+    "verify:flow": "bun scripts/verify-flow.ts",
+    "check:demo": "bun scripts/check-demo.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
