@@ -169,3 +169,24 @@ contains no React Native code (the three pre-existing `react-native` strings com
 is unauthenticated and marks a pending invoice paid on any claimed signature without chain
 verification. The Seeker flow on `/pay` deliberately does not call it. Follow-up: verify it
 on-chain, or remove it.
+
+## 2026-10-11 — Task 7: PWA (passed)
+
+- `public/manifest.webmanifest`: name/short name, `start_url` and `id` `/app`, scope `/`,
+  `display: standalone`, white theme/background, 192/512 icons plus a maskable 512 rendered
+  from the MIT Fluent pig (licence recorded in `public/illustrations/LICENSES.md`).
+- `public/sw.js`, registered only in production builds: cache-first for content-hashed
+  `/assets/*`, icons, illustrations, nav images and fonts, and a precached static
+  `offline.html`. Navigations are network-only, so per-user server-rendered HTML is never
+  stored. Server functions, `/api/*`, POSTs and cross-origin requests are never intercepted.
+  Old caches are dropped on activate.
+- Root head links the manifest, icons and apple-touch icon.
+
+### Audit result
+
+Passed. `bunx tsc --noEmit` and `bun run build` passed. Against the production server
+(`.output/server/index.mjs`) in headless Chromium, `Page.getInstallabilityErrors` returned
+`[]` and `Page.getAppManifest` reported no errors. The worker controlled the page; all 47
+cached entries were static paths (zero non-static); an offline navigation to `/app` served
+"Oink is offline". Diff reviewed: no API, session, keystore or wallet response can enter the
+cache.

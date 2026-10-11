@@ -8,7 +8,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Toaster } from "sonner";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { THEME_BOOT } from "@/lib/theme";
 import appCss from "../styles.css?url";
@@ -56,6 +56,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#ffffff" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Oink" },
       { title: "Oink — Self-Custodial Solana Wallet & Tokenized Equities" },
       {
         name: "description",
@@ -64,6 +66,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -97,6 +102,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    // Production only: in dev the worker would cache Vite's unhashed modules.
+    if (import.meta.env.PROD && "serviceWorker" in navigator)
+      void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
