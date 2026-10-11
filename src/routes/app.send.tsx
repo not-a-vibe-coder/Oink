@@ -71,15 +71,21 @@ function SendPage() {
   const recipientIsAddress = isLikelyAddress(recipient);
   const recipientTag = recipientIsAddress ? "" : normalizeTagInput(recipient);
   // Oink users without a tag are paid at their account ID.
-  const recipientIsAccountId = /^oink-[0-9a-hjkmnp-tv-z]{4}-[0-9a-hjkmnp-tv-z]{4}$/.test(recipientTag);
+  const recipientIsAccountId = /^oink-[0-9a-hjkmnp-tv-z]{4}-[0-9a-hjkmnp-tv-z]{4}$/.test(
+    recipientTag,
+  );
   // An email or an X account (x:@name, x.com/name) goes to the API as typed; it pays the
   // linked Oink wallet, or holds the money for them for 48 hours if nobody has linked it.
   const trimmedRecipient = recipient.trim();
   const recipientIsEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedRecipient);
-  const recipientIsX = /^x:\s*@?\w{1,15}$/i.test(trimmedRecipient) || /(^|\/)(x|twitter)\.com\/@?\w{1,15}\/?$/i.test(trimmedRecipient);
+  const recipientIsX =
+    /^x:\s*@?\w{1,15}$/i.test(trimmedRecipient) ||
+    /(^|\/)(x|twitter)\.com\/@?\w{1,15}\/?$/i.test(trimmedRecipient);
   const recipientIsRaw = recipientIsEmail || recipientIsX;
   const typeahead = useResolveTags(
-    recipientTag.length >= 2 && !recipientIsAddress && !recipientIsAccountId && !recipientIsRaw ? recipientTag : "",
+    recipientTag.length >= 2 && !recipientIsAddress && !recipientIsAccountId && !recipientIsRaw
+      ? recipientTag
+      : "",
   );
 
   const amountValid = useMemo(() => {
@@ -88,7 +94,9 @@ function SendPage() {
   }, [amount]);
 
   const canQuote =
-    (recipientIsAddress || recipientIsRaw || recipientTag.length >= 3) && amountValid && Boolean(symbol);
+    (recipientIsAddress || recipientIsRaw || recipientTag.length >= 3) &&
+    amountValid &&
+    Boolean(symbol);
 
   const requestQuote = useCallback(async () => {
     if (!canQuote) return;
@@ -97,11 +105,12 @@ function SendPage() {
 
     const result = await quoteTransfer({
       data: {
-        recipient: recipientIsAddress || recipientIsRaw
-          ? trimmedRecipient
-          : recipientIsAccountId
-            ? recipientTag
-            : `@${recipientTag}`,
+        recipient:
+          recipientIsAddress || recipientIsRaw
+            ? trimmedRecipient
+            : recipientIsAccountId
+              ? recipientTag
+              : `@${recipientTag}`,
         fromSymbolOrMint: symbol,
         amountIn: amount,
       },
@@ -114,7 +123,16 @@ function SendPage() {
       setQuote(null);
       setQuoteError(friendlyError(result.message));
     }
-  }, [canQuote, recipientIsAddress, recipientIsRaw, trimmedRecipient, recipientIsAccountId, recipientTag, symbol, amount]);
+  }, [
+    canQuote,
+    recipientIsAddress,
+    recipientIsRaw,
+    trimmedRecipient,
+    recipientIsAccountId,
+    recipientTag,
+    symbol,
+    amount,
+  ]);
 
   // Debounced re-quote as the form changes.
   const quoteRef = useRef(requestQuote);
@@ -215,7 +233,7 @@ function SendPage() {
                 ? receipt.held.recipient
                 : quote?.recipient.tag
                   ? `@${quote.recipient.tag}`
-                  : quote?.recipient.accountId ?? shortAddress(quote?.recipient.wallet, 6)}
+                  : (quote?.recipient.accountId ?? shortAddress(quote?.recipient.wallet, 6))}
             </span>
           </h1>
         </header>
@@ -278,8 +296,7 @@ function SendPage() {
       <header className="page-head">
         <h1 className="page-title">Send</h1>
         <p className="page-sub">
-          Pay a tag and it settles into their mix. Pay a raw address and it arrives exactly as
-          sent.
+          Pay a tag and it settles into their mix. Pay a raw address and it arrives exactly as sent.
         </p>
       </header>
 
@@ -303,14 +320,15 @@ function SendPage() {
 
           {recipientIsAddress ? (
             <p className="hint">
-              A raw address. This one has no mix, so it receives {symbol || "your token"} as
-              sent.
+              A raw address. This one has no mix, so it receives {symbol || "your token"} as sent.
             </p>
           ) : quote?.recipient.kind === "held" ? (
             <div className="callout" data-tone="warn" style={{ marginTop: 6 }}>
               <strong>{quote.recipient.displayName} isn't on Oink yet.</strong> We'll hold this for
               48 hours
-              {recipientIsEmail ? " and email them how to claim it" : " — tell them to join and link this X account"}
+              {recipientIsEmail
+                ? " and email them how to claim it"
+                : " — tell them to join and link this X account"}
               . If they don't claim it in time, it comes back to you. Their mix isn't applied: they
               receive {symbol || "the token"} as sent.
             </div>
@@ -461,7 +479,7 @@ function SendPage() {
                 <p className="footnote" style={{ marginTop: "var(--s3)" }}>
                   Network fee {(quote.networkFeeLamports / 1e9).toFixed(6)} SOL
                   {quote.sponsorship.available
-                    ? ` · Oink is covering it (${quote.sponsorship.remainingToday} left today)`
+                    ? ` · Oink is covering it (${quote.sponsorship.remainingToday} left today${quote.sponsorship.tier === "skr" ? ", SKR holder quota" : ""})`
                     : ""}
                 </p>
               </div>

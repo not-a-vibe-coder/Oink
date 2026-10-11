@@ -37,6 +37,18 @@ export const USDC: SolanaTokenInfo = {
 
 export const SOLANA_BASE_CURRENCIES: SolanaTokenInfo[] = [SOL, USDC];
 
+// ── Solana Mobile ecosystem ────────────────────────────────────────────────
+// SKR, the Seeker token. Only this exact mint is SKR to Oink: it was checked on-chain on
+// 2026-10-11 (SPL Token program, 6 decimals, no freeze authority). Same-named look-alikes —
+// e.g. unverified `...pump` launches — never resolve, by symbol or by mint.
+export const SKR: SolanaTokenInfo = {
+  symbol: "SKR",
+  name: "Seeker",
+  mint: "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3",
+  decimals: 6,
+};
+export const SOLANA_ECOSYSTEM_TOKENS: SolanaTokenInfo[] = [SKR];
+
 // ── Curated Featured xStocks on Solana ─────────────────────────────────────
 
 export const FEATURED_SOLANA_STOCKS: SolanaTokenInfo[] = [
@@ -6632,6 +6644,7 @@ export function findSolanaToken(symbolOrTicker: string): SolanaTokenInfo | undef
   const upper = symbolOrTicker.trim().toUpperCase();
   if (upper === "SOL" || upper === "WSOL") return SOL;
   if (upper === "USDC") return USDC;
+  if (upper === "SKR" || upper === "SEEKER") return SKR;
 
   const resolvedSymbol = (SOLANA_COMMON_ALIASES[upper] ?? upper).toUpperCase();
   return SOLANA_TICKER_MAP.get(resolvedSymbol) ?? SOLANA_TICKER_MAP.get(upper);
@@ -6641,6 +6654,7 @@ export function resolveSolanaToken(input: string): SolanaTokenInfo | undefined {
   const trimmed = input.trim();
   if (trimmed === SOL.mint || trimmed === "So11111111111111111111111111111111111111112") return SOL;
   if (trimmed === USDC.mint) return USDC;
+  if (trimmed === SKR.mint) return SKR;
 
   const bySymbol = findSolanaToken(trimmed);
   if (bySymbol) return bySymbol;

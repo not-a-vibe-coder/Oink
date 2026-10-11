@@ -300,14 +300,18 @@ function AssetPicker({
 
   const showing = search.trim()
     ? (results.data?.assets ?? [])
-    : [...(featured.data?.baseCurrencies ?? []), ...(featured.data?.featured ?? [])];
+    : [
+        ...(featured.data?.baseCurrencies ?? []),
+        ...(featured.data?.ecosystem ?? []),
+        ...(featured.data?.featured ?? []),
+      ];
 
   return (
     <Sheet
       open={open}
       onClose={onClose}
       title="Add an asset"
-      description="Tokenized stocks and ETFs, plus the currencies you can spend."
+      description="Tokenized stocks and ETFs, SKR, plus the currencies you can spend."
     >
       <div className="stack-tight">
         <input

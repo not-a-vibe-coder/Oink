@@ -102,7 +102,7 @@ export interface TransferQuote {
   totalIn: string;
   legs: QuoteLeg[];
   networkFeeLamports: number;
-  sponsorship: { available: boolean; remainingToday: number };
+  sponsorship: { available: boolean; remainingToday: number; tier?: "standard" | "skr" };
   quoteId: string;
   expiresAt: string;
 }

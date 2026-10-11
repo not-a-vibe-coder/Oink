@@ -211,6 +211,7 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
       sponsorship: {
         available: sponsorship.eligible,
         remainingToday: sponsorship.remainingToday,
+        tier: sponsorship.tier,
       },
       quoteId: quote.quoteId,
       expiresAt: quote.expiresAt,

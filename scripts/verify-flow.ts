@@ -29,6 +29,7 @@ if (process.env.TEST_DATABASE_URL) {
     "bell-quotes.integration.test.ts",
     "bell-execution.integration.test.ts",
     "push.integration.test.ts",
+    "sponsorship.integration.test.ts",
   ]) {
     await run(["bun", "test", `backend/tests/${file}`], process.cwd(), env);
   }

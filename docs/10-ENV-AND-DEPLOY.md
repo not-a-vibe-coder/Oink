@@ -66,6 +66,12 @@ FEE_PAYER_SECRET_KEY=            # base58 secret key
 FEE_SPONSOR_ENABLED=true
 FEE_SPONSOR_MAX_TX_PER_DAY=20
 FEE_SPONSOR_MAX_LAMPORTS_PER_DAY=50000000     # 0.05 SOL per tag
+# SKR holder perk: wallets holding at least SKR_HOLDER_MIN_BASE (base units, 6 decimals) of the
+# official SKR mint get a higher per-account quota on the same sponsored flows. The global
+# budget below is unchanged. Balance is read on-chain; any RPC failure means the standard quota.
+SKR_HOLDER_MIN_BASE=1000000000                # 1,000 SKR
+FEE_SPONSOR_SKR_MAX_TX_PER_DAY=60
+FEE_SPONSOR_SKR_MAX_LAMPORTS_PER_DAY=150000000
 FEE_SPONSOR_GLOBAL_LAMPORTS_PER_DAY=2000000000
 
 # Protocol fee. Zero for the hackathon; the code path stays.

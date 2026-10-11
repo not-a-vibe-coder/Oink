@@ -3,6 +3,7 @@ import {
   ALL_SOLANA_XSTOCKS,
   FEATURED_SOLANA_STOCKS,
   SOLANA_BASE_CURRENCIES,
+  SOLANA_ECOSYSTEM_TOKENS,
   findSolanaToken,
   resolveSolanaToken,
 } from "../lib/tokens";
@@ -20,16 +21,17 @@ assetsRouter.get("/", async (req: Request, res: Response) => {
   if (featured) {
     res.status(200).json({
       baseCurrencies: SOLANA_BASE_CURRENCIES,
+      ecosystem: SOLANA_ECOSYSTEM_TOKENS,
       featured: FEATURED_SOLANA_STOCKS,
       count: FEATURED_SOLANA_STOCKS.length,
     });
     return;
   }
 
-  let filtered = ALL_SOLANA_XSTOCKS;
+  let filtered = [...SOLANA_ECOSYSTEM_TOKENS, ...ALL_SOLANA_XSTOCKS];
 
   if (search) {
-    filtered = ALL_SOLANA_XSTOCKS.filter(
+    filtered = filtered.filter(
       (t) =>
         t.symbol.toLowerCase().includes(search) ||
         t.name.toLowerCase().includes(search) ||
@@ -55,7 +57,10 @@ assetsRouter.get("/prices", async (req: Request, res: Response) => {
     return;
   }
 
-  const mints = mintsParam.split(",").map((m) => m.trim()).filter(Boolean);
+  const mints = mintsParam
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
   try {
     const prices = await fetchTokenPrices(mints);
     res.status(200).json({ prices });
@@ -67,7 +72,8 @@ assetsRouter.get("/prices", async (req: Request, res: Response) => {
 
 // GET /api/v1/assets/:symbolOrMint
 assetsRouter.get("/:symbolOrMint", async (req: Request, res: Response) => {
-  const token = resolveSolanaToken(req.params.symbolOrMint) || findSolanaToken(req.params.symbolOrMint);
+  const token =
+    resolveSolanaToken(req.params.symbolOrMint) || findSolanaToken(req.params.symbolOrMint);
   if (!token) {
     res.status(404).json({ error: "NOT_FOUND", message: "Token not found.", details: null });
     return;

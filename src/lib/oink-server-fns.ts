@@ -306,7 +306,12 @@ export const getAssets = createServerFn({ method: "GET" })
 
 export const getFeaturedAssets = createServerFn({ method: "GET" }).handler(() =>
   proxy(() =>
-    oinkFetch<{ baseCurrencies: OinkToken[]; featured: OinkToken[]; count: number }>(
+    oinkFetch<{
+      baseCurrencies: OinkToken[];
+      ecosystem?: OinkToken[];
+      featured: OinkToken[];
+      count: number;
+    }>(
       "/api/v1/assets",
       { query: { featured: "true" } },
     ),

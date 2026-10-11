@@ -219,3 +219,30 @@ re-spied the suite's balance mock (its restore removed the outer mock), and the
 DB-persisted `flow_confirm` rate limit made back-to-back reruns fail; the suite now flips
 a flag and clears its own `flow_%` rate-limit rows in the disposable DB. Not exercised:
 delivery through a real browser push service (needs deployed HTTPS and VAPID keys).
+
+## 2026-10-11 — Task 9: SKR integration (passed)
+
+- **On-chain check:** `SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3` is an SPL Token mint with
+  6 decimals and no freeze authority (supply ≈ 10.65B).
+- Registry: `SKR` ("Seeker") resolves by symbol, by "Seeker", or by that exact mint only;
+  look-alike mints (including `...pump` launches) never resolve. The asset API's featured list
+  gains `ecosystem: [SKR]`, search includes it, and the Mix picker shows it, so a mix can hold
+  SKR through the existing settlement path. Bell's SPYx/AAPLx/NVDAx allowlist is unchanged.
+- Holder perk: wallets holding at least `SKR_HOLDER_MIN_BASE` (default 1,000 SKR), checked
+  server-side against the official mint's on-chain balance (owner, mint and decimals
+  verified; cached 5 min), get a higher per-account quota on the existing fee-sponsored
+  transfer flows (default 60 tx / 0.15 SOL per day vs 20 / 0.05). The global daily budget is
+  unchanged. An RPC failure means the standard quota. The send screen labels the SKR quota.
+  Bell signer rules are untouched: Bell never uses sponsorship.
+- Hardening: `checkSponsorshipBudget` used to fail **open** (eligible, 20 left) when its DB
+  query failed. It now fails closed.
+
+### Audit result
+
+Passed. `bun run verify:flow` (now including the sponsorship suite): exit 0; main **125
+passed, 80 skipped, 0 failed**; Flow 9, Bell quotes 3, Bell execution 3, Push 4,
+Sponsorship 4. All DB suites: **64 passed, 0 failed**. Tests cover exact-mint resolution,
+look-alike rejection, the balance sum across accounts, wrong decimals/owner and RPC failure
+reading as zero, the threshold boundary (1,000 SKR vs one base unit less), the higher quota
+being enforced, the shared global budget, and RPC-outage downgrade. Diff reviewed: the fee
+payer gains no new authority, and only quota numbers change.

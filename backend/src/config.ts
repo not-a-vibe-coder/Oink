@@ -19,6 +19,11 @@ export type Config = {
     maxTxPerDay: number;
     maxLamportsPerDay: bigint;
     globalLamportsPerDay: bigint;
+    // SKR holder perk: a higher per-account quota on the same sponsored flows. The global
+    // budget is unchanged, so holders can never drain more than the operator allows.
+    skrHolderMinBase: bigint;
+    skrMaxTxPerDay: number;
+    skrMaxLamportsPerDay: bigint;
   };
   oinkFeeBps: number;
   oinkFeeWallet: string;
@@ -79,6 +84,9 @@ export function getConfig(): Config {
       maxTxPerDay: Number(optional("FEE_SPONSOR_MAX_TX_PER_DAY", "20")),
       maxLamportsPerDay: BigInt(optional("FEE_SPONSOR_MAX_LAMPORTS_PER_DAY", "50000000")),
       globalLamportsPerDay: BigInt(optional("FEE_SPONSOR_GLOBAL_LAMPORTS_PER_DAY", "2000000000")),
+      skrHolderMinBase: BigInt(optional("SKR_HOLDER_MIN_BASE", "1000000000")), // 1,000 SKR
+      skrMaxTxPerDay: Number(optional("FEE_SPONSOR_SKR_MAX_TX_PER_DAY", "60")),
+      skrMaxLamportsPerDay: BigInt(optional("FEE_SPONSOR_SKR_MAX_LAMPORTS_PER_DAY", "150000000")),
     },
     oinkFeeBps: Number(optional("OINK_FEE_BPS", "0")),
     oinkFeeWallet: optional("OINK_FEE_WALLET", ""),
