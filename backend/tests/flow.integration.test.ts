@@ -227,6 +227,48 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
       ).rows[0].count,
     ).toBe(0);
   });
+  test("summary reports the payday plan and next action without a session leak", async () => {
+    await request(app).get("/api/v1/flow/summary").expect(401);
+    balance = 1300000000n;
+    const summary = (
+      await request(app).get("/api/v1/flow/summary").set("Cookie", cookie).expect(200)
+    ).body;
+    expect(summary.planConfigured).toBe(true);
+    expect(summary.orders.pending).toBe(6);
+    // One paid invoice was left unallocated by the insufficient-backing test above.
+    expect(summary.unallocatedPayments).toBe(1);
+    expect(summary.nextAction).toBe("allocate");
+    expect(summary.reserve).toEqual({
+      status: "available",
+      targetBase: "1000000000",
+      availableBase: "0",
+      filledBase: "0",
+      progressBps: 0,
+    });
+    const other = (
+      await request(app).get("/api/v1/flow/summary").set("Cookie", otherCookie).expect(200)
+    ).body;
+    expect(other.planConfigured).toBe(false);
+    expect(other.orders.pending).toBe(0);
+    expect(other.nextAction).toBe("set_plan");
+  });
+  test("summary fails closed when the balance cannot be read", async () => {
+    const connection = getSolanaConnection();
+    const failing = spyOn(connection, "getParsedTokenAccountsByOwner").mockImplementation(
+      async () => {
+        throw new Error("rpc down");
+      },
+    );
+    try {
+      const summary = (
+        await request(app).get("/api/v1/flow/summary").set("Cookie", cookie).expect(200)
+      ).body;
+      expect(summary.reserve.status).toBe("unavailable");
+      expect(summary.reserve.progressBps).toBeNull();
+    } finally {
+      failing.mockRestore();
+    }
+  });
   test("database rejects signature reuse and non-conserving payments", async () => {
     const invoice = await makeInvoice();
     const prior = (await query("SELECT signature FROM flow_invoices WHERE status='paid' LIMIT 1"))

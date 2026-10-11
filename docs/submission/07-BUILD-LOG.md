@@ -76,3 +76,27 @@ claims and do not change custody, signing, pricing, or payment behavior.
 Passed. A post-move repository grep found only the archived Vesper video reference; no product
 file refers to the moved files. `bun run build` passed. Diff reviewed: this is relocation only;
 no runtime product, custody, amount, or security behavior changed.
+
+## 2026-10-11 — Task 4: one journey (passed)
+
+- Added `GET /api/v1/flow/summary` (session required, read-only): cash-reserve progress, Bell
+  order counts by state, unallocated received payments, open requests and one next action.
+  Shared BigInt rules live in `src/lib/flow/journey.ts`. The balance is read after the DB
+  snapshot commits (no row lock held across RPC); an RPC/config failure or an unresolved
+  submitted order reports the reserve as unavailable rather than estimating it.
+- Home now opens with a "Payday plan" card (reserve progress, Bell open/done counts, Mix →
+  Reserve first → Bell chips, one primary action deep-linking to `#plan`, `#request`,
+  `#requests` or `#bell` on Income). Mix links to the payday plan; Income explains Mix vs.
+  payment-link plan and links to Bell.
+- `/demo` renders the same card from a simulated summary computed with the production rules.
+
+### Audit result
+
+Passed. `bun run verify:flow` with the disposable `TEST_DATABASE_URL`: exit 0 (types, lint
+including new `src/components/flow`, build); main suite **97 passed, 65 skipped, 0 failed**.
+`DATABASE_URL=$TEST_DATABASE_URL bun test backend/tests/*.integration.test.ts`: **53 passed,
+0 failed** (adds summary auth, cross-account isolation, next action, and RPC-failure fail-closed
+cases). Playwright at 360/390/430px on `/demo` through allocation and quotes: no horizontal
+overflow; all card links/buttons ≥ 44px. Diff reviewed: no custody, signing, amount-float or
+claim changes; the authenticated home card was not exercised in a browser (needs a backend
+session) and is covered by type/build and API tests.

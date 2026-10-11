@@ -24,6 +24,9 @@ export const setIncomeSettings = createServerFn({ method: "POST" })
       body: data,
     }),
   );
+export const getIncomeSummary = createServerFn({ method: "GET" }).handler(() =>
+  oinkFetch<import("./journey").PaydaySummary>("/api/v1/flow/summary", { cookie: cookie() }),
+);
 export const previewIncome = createServerFn({ method: "POST" })
   .inputValidator(z.object({ amountBase: integer }))
   .handler(({ data }) =>

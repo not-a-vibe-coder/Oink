@@ -2224,3 +2224,23 @@ textarea.input {
     font-size: 36px;
   }
 }
+
+/* Payday plan card (home): one next step across Mix, Income and Bell. */
+.payday-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.payday-title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.payday-art .illustration {
+  width: 64px;
+  margin: 0;
+}
+.payday-steps .chip {
+  min-height: 44px;
+}

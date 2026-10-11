@@ -127,6 +127,13 @@ function MixPage() {
           Every payment that arrives at {handle} is split this way, in one transaction, before it
           ever sits still as cash.
         </p>
+        <p className="meta">
+          Want a cash reserve filled first and each stock order checked before you sign? Use your{" "}
+          <Link to="/app/income" hash="plan" className="link">
+            payday plan
+          </Link>
+          .
+        </p>
       </header>
 
       <div className="stack">

@@ -15,6 +15,7 @@ import {
   previewFlowIncome,
 } from "../services/flow/allocation";
 import { inFlowTransaction } from "../services/flow/settings";
+import { flowSummary } from "../services/flow/summary";
 import { createBellQuote, listBellPurchases } from "../services/bell/quotes";
 import { prepareBellPurchase } from "../services/bell/attempts";
 import { submitBellAttempt } from "../services/bell/submit";
@@ -75,6 +76,13 @@ flowRouter.put(
         req.body?.revision,
       ),
     );
+  }),
+);
+flowRouter.get(
+  "/summary",
+  requireSession,
+  endpoint(async (req, res) => {
+    res.json(await flowSummary(req.accountId!));
   }),
 );
 flowRouter.post(

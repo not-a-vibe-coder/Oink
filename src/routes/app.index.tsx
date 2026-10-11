@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Fuel } from "lucide-react";
+import { PaydayPlanCard } from "@/components/flow/PaydayPlanCard";
 import { AllocationRail } from "@/components/oink/AllocationRail";
 import { Illustration } from "@/components/oink/Illustration";
 import { CopyButton } from "@/components/oink/CopyButton";
@@ -58,6 +59,8 @@ function WalletHome() {
                 : "Nothing here yet."}
             </p>
           </section>
+
+          <PaydayPlanCard />
 
           {mix.length > 0 && (
             <section>

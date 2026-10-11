@@ -28,6 +28,17 @@ function IncomePage() {
         <p className="page-sub">
           Keep your cash reserve funded. Allocate the rest to your chosen investments.
         </p>
+        <p className="meta">
+          Payments to your @tag settle into your{" "}
+          <Link to="/app/mix" className="link">
+            Mix
+          </Link>
+          . Payment links created here follow this plan instead, and every stock order is checked by{" "}
+          <a href="#bell" className="link">
+            Bell
+          </a>{" "}
+          before you sign.
+        </p>
       </header>
       {settings.isPending ? (
         <p className="meta">Loading income settings…</p>
@@ -92,7 +103,7 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
   const completed = new Set(payments.data?.payments.map((p) => p.invoiceId) ?? []);
   return (
     <div className="stack">
-      <section className="panel stack">
+      <section className="panel stack" id="plan">
         <h2 className="eyebrow">Your income plan</h2>
         <label className="stack" style={{ gap: 8 }}>
           Cash target (USDC)
@@ -128,7 +139,7 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
           {save.isPending ? "Saving…" : "Save income plan"}
         </button>
       </section>
-      <section className="panel stack">
+      <section className="panel stack" id="request">
         <h2 className="eyebrow">Request income</h2>
         <label>
           Payment amount (USDC)
@@ -183,7 +194,7 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
         Investments remain in USDC until you approve and sign a Bell trade. Reserved amounts stay in
         your wallet and can still be spent elsewhere.
       </p>
-      <section className="stack">
+      <section className="stack" id="requests">
         <h2 className="eyebrow">Payment requests</h2>
         {invoices.isError && <p role="alert">{invoices.error.message}</p>}
         {invoices.isPending ? (

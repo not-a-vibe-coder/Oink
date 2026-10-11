@@ -11,6 +11,7 @@ await run([
   "bunx",
   "eslint",
   "src/components/bell",
+  "src/components/flow",
   "src/lib/bell",
   "src/lib/demo",
   "src/lib/flow",

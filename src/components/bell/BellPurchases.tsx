@@ -155,7 +155,7 @@ export function BellPurchases() {
       query.state.data?.purchases.some((p) => p.state === "submitted") ? 10000 : false,
   });
   return (
-    <section className="stack">
+    <section className="stack" id="bell">
       <h2 className="eyebrow">Bell investment orders</h2>
       <p className="meta">
         Check the exact purchase against your execution limits. Income stays in USDC until you

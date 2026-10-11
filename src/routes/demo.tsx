@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { BellQuoteBrief } from "@/components/bell/BellPurchases";
-import { DEMO_ALLOCATION, demoQuotes } from "@/lib/demo/scenario";
+import { PaydayPlan } from "@/components/flow/PaydayPlanCard";
+import { DEMO_ALLOCATION, demoQuotes, demoSummary, type DemoStage } from "@/lib/demo/scenario";
 import { displayUsdc } from "@/lib/flow/amounts";
 import { evaluateBellPolicy } from "@/lib/bell/policy";
 import type { BellQuote } from "@/lib/bell/types";
@@ -19,8 +20,7 @@ export const Route = createFileRoute("/demo")({
     ],
   }),
 });
-type Stage =
-  "request" | "received" | "allocated" | "quoted" | "prepared" | "submitted" | "completed";
+type Stage = DemoStage;
 function DemoPage() {
   const [stage, setStage] = useState<Stage>("request");
   const [quotes, setQuotes] = useState<BellQuote[]>([]);
@@ -65,6 +65,7 @@ function DemoPage() {
             Fill your cash reserve first. Review each investment before it leaves USDC.
           </p>
         </div>
+        <PaydayPlan summary={demoSummary(stage)} links={false} />
         <section className="panel stack">
           <h2 className="eyebrow">Your income plan</h2>
           <p className="figure">
