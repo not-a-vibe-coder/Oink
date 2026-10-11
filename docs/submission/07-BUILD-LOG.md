@@ -352,3 +352,12 @@ layout coverage scope, and a "0 floats" deck stat (replaced by the tested single
 guarantee). Test counts quote the task 11 run (125 unit, 64 DB). Deck rendered headless to an
 8-page 1280×720 PDF with no overflow and no broken images. Placeholders are bracketed and
 bold: live URL, APK link, videos, Solscan fill, team, registration.
+
+## 2026-10-11 — Task 13: final verification (passed)
+
+On a brand-new database (`oink_final`): both `bun install --frozen-lockfile` runs passed and
+`bun run verify:flow` exited 0 (125 unit tests passed, 0 failed; Flow 9, Bell quotes 3,
+Bell execution 3, Push 4, Sponsorship 4; production build passed). All DB suites: 64 passed,
+0 failed. A repo-wide ESLint sweep shows only pre-existing formatting issues in untouched
+files; the one edited file has the same count as at `7b76795`. The APK was built and verified
+in task 10; rebuild it against the real host after deploy. Pushed commit: see `git log origin/main -1`.
