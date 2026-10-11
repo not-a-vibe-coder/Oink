@@ -288,3 +288,37 @@ does not cache it). `bun install --frozen-lockfile` in `twa/` passes.
 **Not done:** install on an emulator or device (none attached; this needs the deployed domain
 to show anything beyond the Custom Tab fallback). After deploy, the founder rebuilds with
 the real host and checks full-screen launch, sign-in, Bell signing and Seeker MWA on a phone.
+
+## 2026-10-11 — Task 11: deploy kit (passed)
+
+- `render.yaml`: Docker web service `oink-api` (`backend.Dockerfile`, `oven/bun:1.4.2-slim`,
+  frozen production install, runs as the non-root `bun` user, health check `/health`) plus
+  `oink-db` (PostgreSQL 16). Mainnet-beta is preset, and secrets are `sync: false`.
+  `.dockerignore` excludes env files, secrets, keystores, tests and node_modules.
+- `vercel.json`: frozen Bun install, plus headers for `sw.js` (no-cache), the manifest, and
+  `assetlinks.json`.
+- `scripts/generate-secrets.ts`: the four 32-byte server secrets, the proxy secret (one value
+  for both services), the VAPID P-256 pair and a fee-payer keypair. Written to
+  `.secrets/oink-production.env` (gitignored, mode 600). It refuses to overwrite and prints
+  only public values (fee-payer address, VAPID public key).
+- `docs/submission/08-DEPLOY.md`: accounts, secrets, Render, Vercel, APK rebuild, the mainnet
+  smoke test, the env checklist, and rollback/rotation, with the `OINK_KMS_KEY` lock-out
+  warning. docs/10 links to it and documents `PUBLIC_API_URL`.
+- `backend/src/db/index.ts`: an explicit `sslmode=disable` in `DATABASE_URL` now turns off the
+  production TLS default (used for the local dry run). It is never inferred, and the
+  production default is unchanged.
+
+### Audit result
+
+Passed. Generated secrets validated: the VAPID pair is accepted by `web-push`, the fee-payer
+secret round-trips to the printed address, all five secrets decode to 32 bytes, and a second
+run refused to overwrite. Deploy dry run with no Docker locally: the container's exact
+files (backend without tests, `src/lib/{bell,flow}`) went to a clean directory,
+`bun install --frozen-lockfile --production` passed, and the API was booted with
+`NODE_ENV=production`, mainnet-beta and the generated secrets against a **fresh** database.
+All 11 migrations applied (latest `011_push_subscriptions.sql`); `/health` returned
+`{"status":"ok","network":"mainnet-beta"}`; the log contained no secret names; and with
+`OINK_KMS_KEY` unset the server refused to start. The dry-run database, secrets and logs
+were deleted. `bun run verify:flow`: exit 0 (125 passed, 80 skipped, 0 failed; DB suites
+9/3/3/4/4). All DB suites: 64 passed, 0 failed. Not done here: a real Docker build and the
+Render/Vercel deploys (accounts are the founder's).

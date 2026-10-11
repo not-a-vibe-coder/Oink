@@ -19,3 +19,4 @@ keypair*.json
 *.keystore
 *.jks
 keystore.env
+.secrets/

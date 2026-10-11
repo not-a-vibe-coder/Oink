@@ -1,0 +1,65 @@
+# Render Blueprint for the Oink API + PostgreSQL.
+# Dashboard → New → Blueprint → this repo. Values marked `sync: false` are asked for once;
+# paste them from .secrets/oink-production.env (bun scripts/generate-secrets.ts).
+# Bell requires mainnet-beta and a mainnet RPC. See docs/submission/08-DEPLOY.md.
+services:
+  - type: web
+    name: oink-api
+    runtime: docker
+    dockerfilePath: ./backend.Dockerfile
+    dockerContext: .
+    plan: starter # free instances sleep; payments and Bell reconciliation need it awake
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SOLANA_NETWORK
+        value: mainnet-beta
+      - key: SOLANA_RPC_URL # mainnet RPC with your key (e.g. Helius); must match SOLANA_NETWORK
+        sync: false
+      - key: SOLANA_RPC_FALLBACK_URL
+        value: https://api.mainnet-beta.solana.com
+      - key: APP_URL # the Vercel production origin, e.g. https://app.your-domain.com
+        sync: false
+      - key: PUBLIC_API_URL # this service's public URL; enables mix-settling Solana Pay links
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: oink-db
+          property: connectionString
+      - key: OINK_KMS_KEY # LOSING THIS LOCKS EVERY USER OUT OF 2FA
+        sync: false
+      - key: OINK_DECOY_KEY
+        sync: false
+      - key: OINK_SESSION_SECRET
+        sync: false
+      - key: OINK_ARGON_PEPPER
+        sync: false
+      - key: OINK_PROXY_SECRET
+        sync: false
+      - key: FEE_PAYER_SECRET_KEY
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT # mailto:you@your-domain.com
+        sync: false
+      - key: JUPITER_API_KEY # optional per Jupiter's access policy
+        sync: false
+      - key: PYTH_API_KEY # optional; enables Bell premium caps
+        sync: false
+      - key: FEE_SPONSOR_ENABLED
+        value: "true"
+      - key: OINK_FEE_BPS
+        value: "0"
+
+databases:
+  - name: oink-db
+    plan: basic-256mb # free Render Postgres expires after 30 days
+    region: oregon
+    databaseName: oink
+    user: oink
+    postgresMajorVersion: "16"

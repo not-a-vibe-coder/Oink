@@ -1,5 +1,8 @@
 # OINK — Environment, Secrets & Deployment
 
+> Step-by-step mainnet deploy: [docs/submission/08-DEPLOY.md](submission/08-DEPLOY.md). Generate
+> secrets with `bun scripts/generate-secrets.ts` (never prints them).
+
 New GitHub repository, new database, new hosting. **Nothing is shared with TENDER** —
 not the repo, not the database, not the API keys, not the fee wallet.
 
@@ -35,6 +38,7 @@ NODE_ENV=production
 PORT=3001
 # KEEPALIVE_URL=https://api.example.com   # optional; Render uses RENDER_EXTERNAL_URL. Pings /health every minute so the host never idles the API.
 APP_URL=https://<domain>                 # CORS allowlist + invoice links
+PUBLIC_API_URL=https://api.<domain>      # enables mix-settling Solana Pay transaction requests
 DATABASE_URL=postgresql://...
 
 # Solana
@@ -110,7 +114,7 @@ X_OAUTH_REDIRECT_URI=https://api.<domain>/api/v1/x/link/callback
 GROQ_API_KEY=
 ```
 
-Generate a secret: `openssl rand -base64 32`
+Generate all secrets at once: `bun scripts/generate-secrets.ts` (or one: `openssl rand -base64 32`).
 
 ### Boot assertions
 

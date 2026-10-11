@@ -2,10 +2,16 @@ import pg, { type QueryResult, type QueryResultRow } from "pg";
 
 const { Pool } = pg;
 
+// Production defaults to TLS. An explicit `sslmode=disable` in the URL opts out, for a private
+// network or a local production-mode dry run; it is never inferred.
+const databaseUrl = process.env.DATABASE_URL;
+const sslDisabled = databaseUrl ? /[?&]sslmode=disable(&|$)/.test(databaseUrl) : false;
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || undefined,
+  connectionString: databaseUrl || undefined,
   ssl:
-    process.env.DATABASE_URL && (process.env.DATABASE_URL.includes("supabase.com") || process.env.NODE_ENV === "production")
+    databaseUrl &&
+    !sslDisabled &&
+    (databaseUrl.includes("supabase.com") || process.env.NODE_ENV === "production")
       ? { rejectUnauthorized: false }
       : false,
 });
