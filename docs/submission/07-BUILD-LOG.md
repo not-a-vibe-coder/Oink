@@ -26,3 +26,20 @@ database audit passed:
 
 No product source changes were made. Diff reviewed: this log contains no secret, payment,
 or wallet data. Follow-up: task 1 may begin.
+
+## 2026-10-11 — Task 1: correct SpaceX alias (passed)
+
+- Removed the unsafe `SPACEX -> SPYx` alias from `backend/src/lib/tokens.ts`. The registry's
+  actual SpaceX instrument is `SPCXx`; a SpaceX text query no longer selects the unrelated
+  S&P 500 ETF.
+- Reviewed every remaining `SOLANA_COMMON_ALIASES` entry. Each maps a company, ticker, or
+  index shorthand to its matching instrument; no frontend alias mirror exists.
+- Added `backend/tests/tokens.test.ts`, covering every convenience alias plus the SpaceX,
+  `SPCX`, and `SPY` regression cases.
+
+### Audit result
+
+Passed. `bun test backend/tests/tokens.test.ts`: **2 passed, 0 failed (30 assertions)**.
+`bun run verify:flow`: passed (TypeScript, targeted lint, full unit suite, build; database
+checks are intentionally skipped when `TEST_DATABASE_URL` is absent). Diff reviewed: no
+custody behavior, transaction guard, amount arithmetic, or claims changed.

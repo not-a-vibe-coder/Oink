@@ -6617,7 +6617,6 @@ const SOLANA_COMMON_ALIASES: Record<string, string> = {
   META: "METAx",
   COINBASE: "COINx",
   COIN: "COINx",
-  SPACEX: "SPYx",
   SP500: "SPYx",
   SPY: "SPYx",
   NASDAQ: "QQQx",
