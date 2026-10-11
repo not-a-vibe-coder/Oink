@@ -1,3 +1,4 @@
+import { MINT_SIZE, MintLayout } from "@solana/spl-token";
 import crypto from "node:crypto";
 import { Keypair, PublicKey, ComputeBudgetProgram } from "@solana/web3.js";
 import {
@@ -71,4 +72,31 @@ export function fixtureBuild(
       lastValidBlockHeight: 1000,
     },
   };
+}
+
+/** A Token-2022 mint with a ScaledUiAmountConfig extension (type 25). */
+export function scaledMint(multiplier: number, newMultiplier: number, effective: bigint): Buffer {
+  const base = Buffer.alloc(MINT_SIZE);
+  MintLayout.encode(
+    {
+      mintAuthorityOption: 0,
+      mintAuthority: PublicKey.default,
+      supply: 0n,
+      decimals: 8,
+      isInitialized: true,
+      freezeAuthorityOption: 0,
+      freezeAuthority: PublicKey.default,
+    },
+    base,
+  );
+  const ext = Buffer.alloc(56);
+  PublicKey.default.toBuffer().copy(ext, 0);
+  ext.writeDoubleLE(multiplier, 32);
+  ext.writeBigInt64LE(effective, 40);
+  ext.writeDoubleLE(newMultiplier, 48);
+  const tlv = Buffer.alloc(4);
+  tlv.writeUInt16LE(25, 0);
+  tlv.writeUInt16LE(56, 2);
+  // Mint (82) padded to the account size (165), then the account-type byte (1 = mint).
+  return Buffer.concat([base, Buffer.alloc(165 - MINT_SIZE), Buffer.from([1]), tlv, ext]);
 }

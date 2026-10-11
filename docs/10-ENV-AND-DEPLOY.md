@@ -46,6 +46,10 @@ SOLANA_RPC_FALLBACK_URL=https://api.devnet.solana.com
 JUPITER_API_URL=https://api.jup.ag/swap/v1
 JUPITER_PRICE_API_URL=https://api.jup.ag/price/v3
 JUPITER_API_KEY=
+# Optional. Bell premium caps need a Pyth API key (Hermes requires one since Aug 2026).
+# Without it, the market-session badge still works and premium caps stay fail-closed.
+PYTH_API_KEY=
+# PYTH_HERMES_URL=https://hermes.pyth.network
 
 # --- SECRETS. 32 random bytes, base64. Rotating these has consequences. ---
 OINK_KMS_KEY=          # seals TOTP secrets at rest. LOSING THIS LOCKS EVERY USER OUT OF 2FA

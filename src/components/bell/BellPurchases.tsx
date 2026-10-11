@@ -4,6 +4,7 @@ import { displayUsdc, parseUsdc } from "@/lib/flow/amounts";
 import { getBellPurchases, quoteBellPurchase } from "@/lib/flow/server-fns";
 import { DEFAULT_BELL_POLICY, displayImpactPercent, displayTokenAmount } from "@/lib/bell/policy";
 import type { BellPurchase, BellQuote } from "@/lib/bell/types";
+import { premiumBps, referenceGap, type BellReference } from "@/lib/bell/reference";
 import { BellExecution, BellReceiptHistory } from "./BellExecution";
 import { Illustration } from "@/components/oink/Illustration";
 export function BellQuoteBrief({ quote }: { quote: BellQuote }) {
@@ -41,11 +42,55 @@ export function BellQuoteBrief({ quote }: { quote: BellQuote }) {
           Instrument documentation
         </a>
       </p>
-      <p className="footnote">
-        Equity reference price and market-session data unavailable. No equity premium has been
-        verified.
-      </p>
+      <ReferenceLine quote={quote} />
       {quote.route.length > 0 && <p className="footnote">Route: {quote.route.join(" → ")}</p>}
+    </div>
+  );
+}
+const SESSION: Record<BellReference["marketSession"], { label: string; tone?: string }> = {
+  regular: { label: "US market open", tone: "ok" },
+  extended: { label: "Extended hours", tone: "warn" },
+  closed: { label: "US market closed", tone: "warn" },
+  unknown: { label: "Market session unknown" },
+};
+const GAP: Record<string, string> = {
+  NOT_CONFIGURED: "No equity reference feed is configured.",
+  PROVIDER_UNAVAILABLE: "The equity reference feed is unavailable.",
+  MARKET_NOT_REGULAR: "Reference prices are used only during regular US trading hours.",
+  STALE: "The equity reference price is not current.",
+  LOW_CONFIDENCE: "The equity reference price is too uncertain to use.",
+  MULTIPLIER_UNAVAILABLE: "The token's on-chain share multiplier could not be read.",
+};
+
+/** Session badge plus the premium over the reference, only when the evidence is usable. */
+export function MarketSessionBadge({ session }: { session: BellReference["marketSession"] }) {
+  const meta = SESSION[session] ?? SESSION.unknown;
+  return (
+    <span className="badge" data-tone={meta.tone}>
+      {meta.label}
+    </span>
+  );
+}
+function ReferenceLine({ quote }: { quote: BellQuote }) {
+  const reference = quote.reference;
+  const gap = referenceGap(reference, Date.parse(quote.quotedAt));
+  let premium: string | null = null;
+  if (gap === null && quote.minimumOutput !== "0") {
+    const bps = premiumBps(quote, reference);
+    const sign = bps < 0n ? "−" : "+";
+    const abs = bps < 0n ? -bps : bps;
+    premium = `${sign}${abs / 100n}.${(abs % 100n).toString().padStart(2, "0")}%`;
+  }
+  return (
+    <div className="stack-tight">
+      <div className="row">
+        <MarketSessionBadge session={reference?.marketSession ?? "unknown"} />
+      </div>
+      <p className="footnote">
+        {premium
+          ? `Worst-case price vs. ${reference.feedSymbol ?? "reference"} (per share, after the on-chain multiplier): ${premium}.`
+          : `${GAP[gap ?? ""] ?? GAP.PROVIDER_UNAVAILABLE} No equity premium has been verified.`}
+      </p>
     </div>
   );
 }
@@ -62,10 +107,17 @@ function PurchaseQuote({ purchase }: { purchase: BellPurchase }) {
       ? displayUsdc(purchase.quote.policy.maxTokenPriceBase)
       : "",
   );
+  const [premium, setPremium] = useState(
+    purchase.quote?.policy.maxPremiumBps == null ? "" : String(purchase.quote.policy.maxPremiumBps),
+  );
   const [error, setError] = useState("");
   const quote = useMutation({
     mutationFn: () => {
-      if (!/^\d{1,4}$/.test(slippage) || (impact && !/^\d{1,5}$/.test(impact)))
+      if (
+        !/^\d{1,4}$/.test(slippage) ||
+        (impact && !/^\d{1,5}$/.test(impact)) ||
+        (premium && !/^\d{1,5}$/.test(premium))
+      )
         throw new Error("Use integer basis points for execution limits.");
       return quoteBellPurchase({
         data: {
@@ -74,7 +126,7 @@ function PurchaseQuote({ purchase }: { purchase: BellPurchase }) {
             slippageBps: Number(slippage),
             maxTokenPriceBase: maxPrice ? parseUsdc(maxPrice) : null,
             maxPriceImpactBps: impact ? Number(impact) : null,
-            maxPremiumBps: null,
+            maxPremiumBps: premium ? Number(premium) : null,
           },
         },
       });
@@ -122,6 +174,19 @@ function PurchaseQuote({ purchase }: { purchase: BellPurchase }) {
               onChange={(e) => setMaxPrice(e.target.value)}
             />
           </label>
+          <label>
+            Premium limit over the stock price (basis points; blank disables)
+            <input
+              className="input"
+              inputMode="numeric"
+              value={premium}
+              onChange={(e) => setPremium(e.target.value)}
+            />
+          </label>
+          <p className="footnote">
+            A premium limit needs a fresh regular-session reference price. Without one, the order is
+            deferred and your USDC stays put.
+          </p>
           <button
             className="btn btn-outline"
             disabled={quote.isPending}

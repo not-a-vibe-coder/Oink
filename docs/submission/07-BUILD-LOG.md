@@ -100,3 +100,37 @@ cases). Playwright at 360/390/430px on `/demo` through allocation and quotes: no
 overflow; all card links/buttons ≥ 44px. Diff reviewed: no custody, signing, amount-float or
 claim changes; the authenticated home card was not exercised in a browser (needs a backend
 session) and is covered by type/build and API tests.
+
+## 2026-10-11 — Task 5: Bell reference prices and market session (passed)
+
+- **Live check (Oct 11, 19:14 UTC):** Pyth Hermes still lists regular-session feeds
+  `Equity.US.SPY/USD`, `AAPL`, `NVDA` with a public, holiday-aware schedule, but every price
+  request (equity and BTC alike) now returns **HTTP 401 unauthorized**. Pyth's docs confirm
+  Hermes has required an API key since the August 26, 2026 Pyth Core upgrade
+  (https://docs.pyth.network/price-feeds/core/upgrade/preparing). Prices are therefore used
+  only with `PYTH_API_KEY`; without it the premium cap stays fail-closed.
+- **Live check:** SPYx/AAPLx/NVDAx are Token-2022 mints with ScaledUiAmount multipliers
+  ≈1.00571 / 1.00327 / 1.00170 (new multipliers already effective), so 1:1 would be wrong.
+- Added `src/lib/bell/reference.ts` (exact f64→rational multiplier, effective-timestamp
+  switch, schedule parser and ET session, BigInt premium math against the lower confidence
+  bound, freshness/confidence gaps) and `backend/src/services/bell/reference.ts` (pinned feed
+  IDs with symbol re-check, Bearer-authenticated price fetch, on-chain multiplier). The policy
+  gains `PREMIUM_LIMIT`; a cap passes only with fresh (≤60 s), regular-session, ≤2%-confidence
+  evidence and a valid multiplier, and is re-evaluated from the stored brief at prepare and
+  submit. Quotes now show a session badge and, when usable, the per-share premium; the order
+  form adds an optional premium limit.
+- Documented `PYTH_API_KEY` / `PYTH_HERMES_URL` in `backend/.env.example` and docs/10, and
+  updated docs/bell/01.
+
+### Audit result
+
+Passed. `bun run verify:flow` (disposable DB): exit 0; main suite **117 passed, 66 skipped,
+0 failed**; Flow 7, Bell quotes 3 (new premium pass/defer case), Bell execution 3. All DB suites:
+**54 passed, 0 failed**. New tests cover session (DST, weekends, holidays, half days, malformed),
+multiplier (exactness, effective switch, invalid values), premium (exact floor, multiplier,
+confidence, exponent sign), stale/future/missing/low-confidence/corrupt data, 401, metadata
+mismatch and non-Token-2022 mints. Live smoke against mainnet without a key: session `closed`,
+reason `NOT_CONFIGURED`, real multipliers read. Diff reviewed: no change to signer, instruction,
+route, simulation, expiry or persist-before-broadcast guards; the key is read from env and only
+sent as a header to Hermes; no prices invented. Follow-up: the founder needs a Pyth key to
+enable premium caps in production.

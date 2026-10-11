@@ -11,6 +11,7 @@ import { FlowError, inFlowTransaction, lockSettings } from "../flow/settings";
 import { bellAsset, bellNetworkSupported } from "./assets";
 import type { BellAttempt } from "../../../../src/lib/bell/types";
 import { fetchBellBuild, type BellProviderBuild } from "./provider";
+import { gatherBellReference } from "./reference";
 export interface PurchaseRecord {
   id: string;
   payment_id: string;
@@ -148,6 +149,9 @@ export function createBellQuote(
           priceImpact: typeof build.priceImpactPct === "string" ? build.priceImpactPct : null,
           route: build.routePlan.map((step) => step.swapInfo.label),
         };
+        // Evidence is gathered for every quote so the session badge shows even without a cap;
+        // it never throws, and an unavailable reference only matters if a cap was requested.
+        quote.reference = await gatherBellReference(asset.symbol, asset.mint);
         quote.decision = evaluateBellPolicy({ ...quote, slippageBps: build.slippageBps }, policy);
       } catch {
         build = null;

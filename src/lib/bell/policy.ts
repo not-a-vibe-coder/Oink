@@ -1,4 +1,5 @@
 import { baseAmount } from "../flow/amounts";
+import { exceedsPremium, referenceGap, type BellReference } from "./reference";
 import type { BellDecision, BellPolicy } from "./types";
 export const DEFAULT_BELL_POLICY: BellPolicy = {
   slippageBps: 50,
@@ -43,6 +44,9 @@ export interface PolicyQuote {
   slippageBps: number;
   priceImpact: string | null;
   expiresAt: string;
+  /** Needed only for a premium cap; absent evidence keeps the cap unavailable. */
+  quotedAt?: string;
+  reference?: BellReference;
 }
 export function evaluateBellPolicy(
   quote: PolicyQuote,
@@ -79,12 +83,22 @@ export function evaluateBellPolicy(
         "QUOTE_EXPIRED",
         "This quote expired. Request a fresh execution brief.",
       );
-    if (policy.maxPremiumBps !== null)
-      return decision(
-        "unavailable",
-        "REFERENCE_UNAVAILABLE",
-        "A premium limit needs verified equity reference data, which is unavailable.",
-      );
+    if (policy.maxPremiumBps !== null) {
+      // Freshness is judged against when the quote was taken, so the same evidence gives the
+      // same answer at quote, prepare and submit; the 30-second quote expiry bounds the rest.
+      if (referenceGap(quote.reference, Date.parse(quote.quotedAt ?? "")) !== null)
+        return decision(
+          "unavailable",
+          "REFERENCE_UNAVAILABLE",
+          "A premium limit needs fresh regular-session reference data, which is unavailable.",
+        );
+      if (exceedsPremium(quote, quote.reference!, policy.maxPremiumBps))
+        return decision(
+          "defer",
+          "PREMIUM_LIMIT",
+          "The worst-case price is above the reference price by more than your premium limit.",
+        );
+    }
     if (
       policy.maxTokenPriceBase !== null &&
       input * 10n ** BigInt(quote.outputDecimals) > BigInt(policy.maxTokenPriceBase) * minimum

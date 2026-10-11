@@ -1,4 +1,5 @@
 import type { PurchaseState } from "../flow/types";
+import type { BellReference } from "./reference";
 export interface BellPolicy {
   slippageBps: number;
   maxTokenPriceBase: string | null;
@@ -10,6 +11,7 @@ export type BellReason =
   | "QUOTE_EXPIRED"
   | "INVALID_QUOTE"
   | "PRICE_LIMIT"
+  | "PREMIUM_LIMIT"
   | "PRICE_IMPACT_LIMIT"
   | "PRICE_IMPACT_UNAVAILABLE"
   | "REFERENCE_UNAVAILABLE"
@@ -39,7 +41,7 @@ export interface BellQuote {
   decision: BellDecision;
   quotedAt: string;
   expiresAt: string;
-  reference: { status: "unavailable"; marketSession: "unknown" };
+  reference: BellReference;
 }
 export interface BellPurchase {
   id: string;

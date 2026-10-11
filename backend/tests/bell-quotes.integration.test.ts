@@ -7,7 +7,10 @@ import { migrate } from "../src/db/migrate";
 import { createSession } from "../src/middleware/session";
 import { USDC } from "../src/lib/tokens";
 import { DEFAULT_BELL_POLICY } from "../../src/lib/bell/policy";
-import { fixtureBuild } from "./helpers/bell-fixture";
+import { fixtureBuild, scaledMint } from "./helpers/bell-fixture";
+import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { BELL_REFERENCE_FEEDS } from "../src/services/bell/reference";
+import { getSolanaConnection } from "../src/services/txBuilder";
 const url = process.env.TEST_DATABASE_URL;
 const suite = url && url === process.env.DATABASE_URL ? describe : describe.skip;
 const account = "oink-k7p2-9xqp",
@@ -40,6 +43,34 @@ suite("Bell quote API (PostgreSQL with provider fixtures)", () => {
       Object.assign(
         async (input: Parameters<typeof fetch>[0]) => {
           const requestUrl = new URL(String(input));
+          if (requestUrl.pathname === "/v2/price_feeds")
+            return Response.json([
+              {
+                id: BELL_REFERENCE_FEEDS.SPYx.id,
+                attributes: {
+                  symbol: BELL_REFERENCE_FEEDS.SPYx.symbol,
+                  // Always open, so this suite does not depend on the wall-clock session.
+                  schedule: "America/New_York;O,O,O,O,O,O,O;",
+                },
+              },
+            ]);
+          if (requestUrl.pathname === "/v2/updates/price/latest") {
+            if (!process.env.PYTH_API_KEY) return new Response("unauthorized", { status: 401 });
+            return Response.json({
+              parsed: [
+                {
+                  id: BELL_REFERENCE_FEEDS.SPYx.id,
+                  // 1,000 USD per share, published now.
+                  price: {
+                    price: "100000000000",
+                    conf: "0",
+                    expo: -8,
+                    publish_time: Math.floor(Date.now() / 1000),
+                  },
+                },
+              ],
+            });
+          }
           return Response.json(
             fixtureBuild(
               wallet,
@@ -53,7 +84,17 @@ suite("Bell quote API (PostgreSQL with provider fixtures)", () => {
         { preconnect: globalThis.fetch.preconnect },
       ),
     );
-    restore = () => mock.mockRestore();
+    const mintInfo = spyOn(getSolanaConnection(), "getAccountInfo").mockResolvedValue({
+      data: scaledMint(1, 1, 0n),
+      owner: TOKEN_2022_PROGRAM_ID,
+      lamports: 1,
+      executable: false,
+      rentEpoch: 0,
+    });
+    restore = () => {
+      mock.mockRestore();
+      mintInfo.mockRestore();
+    };
   }, 30000);
   afterAll(async () => {
     restore();
@@ -99,5 +140,31 @@ suite("Bell quote API (PostgreSQL with provider fixtures)", () => {
     const list = await request(app).get("/api/v1/flow/purchases").set("Cookie", cookie).expect(200);
     expect(list.body.purchases[0].state).toBe("deferred");
     expect(list.body.purchases[0].quote.id).toBe(unavailable.body.id);
+  });
+  test("a premium cap passes or defers only with fresh reference evidence", async () => {
+    process.env.SOLANA_NETWORK = "mainnet-beta";
+    process.env.PYTH_API_KEY = "fixture-key";
+    try {
+      // 180 USDC for at least 0.1791 SPYx = 1,005.03 per share vs 1,000 reference: +50 bps.
+      const quote = (maxPremiumBps: number) =>
+        request(app)
+          .post(`/api/v1/flow/purchases/${purchase}/quote`)
+          .set("Cookie", cookie)
+          .send({ policy: { ...DEFAULT_BELL_POLICY, maxPremiumBps } })
+          .expect(200);
+      const passing = await quote(100);
+      expect(passing.body.decision.status).toBe("pass");
+      expect(passing.body.reference).toMatchObject({
+        status: "available",
+        marketSession: "regular",
+        multiplier: { numerator: "1", denominator: "1" },
+      });
+      const deferred = await quote(25);
+      expect(deferred.body.decision.reason).toBe("PREMIUM_LIMIT");
+      const stored = await query("SELECT brief FROM bell_quotes WHERE id=$1", [deferred.body.id]);
+      expect(stored.rows[0].brief.reference.price.price).toBe("100000000000");
+    } finally {
+      delete process.env.PYTH_API_KEY;
+    }
   });
 });
