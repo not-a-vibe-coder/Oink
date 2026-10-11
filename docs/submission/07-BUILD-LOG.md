@@ -43,3 +43,19 @@ Passed. `bun test backend/tests/tokens.test.ts`: **2 passed, 0 failed (30 assert
 `bun run verify:flow`: passed (TypeScript, targeted lint, full unit suite, build; database
 checks are intentionally skipped when `TEST_DATABASE_URL` is absent). Diff reviewed: no
 custody behavior, transaction guard, amount arithmetic, or claims changed.
+
+## 2026-10-11 — Task 2: repository hygiene (passed)
+
+- Searched all tracked product files before moving the root clutter. `prompt.md` had no
+  references and now lives in `docs/archive/foreign/`. The inspiration PDF now lives in
+  `docs/archive/inspiration/`.
+- Moved the standalone Vesper mockup and its MP4 into
+  `docs/archive/inspiration/vesper/`. Its two referenced WOFF2 fonts moved with it and the
+  archived HTML continues to resolve both fonts and its local video; no product route imports
+  these files.
+
+### Audit result
+
+Passed. A post-move repository grep found only the archived Vesper video reference; no product
+file refers to the moved files. `bun run build` passed. Diff reviewed: this is relocation only;
+no runtime product, custody, amount, or security behavior changed.
