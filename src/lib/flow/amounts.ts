@@ -19,3 +19,10 @@ export function displayUsdc(value: string): string {
   const fraction = (amount % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
   return `${amount / 1_000_000n}${fraction ? `.${fraction}` : ""}`;
 }
+/** Whole SOL with up to nine decimals → lamports, exact. */
+export function parseSol(value: string): string {
+  if (!/^(0|[1-9]\d{0,11})(\.\d{1,9})?$/.test(value))
+    throw new Error("Use a SOL amount with at most nine decimals.");
+  const [whole, fraction = ""] = value.split(".");
+  return (BigInt(whole) * 1_000_000_000n + BigInt(fraction.padEnd(9, "0"))).toString();
+}

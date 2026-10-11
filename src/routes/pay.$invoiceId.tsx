@@ -3,6 +3,7 @@ import { AllocationRail } from "@/components/oink/AllocationRail";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { PigAvatar } from "@/components/oink/PigAvatar";
 import { QrCode } from "@/components/oink/QrCode";
+import { SeekerPayRequest } from "@/components/mwa/SeekerWallet";
 import { useInvoice } from "@/hooks/useOink";
 import { formatDateTime, formatTokenAmount, shortAddress } from "@/lib/format";
 
@@ -99,6 +100,7 @@ function PayPage() {
 
       {open && (
         <div className="stack">
+          <SeekerPayRequest solanaPayUri={solanaPayUri} />
           <QrCode
             value={solanaPayUri}
             alt={`Solana Pay QR for ${data.amount} ${data.tokenSymbol}`}
@@ -130,8 +132,8 @@ function PayPage() {
               </p>
               <AllocationRail mix={data.mix} />
               <p className="footnote" style={{ marginTop: "var(--s3)" }}>
-                Their mix splits the payment the moment it lands — one transaction, no cash
-                sitting in between.
+                Their mix splits the payment the moment it lands — one transaction, no cash sitting
+                in between.
               </p>
             </section>
           )}
@@ -139,7 +141,11 @@ function PayPage() {
           <div className="btn-row">
             <Link
               to="/app/send"
-              search={{ to: data.creatorTag ?? data.creatorAccountId, token: data.tokenSymbol, amount: data.amount }}
+              search={{
+                to: data.creatorTag ?? data.creatorAccountId,
+                token: data.tokenSymbol,
+                amount: data.amount,
+              }}
               className="btn btn-primary"
               style={{ flex: 1 }}
             >

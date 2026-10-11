@@ -4,6 +4,7 @@ import { Share2 } from "lucide-react";
 import { AllocationRail } from "@/components/oink/AllocationRail";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { QrCode } from "@/components/oink/QrCode";
+import { SeekerTopUp } from "@/components/mwa/SeekerWallet";
 import { useCreateInvoice, useMix, useWalletAddress } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
 import { formatDateTime } from "@/lib/format";
@@ -62,6 +63,7 @@ function ReceivePage() {
 
       {tab === "address" ? (
         <div className="stack">
+          <SeekerTopUp />
           <QrCode
             value={address.data?.solanaPayUri ?? `solana:${publicKey}`}
             alt={`QR code for ${handle}'s Solana address`}

@@ -134,3 +134,38 @@ reason `NOT_CONFIGURED`, real multipliers read. Diff reviewed: no change to sign
 route, simulation, expiry or persist-before-broadcast guards; the key is read from env and only
 sent as a header to Hermes; no prices invented. Follow-up: the founder needs a Pyth key to
 enable premium caps in production.
+
+## 2026-10-11 — Task 6: Seeker wallet via Mobile Wallet Adapter (passed)
+
+- Added `@solana-mobile/wallet-standard-mobile@0.6.0` (the stable release from August 2026;
+  0.7.0 was only four days old), `@wallet-standard/app@1.1.0` and `@wallet-standard/base@1.1.1`,
+  all pinned exactly. `registerMwa` is called lazily through a dynamic import, client-only, and
+  only in Android Chrome (WebViews, iOS, desktop and other Android browsers are excluded);
+  every connect/sign call runs from a tap handler.
+- `/income/$invoiceId`: "Connect wallet to pay" prepares a server-built, unsigned referenced
+  USDC transfer (`POST /api/v1/flow/invoices/:id/transaction`, public, rate-limited). The second
+  tap signs and sends in the payer's wallet, and receipt then goes through the unchanged
+  `confirm` endpoint (finalized, reference, exact amount), retried for up to 2 minutes.
+- `/pay/$invoiceId`: "Pay with Seeker wallet" uses the existing Solana Pay
+  transaction-request endpoint (mix settlement). It now also returns `chain`, which wallets
+  ignore.
+- Receive: "Top up from Seeker wallet" (`POST /api/v1/flow/topup/transaction`, session
+  required) sends USDC and/or SOL for Bell fees into the session's own Oink wallet.
+- The builder asserts that the external wallet is the only signer and fee payer, and attaches
+  the reference as a read-only non-signer. No Oink or server key is added, and the Oink account
+  wallet remains the only Bell signer.
+
+### Audit result
+
+Passed. `bun run verify:flow` (disposable DB): exit 0, main suite **124 passed, 67 skipped,
+0 failed**. All DB suites: **55 passed, 0 failed**. New tests cover the sole-signer invariant,
+the reference flags, exact transferChecked amount/decimals, SOL+USDC top-up, rejection paths,
+the route state (open/paid/self-pay/401/bad amounts), UA gating and transaction-request
+parsing. Build passes; the MWA chunk is lazy (`SeekerWallet-*.js`, `index.browser-*.js`) and
+contains no React Native code (the three pre-existing `react-native` strings come from Privy).
+**Not yet exercised on an Android device**; that happens with the APK (task 10).
+
+**Pre-existing finding (not changed here):** the legacy `POST /api/v1/invoices/:id/confirm`
+is unauthenticated and marks a pending invoice paid on any claimed signature without chain
+verification. The Seeker flow on `/pay` deliberately does not call it. Follow-up: verify it
+on-chain, or remove it.

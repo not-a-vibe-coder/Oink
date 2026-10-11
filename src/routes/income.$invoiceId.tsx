@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { Illustration } from "@/components/oink/Illustration";
 import { QrCode } from "@/components/oink/QrCode";
+import { SeekerPayIncome } from "@/components/mwa/SeekerWallet";
 import { displayUsdc } from "@/lib/flow/amounts";
 import { confirmIncomeInvoice, getIncomeInvoice } from "@/lib/flow/server-fns";
 export const Route = createFileRoute("/income/$invoiceId")({ component: IncomeRequest });
@@ -42,6 +43,11 @@ function IncomeRequest() {
           )}
           {invoice.data.status === "pending" && (
             <>
+              <SeekerPayIncome
+                invoiceId={invoiceId}
+                amountBase={invoice.data.amountBase}
+                onPaid={() => void invoice.refetch()}
+              />
               <QrCode
                 value={invoice.data.solanaPayUri}
                 size={220}

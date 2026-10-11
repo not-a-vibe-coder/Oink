@@ -12,6 +12,8 @@ await run([
   "eslint",
   "src/components/bell",
   "src/components/flow",
+  "src/components/mwa",
+  "src/lib/mwa",
   "src/lib/bell",
   "src/lib/demo",
   "src/lib/flow",

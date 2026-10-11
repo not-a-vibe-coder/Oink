@@ -56,6 +56,29 @@ export const confirmIncomeInvoice = createServerFn({ method: "POST" })
       body: { signature: data.signature },
     }),
   );
+const walletAddress = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+/** Unsigned transfer for an external (Seeker/Android) wallet to sign itself. */
+export interface ExternalTransaction {
+  transaction: string;
+  chain: string;
+}
+export const buildIncomePayerTransaction = createServerFn({ method: "POST" })
+  .inputValidator(id.extend({ account: walletAddress }))
+  .handler(({ data }) =>
+    oinkFetch<ExternalTransaction>(`/api/v1/flow/invoices/${data.id}/transaction`, {
+      method: "POST",
+      body: { account: data.account },
+    }),
+  );
+export const buildTopUpTransaction = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ payer: walletAddress, usdcBase: integer, lamports: integer }))
+  .handler(({ data }) =>
+    oinkFetch<ExternalTransaction>("/api/v1/flow/topup/transaction", {
+      method: "POST",
+      cookie: cookie(),
+      body: data,
+    }),
+  );
 export const allocateIncomeInvoice = createServerFn({ method: "POST" })
   .inputValidator(id)
   .handler(({ data }) =>

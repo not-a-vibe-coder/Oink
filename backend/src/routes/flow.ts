@@ -16,6 +16,9 @@ import {
 } from "../services/flow/allocation";
 import { inFlowTransaction } from "../services/flow/settings";
 import { flowSummary } from "../services/flow/summary";
+import { buildExternalPayment } from "../services/externalPayment";
+import { flowUsdcMint } from "../services/flow/chain";
+import { query } from "../db";
 import { createBellQuote, listBellPurchases } from "../services/bell/quotes";
 import { prepareBellPurchase } from "../services/bell/attempts";
 import { submitBellAttempt } from "../services/bell/submit";
@@ -118,6 +121,60 @@ flowRouter.get(
   "/invoices/:id",
   endpoint(async (req, res) => {
     res.json(await getFlowInvoice(String(req.params.id)));
+  }),
+);
+// Public: a payer's Seeker/Android wallet asks for the referenced transfer it will sign itself.
+flowRouter.post(
+  "/invoices/:id/transaction",
+  ipRateLimiter("flow_payer_tx", 60, 3600),
+  endpoint(async (req, res) => {
+    const invoice = await getFlowInvoice(String(req.params.id));
+    if (invoice.status !== "pending")
+      throw new FlowError("CONFLICT", "This payment request is no longer open.", 409);
+    const tokenMint = (
+      await query<{ token_mint: string }>("SELECT token_mint FROM flow_invoices WHERE id = $1", [
+        invoice.id,
+      ])
+    ).rows[0].token_mint;
+    res.json(
+      await buildExternalPayment({
+        payer: req.body?.account,
+        recipient: invoice.recipientWallet,
+        mint: tokenMint,
+        tokenBase: BigInt(invoice.amountBase),
+        lamports: 0n,
+        reference: invoice.reference,
+      }),
+    );
+  }),
+);
+// Session: fund this account's Oink wallet from the user's own Seeker wallet (USDC and/or SOL).
+flowRouter.post(
+  "/topup/transaction",
+  requireSession,
+  ipRateLimiter("flow_topup_tx", 60, 3600),
+  endpoint(async (req, res) => {
+    const amount = (value: unknown) => {
+      if (value === undefined || value === null || value === "") return 0n;
+      if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value))
+        throw new FlowError("VALIDATION_FAILED", "Use whole base units for top-up amounts.");
+      return BigInt(value);
+    };
+    const tokenBase = amount(req.body?.usdcBase);
+    const wallet = await query<{ public_key: string }>(
+      "SELECT public_key FROM wallets WHERE account_id = $1 AND status = 'active'",
+      [req.accountId!],
+    );
+    if (!wallet.rows[0]) throw new FlowError("NOT_FOUND", "Account not found.", 404);
+    res.json(
+      await buildExternalPayment({
+        payer: req.body?.payer,
+        recipient: wallet.rows[0].public_key,
+        mint: tokenBase > 0n ? flowUsdcMint() : "11111111111111111111111111111111",
+        tokenBase,
+        lamports: amount(req.body?.lamports),
+      }),
+    );
   }),
 );
 flowRouter.post(

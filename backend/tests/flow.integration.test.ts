@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
-import { Keypair, PublicKey, type ParsedTransactionWithMeta } from "@solana/web3.js";
+import { Keypair, PublicKey, Transaction, type ParsedTransactionWithMeta } from "@solana/web3.js";
+import { MINT_SIZE, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import bs58 from "bs58";
 import request from "supertest";
 import { app } from "../src/app";
@@ -267,6 +268,89 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
       expect(summary.reserve.progressBps).toBeNull();
     } finally {
       failing.mockRestore();
+    }
+  });
+  test("payer wallets get an unsigned referenced transfer; top-ups need a session", async () => {
+    const connection = getSolanaConnection();
+    const mintData = Buffer.alloc(MINT_SIZE);
+    MintLayout.encode(
+      {
+        mintAuthorityOption: 0,
+        mintAuthority: PublicKey.default,
+        supply: 0n,
+        decimals: 6,
+        isInitialized: true,
+        freezeAuthorityOption: 0,
+        freezeAuthority: PublicKey.default,
+      },
+      mintData,
+    );
+    const spies = [
+      spyOn(connection, "getAccountInfo").mockResolvedValue({
+        data: mintData,
+        owner: TOKEN_PROGRAM_ID,
+        lamports: 1,
+        executable: false,
+        rentEpoch: 0,
+      }),
+      spyOn(connection, "getTokenAccountBalance").mockResolvedValue({
+        context: { slot: 1 },
+        value: { amount: "900000000", decimals: 6, uiAmount: null },
+      }),
+      spyOn(connection, "getLatestBlockhash").mockResolvedValue({
+        blockhash: Keypair.generate().publicKey.toBase58(),
+        lastValidBlockHeight: 100,
+      }),
+    ];
+    try {
+      const payer = Keypair.generate().publicKey.toBase58();
+      const invoice = await makeInvoice();
+      const built = (
+        await request(app)
+          .post(`/api/v1/flow/invoices/${invoice.id}/transaction`)
+          .send({ account: payer })
+          .expect(200)
+      ).body;
+      const tx = Transaction.from(Buffer.from(built.transaction, "base64"));
+      const message = tx.compileMessage();
+      expect(message.accountKeys.filter((_, i) => message.isAccountSigner(i)).map(String)).toEqual([
+        payer,
+      ]);
+      const ref = message.accountKeys.findIndex((key) => key.toBase58() === invoice.reference);
+      expect(ref).toBeGreaterThan(-1);
+      expect(message.isAccountWritable(ref)).toBe(false);
+      await request(app)
+        .post(`/api/v1/flow/invoices/${invoice.id}/transaction`)
+        .send({ account: wallet })
+        .expect(400);
+      await request(app)
+        .post(`/api/v1/flow/invoices/${invoice.id}/confirm`)
+        .send({ signature: proof(invoice.reference) })
+        .expect(200);
+      await request(app)
+        .post(`/api/v1/flow/invoices/${invoice.id}/transaction`)
+        .send({ account: payer })
+        .expect(409);
+      await request(app)
+        .post("/api/v1/flow/topup/transaction")
+        .send({ payer, lamports: "1000" })
+        .expect(401);
+      const topup = (
+        await request(app)
+          .post("/api/v1/flow/topup/transaction")
+          .set("Cookie", cookie)
+          .send({ payer, usdcBase: "1000000", lamports: "1000" })
+          .expect(200)
+      ).body;
+      const topupTx = Transaction.from(Buffer.from(topup.transaction, "base64"));
+      expect(topupTx.feePayer?.toBase58()).toBe(payer);
+      await request(app)
+        .post("/api/v1/flow/topup/transaction")
+        .set("Cookie", cookie)
+        .send({ payer, usdcBase: "1.5" })
+        .expect(400);
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
     }
   });
   test("database rejects signature reuse and non-conserving payments", async () => {
