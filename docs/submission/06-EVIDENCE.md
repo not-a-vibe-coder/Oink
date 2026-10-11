@@ -1,5 +1,29 @@
 # Verification and delivery evidence
 
+## Final submission round: October 11, 2026
+
+Final verified commit: **[recorded in 07-BUILD-LOG.md, task 13]**. Each task below was audited
+before the next began; commands and results are in `07-BUILD-LOG.md`.
+
+| Check | Result |
+| --- | --- |
+| `bun run verify:flow` (frontend/backend types, lint, unit, build, six PostgreSQL suites) | Pass: 125 unit tests, 0 failed; Flow 9, Bell quotes 3, Bell execution 3, Push 4, Sponsorship 4 |
+| All DB integration suites on a disposable PostgreSQL 16 | 64 passed, 0 failed |
+| Phone layouts: `/demo` at 360/390/430px; landing and app routes at 390px | No horizontal overflow; payday-card controls ≥ 44px |
+| Chrome installability (`Page.getInstallabilityErrors`) on the production build | No errors; worker caches only static paths; offline page works |
+| Production-mode API boot on a fresh DB (mainnet-beta, generated secrets) | 11 migrations, `/health` ok, refuses to start without `OINK_KMS_KEY` |
+| Android TWA APK (placeholder host `oink.example`) | `apksigner verify`: v1/v2/v3 pass; package `app.oink.wallet`; assetlinks fingerprint matches |
+| Live read-only checks | Pyth Hermes metadata/schedules public, prices need an API key (401); xStock Token-2022 multipliers 1.0017–1.0057; SKR mint verified (SPL, 6 decimals) |
+
+**What this does not show:** no mainnet Bell fill, no deployed URL, no on-device install, no
+real push delivery, and no users or revenue. **[LIVE: add the Solscan link of the first real
+purchase here.]** Pyth prices were not fetched, because no API key is configured, so premium
+caps are tested only against fixtures.
+
+---
+
+## Earlier phase evidence (October 1, 2026)
+
 Checked October 1, 2026. Phase 5 spans `256c0f5..HEAD` at its final delivery revision: ten local commits. All five Flow/Bell phases total fifty commits from `64b3d01..HEAD` at that revision. These are local repository records, not proof of a pushed deployment or completed submission.
 
 ## Executed checks

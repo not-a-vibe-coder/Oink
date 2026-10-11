@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oink pitch deck</title>
+<!--
+  Eight 16:9 slides. Export: open in Chrome → Print → Destination "Save as PDF",
+  Margins "None", enable "Background graphics". One slide per page.
+  Every claim traces to the repository (docs/submission/06-EVIDENCE.md); bracketed items are
+  founder placeholders and live evidence that does not exist yet.
+-->
+<style>
+  :root {
+    --paper: #ffffff; --tint: #f2f6fc; --ink: #0a0a0a; --ink2: #3f3f3f; --muted: #6b7079;
+    --pig: #ff6f91; --ok: #17864b; --warn: #b45309; --rule: #e6e9ef;
+  }
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #e9ecf1; color: var(--ink);
+    font: 22px/1.4 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .slide { width: 1280px; height: 720px; margin: 24px auto; background: var(--paper);
+    padding: 64px 80px; position: relative; overflow: hidden; display: flex; flex-direction: column;
+    break-after: page; page-break-after: always; box-shadow: 0 2px 24px rgba(0,0,0,.08); }
+  @media print { html, body { background: var(--paper); } .slide { margin: 0; box-shadow: none; } }
+  .eyebrow { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 64px; line-height: 1.05; margin: 14px 0 18px; letter-spacing: -.02em; }
+  h2 { font-size: 44px; line-height: 1.1; margin: 12px 0 28px; letter-spacing: -.015em; }
+  p { margin: 0 0 14px; color: var(--ink2); }
+  .lead { font-size: 28px; color: var(--ink2); max-width: 820px; }
+  .art { position: absolute; right: 72px; width: 150px; height: 150px; object-fit: contain; }
+  .grid { display: grid; gap: 20px; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .card { background: var(--tint); border-radius: 18px; padding: 24px 26px; }
+  .card h3 { margin: 0 0 8px; font-size: 26px; }
+  .card p { font-size: 19px; margin: 0; }
+  .tag { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .06em;
+    padding: 4px 10px; border-radius: 999px; background: #fff; color: var(--ink2); margin-bottom: 10px; }
+  .flow { display: flex; align-items: center; gap: 14px; margin: 8px 0 26px; flex-wrap: wrap; }
+  .step { background: var(--tint); border-radius: 14px; padding: 14px 18px; font-weight: 600; font-size: 20px; }
+  .arrow { color: var(--muted); font-size: 26px; }
+  .pass { color: var(--ok); } .defer { color: var(--warn); }
+  ul { margin: 0; padding-left: 26px; } li { margin: 0 0 10px; color: var(--ink2); }
+  .foot { position: absolute; left: 80px; right: 80px; bottom: 30px; display: flex;
+    justify-content: space-between; font-size: 14px; color: var(--muted); }
+  .ph { background: #fff4d6; color: #7a5200; padding: 1px 8px; border-radius: 6px; font-weight: 600; }
+  .big { font-size: 56px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
+  .stat .card p { font-size: 18px; }
+</style>
+</head>
+<body>
+
+<!-- 1. Problem -->
+<section class="slide">
+  <img class="art" style="top:72px" src="../../../public/illustrations/money_with_wings_3d.webp" alt="" />
+  <p class="eyebrow">Oink · The problem</p>
+  <h1>Payday is a decision<br />most people skip.</h1>
+  <p class="lead">If you're paid in USDC, every payday asks how much stays as cash and how much gets
+    invested. Acting on it means a wallet, a DEX, your own price checks, and hoping you sign the
+    price you meant.</p>
+  <p class="lead">So the money just sits there.</p>
+  <p style="margin-top:auto;font-size:17px;color:var(--muted)">Audience: USDC-paid freelancers and contractors. A hypothesis, not yet validated with interviews.</p>
+  <div class="foot"><span>Oink</span><span>1 / 8</span></div>
+</section>
+
+<!-- 2. Product -->
+<section class="slide">
+  <img class="art" style="top:60px" src="../../../public/illustrations/pig_3d.webp" alt="" />
+  <p class="eyebrow">The product</p>
+  <h2>Oink: get paid in stocks,<br />on your phone.</h2>
+  <div class="flow">
+    <span class="step">Payment link / @tag</span><span class="arrow">→</span>
+    <span class="step">Verified on-chain</span><span class="arrow">→</span>
+    <span class="step">Cash reserve first</span><span class="arrow">→</span>
+    <span class="step">Stock orders</span><span class="arrow">→</span>
+    <span class="step">Bell check → you sign</span>
+  </div>
+  <div class="grid g3">
+    <div class="card"><span class="tag">OINK · ACCOUNT</span><h3>No seed phrase</h3>
+      <p>Password + authenticator open an encrypted wallet in your browser. @tags, payment links, Mix.</p></div>
+    <div class="card"><span class="tag">FLOW · PLAN</span><h3>Reserve first</h3>
+      <p>Referenced USDC intake, finalized receipt check, exact BigInt split into SPYx / NVDAx / AAPLx orders.</p></div>
+    <div class="card"><span class="tag">BELL · SAFETY</span><h3>Checked before signing</h3>
+      <p>Jupiter quote vs. your limits. Fails closed: deferred orders stay in USDC.</p></div>
+  </div>
+  <div class="foot"><span>Oink</span><span>2 / 8</span></div>
+</section>
+
+<!-- 3. How Bell protects you -->
+<section class="slide">
+  <img class="art" style="top:60px" src="../../../public/illustrations/bell_3d.webp" alt="" />
+  <p class="eyebrow">How Bell protects you</p>
+  <h2>Nothing is bought until<br />you sign, and only if it passes.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>Before the quote reaches you</h3>
+      <ul>
+        <li>Exact-amount Jupiter Swap v2 route, 30-second expiry</li>
+        <li>Slippage, price-impact and maximum-price limits</li>
+        <li>Premium cap over the Pyth stock price, after the xStock's on-chain share multiplier, only with fresh regular-session data</li>
+      </ul></div>
+    <div class="card"><h3>Before and after you sign</h3>
+      <ul>
+        <li>Instruction allowlist, decoded route, you as the only signer, simulation</li>
+        <li>Signed locally: the server never holds your key</li>
+        <li>Saved before broadcast; uncertain outcomes are reconciled, never resent</li>
+      </ul></div>
+  </div>
+  <p style="margin-top:20px"><b class="pass">Pass</b> → review and sign. <b class="defer">Defer</b> → your USDC stays put. Bell never invents a price.</p>
+  <div class="foot"><span>Oink</span><span>3 / 8</span></div>
+</section>
+
+<!-- 4. Demo -->
+<section class="slide">
+  <img class="art" style="top:60px" src="../../../public/illustrations/check_mark_button_3d.webp" alt="" />
+  <p class="eyebrow">Demo · under 3 minutes, on a phone</p>
+  <h2>One payday, start to finish.</h2>
+  <div class="flow">
+    <span class="step">Sign up</span><span class="arrow">→</span>
+    <span class="step">Set plan &amp; Mix</span><span class="arrow">→</span>
+    <span class="step">Client pays from Seeker</span><span class="arrow">→</span>
+    <span class="step">Reserve fills</span>
+  </div>
+  <div class="flow">
+    <span class="step"><span class="pass">SPYx passes</span></span><span class="arrow">·</span>
+    <span class="step"><span class="defer">AAPLx deferred</span></span><span class="arrow">→</span>
+    <span class="step">Sign locally</span><span class="arrow">→</span>
+    <span class="step">Confirmed on Solscan</span>
+  </div>
+  <p>Video: <span class="ph">[demo video link]</span> · Live app: <span class="ph">[URL]</span> · APK: <span class="ph">[link]</span></p>
+  <p style="font-size:17px;color:var(--muted)">Any part not recorded on mainnet is shown in the labelled simulation at /demo.</p>
+  <div class="foot"><span>Oink</span><span>4 / 8</span></div>
+</section>
+
+<!-- 5. Proof -->
+<section class="slide stat">
+  <p class="eyebrow">Proof</p>
+  <h2>Built and tested end to end.</h2>
+  <div class="grid g3">
+    <div class="card"><div class="big">125</div><p>unit tests passing: allocation, Bell policy and premium math, guards, MWA, journey</p></div>
+    <div class="card"><div class="big">64</div><p>PostgreSQL integration tests: receipts, idempotent allocation, persist-before-broadcast, push, SKR quota</p></div>
+    <div class="card"><div class="big">1</div><p>signer on every Bell trade: you. No server key, sponsorship or delegation, enforced and tested</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card"><p><b>Verified live (read-only):</b> Jupiter routes for SPYx/AAPLx/NVDAx; xStock Token-2022 multipliers (1.0017–1.0057, not 1:1); SKR mint.</p></div>
+    <div class="card"><p><b>First mainnet fill:</b> <span class="ph">[Solscan link: pending]</span><br /><b>Users / revenue:</b> none claimed yet.</p></div>
+  </div>
+  <div class="foot"><span>Oink</span><span>5 / 8</span></div>
+</section>
+
+<!-- 6. Business model -->
+<section class="slide">
+  <p class="eyebrow">Business model · to validate</p>
+  <h2>Every payday brings you back.</h2>
+  <div class="grid g3">
+    <div class="card"><h3>Wedge</h3><p>USDC-paid freelancers and contractors who already want a reserve plus stock exposure.</p></div>
+    <div class="card"><h3>Distribution</h3><p>Payment links put Oink in front of every client who pays. Then platforms that pay contractors in USDC.</p></div>
+    <div class="card"><h3>Revenue (hypothesis)</h3><p>A small, disclosed fee on executed purchases (zero today by design), or a paid plan for payers running payroll links.</p></div>
+  </div>
+  <p style="margin-top:24px">Next proof point: a consented pilot of 3–5 freelancers, measuring repeat paydays, fills, costs and drop-off (<code>02-PILOT.md</code>).</p>
+  <div class="foot"><span>Oink</span><span>6 / 8</span></div>
+</section>
+
+<!-- 7. Why mobile, why Solana -->
+<section class="slide">
+  <img class="art" style="top:60px" src="../../../public/illustrations/hourglass_done_3d.webp" alt="" />
+  <p class="eyebrow">Why mobile · why Solana</p>
+  <h2>Payday is a phone moment.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>Mobile</h3><ul>
+      <li>Installable app; Android APK for the Seeker and dApp Store</li>
+      <li>Clients pay from their Seeker wallet (Mobile Wallet Adapter)</li>
+      <li>Push when money lands or an order needs review</li>
+      <li>SKR holders get more sponsored transfers</li></ul></div>
+    <div class="card"><h3>Solana</h3><ul>
+      <li>Tokenized stocks (xStocks) and USDC on one chain</li>
+      <li>Sub-cent network fees make $10 purchases sensible</li>
+      <li>Solana Pay references make receipts verifiable</li>
+      <li>Jupiter routing and Pyth reference prices compose in</li></ul></div>
+  </div>
+  <div class="foot"><span>Oink</span><span>7 / 8</span></div>
+</section>
+
+<!-- 8. Team and next steps -->
+<section class="slide">
+  <img class="art" style="top:60px" src="../../../public/illustrations/pig_3d.webp" alt="" />
+  <p class="eyebrow">Team · next steps</p>
+  <h2>Who we are and what's next.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>Team</h3><p><span class="ph">[Founder name, role, background, location]</span></p>
+      <p style="margin-top:10px"><span class="ph">[Why we understand USDC-paid workers]</span></p></div>
+    <div class="card"><h3>Next 30 days</h3><ul>
+      <li>Mainnet launch with eligibility gating (xStocks are not for US persons)</li>
+      <li>Consented freelancer pilot</li>
+      <li>Solana dApp Store listing</li>
+      <li>Pyth key to enable premium caps by default</li></ul></div>
+  </div>
+  <p style="margin-top:22px;font-size:20px"><b>github.com/not-a-vibe-coder/Oink</b> · MIT · <span class="ph">[live URL]</span></p>
+  <div class="foot"><span>Oink: get paid in stocks, on your phone.</span><span>8 / 8</span></div>
+</section>
+
+</body>
+</html>

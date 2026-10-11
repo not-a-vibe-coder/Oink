@@ -322,3 +322,33 @@ All 11 migrations applied (latest `011_push_subscriptions.sql`); `/health` retur
 were deleted. `bun run verify:flow`: exit 0 (125 passed, 80 skipped, 0 failed; DB suites
 9/3/3/4/4). All DB suites: 64 passed, 0 failed. Not done here: a real Docker build and the
 Render/Vercel deploys (accounts are the founder's).
+
+## 2026-10-11 — Task 12: submission pack (passed)
+
+- README top rewritten around "Oink: get paid in stocks, on your phone." It has an
+  Oink/Flow/Bell/Mobile table with code paths, links with clearly marked placeholders (live
+  URL, APK, videos, first Solscan fill), the custody statement and honest limits.
+- `03-PITCH-AND-DEMO.md`: a ~2½-minute pitch and a ≤3-minute phone-first demo (sign up → plan
+  and Mix → Seeker payment → reserve fills → Bell passes SPYx and defers AAPLx → local signing
+  → Solscan), with every live-only step marked **[LIVE]** and a `/demo` fallback that keeps the
+  simulation banner.
+- `04-SUBMISSION-DRAFT.md`: shared copy, both deadlines, the limitations paragraph (US
+  persons, Pyth key and regular hours, user-paid SOL fees and rent, reservation not escrow,
+  device testing pending), judging maps for Solana Mobile (leading with stickiness: "every
+  payday brings you back") and Colosseum, and the founder checklist.
+- `05-REUSE-DISCLOSURE.md`: the October 11 range `7b76795..<final>`, new third-party licences
+  (Apache-2.0, MPL-2.0 for web-push, MIT assets), and the AI-assisted development note.
+- `06-EVIDENCE.md`: a final-round evidence table, with "what this does not show".
+- `deck/oink-deck.html`: 8 slides (problem, product, Bell, demo, proof, business model,
+  mobile/Solana, team/next), printable to PDF.
+
+### Audit result
+
+Passed. Claim audit: every code path cited in the README and draft exists. Overclaims found
+and corrected while drafting: automatic allocation (it is one tap plus signatures), @tag
+payments going through Bell (they settle via Mix), "fractions of a cent" fees (now
+mentions first-time token-account rent), "Lighthouse" (it was Chrome's installability API),
+layout coverage scope, and a "0 floats" deck stat (replaced by the tested single-signer
+guarantee). Test counts quote the task 11 run (125 unit, 64 DB). Deck rendered headless to an
+8-page 1280×720 PDF with no overflow and no broken images. Placeholders are bracketed and
+bold: live URL, APK link, videos, Solscan fill, team, registration.

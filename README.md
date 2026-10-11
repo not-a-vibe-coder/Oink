@@ -6,19 +6,45 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![Solana](https://img.shields.io/badge/Solana-mainnet--beta-9945FF?logo=solana&logoColor=white)
 
-Oink Flow + Bell turns received USDC into a cash-first plan: fill a chosen reserve, check tokenized-stock quotes, then let the user review and sign each purchase locally. It builds on Oink’s existing encrypted Solana wallet and design.
+## Oink: get paid in stocks, on your phone.
+
+Send a client a payment link. When their USDC lands and Oink verifies it on-chain, one tap
+applies your **payday plan**: your cash reserve is topped up first, and the surplus becomes
+orders for the tokenized stocks you chose (SPYx, NVDAx, AAPLx). **Bell** checks each order
+against your limits, and nothing is bought until you sign it on your phone. Payments to your
+@tag can also settle straight into your **Mix** in the payer's own transaction. There's no seed
+phrase, no broker and no wallet extension: a password plus an authenticator opens an encrypted
+wallet that lives in your browser.
+
+| | What it does | Where |
+| --- | --- | --- |
+| **Oink** (account) | Password + TOTP encrypted browser wallet, @tags, mixes, payment links | `src/lib/crypto`, `src/lib/wallet`, `backend/src/routes/{auth,mix,invoices}.ts` |
+| **Flow** (plan) | Referenced USDC intake, finalized receipt check, cash-first BigInt allocation, reservations | `src/lib/flow`, `backend/src/services/flow` |
+| **Bell** (safety) | Jupiter Swap v2 quotes, policy checks, guarded assembly, local signing, persist-before-broadcast, reconciliation, retry/cancel | `src/lib/bell`, `backend/src/services/bell` |
+| **Mobile** | Installable PWA, Android TWA APK, Seeker wallets via Mobile Wallet Adapter, opt-in push, SKR holder perk | `public/`, `twa/`, `src/lib/mwa`, `backend/src/services/push.ts` |
+
+**Links**: the bracketed items are not done yet; the founder fills them in.
+
+- Live app: **[DEMO URL — pending deploy]** · simulated walkthrough at `/demo`
+- Android APK: **[APK link — pending; build with `twa/build-apk.ts`]**
+- Demo video: **[pending]** · Pitch video: **[pending]** · Deck: [`docs/submission/deck/oink-deck.html`](docs/submission/deck/oink-deck.html)
+- First mainnet Bell fill (Solscan): **[pending — no live fill has been made yet]**
+- [Submission draft](docs/submission/04-SUBMISSION-DRAFT.md) · [Pitch and demo scripts](docs/submission/03-PITCH-AND-DEMO.md) · [Evidence](docs/submission/06-EVIDENCE.md) · [Reuse disclosure](docs/submission/05-REUSE-DISCLOSURE.md) · [Deploy guide](docs/submission/08-DEPLOY.md) · [Build log](docs/submission/07-BUILD-LOG.md)
+
+**Custody.** The private key never leaves the browser in plaintext, and the server never
+holds spend authority. In Bell, the user is the only signer and fee payer. Bell defers a
+purchase, and the money stays in USDC, whenever a quote fails a limit, expires, or (with a
+premium cap set) lacks fresh regular-session reference data. It never invents a price.
+
+**Honest limits.** xStocks are not offered to US persons, and eligibility depends on the
+issuer's terms in your jurisdiction. Premium caps need a Pyth API key and regular US market
+hours; otherwise they fail closed. Bell users pay their own SOL network fees and account rent.
+No live mainnet fill, users or revenue are claimed yet; everything shown in `/demo` is
+labelled as a simulation.
 
 ## Review the product
 
-Run `bun install --frozen-lockfile`, then `bun run dev --host 127.0.0.1 --port 3105` and open `/demo`. This isolated walkthrough needs no API, account or funds. Every payment and fill is explicitly simulated. The actual account workflow lives at `/app/income` and requires the backend.
-
-- [Submission draft](docs/submission/04-SUBMISSION-DRAFT.md)
-- [Pitch and demo scripts](docs/submission/03-PITCH-AND-DEMO.md)
-- [Recorded simulation and screenshots](docs/submission/artifacts/README.md)
-- [Reuse disclosure](docs/submission/05-REUSE-DISCLOSURE.md)
-- [Build evidence](docs/flow/05-PROGRESS.md)
-
-Live evidence covers read-only routes, not funded fills. Customer pilot, founder narration, hosted deployment and contest upload remain pending. Premium checks fail closed without equity reference data. Bell network fees and account creation use the user’s SOL.
+Run `bun install --frozen-lockfile`, then `bun run dev --host 127.0.0.1 --port 3105` and open `/demo`. This isolated walkthrough needs no API, account or funds; every payment and fill is explicitly simulated. The real account workflow lives at `/app` (home "Payday plan" card → `/app/income`) and needs the backend.
 
 ## Security model
 

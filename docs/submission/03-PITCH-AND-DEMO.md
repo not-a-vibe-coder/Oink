@@ -1,36 +1,67 @@
-# Pitch and demo recording scripts
+# Pitch and demo scripts
 
-## Pitch: approximately two minutes
+Two separate recordings, as Colosseum asks: a **pitch** (2–3 min) and a **product demo**
+(≤3 min, phone-first). Do not read bracketed text aloud. Every claim below traces to code or
+tests in this repository; anything that needs a live run is marked **[LIVE]**. Record it for
+real, or say plainly that it is a simulation.
 
-“People paid in USDC still have to decide what stays available for living expenses and what goes into investments every time they get paid. Oink Flow gives that payment a plan, and Bell checks the proposed investments before the user signs.
+## Pitch: about 2½ minutes
 
-“Our first audience is USDC-paid freelancers who already want to keep a cash reserve and buy tokenized stocks. That customer need is a hypothesis we are testing; we do not yet claim interviews, active users, revenue, or willingness to pay.
+**Problem (0:00–0:25).** "If you're paid in USDC, every payday asks the same question: how
+much do I keep as cash, and how much do I invest? Then you open a wallet, a DEX and a
+spreadsheet, and hope the price you sign is the price you meant. Most people just leave it
+all in USDC."
 
-“Here is the workflow. A person chooses a USDC cash target and how investment surplus should be split. They send a client a payment link. Oink verifies the payment, fills the cash shortfall, and records individual investment orders. Bell gets a quote for each exact amount and checks the person’s price, slippage, impact, and freshness limits. If a quote does not pass, those funds stay in USDC. A passing purchase still needs the user’s explicit approval and local signature.
+**Product (0:25–1:00).** "Oink: get paid in stocks, on your phone. You share a payment link
+or your @tag. When the payment lands and Oink verifies it on-chain, your payday plan runs. It
+tops up your cash reserve first, then turns the rest into orders for the tokenized stocks you
+picked: SPYx, NVDAx, AAPLx. You sign up with a password and an authenticator app. No seed
+phrase, no broker, no browser extension."
 
-“The specific product choice is to connect income planning with execution review. We compose with Jupiter for routing; our proposed value is the repeatable cash-first workflow and understandable outcomes. We are not issuing stocks or promising better prices than Jupiter.
+**How Bell protects you (1:00–1:35).** "Every order goes through Bell. Bell gets a Jupiter
+quote for the exact amount and checks it against your limits: slippage, price impact,
+maximum price and, when live reference data is available, a premium cap over the real stock
+price. If the quote fails, Bell defers the order and your money stays in USDC. It never
+invents a price. If it passes, Bell builds a guarded transaction that only allows the
+expected swap. You sign it on your phone, and Oink saves the signature before broadcasting, so
+a dropped connection can never double-buy."
 
-“We have implemented the product and tested payment verification, allocation, deferred quotes, locally signed transaction validation, and recovery from uncertain submission. Read-only live routes were available for three stock tokens. The walkthrough you see is labelled simulated; no funded mainnet pilot has been performed.
+**Why mobile and Solana (1:35–1:55).** "Payday is a phone moment. Oink installs as an app
+on Android and the Seeker. Clients can pay straight from their Seeker wallet, you get a
+notification when money arrives, and on Solana a ten-dollar stock purchase costs a
+fraction of a cent in network fees, plus a one-time token-account deposit the first time you buy
+each stock."
 
-“Our next step is a small consented freelancer pilot, measuring successful allocations, actual costs, repeat use, and where people abandon the workflow. We will test whether paid planning features or payment-platform integrations make sense before choosing pricing.
+**Proof (1:55–2:15).** "It's built and tested end to end: on-chain receipt verification,
+exact BigInt allocation, Bell's guards, persist-before-broadcast and reconciliation, with
+over 120 unit tests and 64 database integration tests. [LIVE: 'and here's our first real
+SPYx purchase on Solscan' — only if it exists.] We don't claim users or revenue yet."
 
-“[FOUNDER: add your name, relevant experience, and why you understand this customer.]
+**Business and ask (2:15–2:35).** "We start with USDC-paid freelancers and contractors. The
+model to test is a small, disclosed fee on executed purchases or a paid plan for teams that
+pay contractors, which today is zero by design. Every payday brings you back, and that's the
+habit we're building. [FOUNDER: name, background, why you understand this user.] Oink: get
+paid in stocks, on your phone."
 
-“Oink Flow plus Bell: income fills your cash reserve first, and investments move only after review.”
+## Product demo: 3 minutes or less, on a phone
 
-Record founder background accurately, then rehearse duration and remove unsupported claims. Do not read bracketed placeholders in the final recording. The [Colosseum guidance](https://colosseum.com/hackathon) requests a two-to-three-minute pitch distinct from the demo.
+Record the screen of an Android phone (ideally a Seeker) running the installed app (TWA or
+PWA). Use a fresh account and a small amount of real mainnet USDC. **If no funded run is
+possible, record `/demo` instead and keep its "Simulated walkthrough" banner visible the
+whole time.**
 
-## Product/technical demo: at most three minutes
+| Time | Screen | Action and narration |
+| --- | --- | --- |
+| 0:00–0:20 | Landing → Create | "No seed phrase: a password and an authenticator." Create the account (skip the 2FA QR in the edit). |
+| 0:20–0:40 | Home → Payday plan card | "Home shows one next step." Card says *Set your payday plan*. Tap through Mix to show the @tag split. |
+| 0:40–1:00 | Income → plan | Reserve target (e.g. 5 USDC) and 60% SPYx / 40% AAPLx. Save. Create a 10 USDC payment link. |
+| 1:00–1:25 | `/income/<id>` on a second phone | **[LIVE]** Payer taps "Connect wallet to pay" → approves in their Seeker wallet. "The payment carries a unique reference; Oink accepts it only once it is finalized on-chain." |
+| 1:25–1:45 | Home | **[LIVE]** Push: *Payment received*. Card: *Payment received → Apply plan*. Tap it. "The reserve fills first, and the rest becomes two orders." The reserve bar fills. |
+| 1:45–2:20 | Income → Bell orders | Check quotes. Set a maximum token price below AAPLx's price so Bell **defers** AAPLx ("too expensive, it stays in USDC"), while SPYx **passes**. Show the market-session badge. |
+| 2:20–2:45 | Bell review → sign | **[LIVE]** Review the simulation (input, minimum output, SOL fee) → unlock → sign locally. "The server never sees my key." |
+| 2:45–3:00 | Receipt → Solscan | **[LIVE]** State *confirmed* → open the Solscan link. "That's a real tokenized-stock purchase, checked before I signed it." |
 
-| Time      | Screen/action                                          | Narration                                                                                                                                                                             |
-| --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0:00–0:15 | `/demo`, visible simulation notice                     | “This is a simulated rehearsal of the implemented workflow. These are fictional payments and fills.”                                                                                  |
-| 0:15–0:35 | Cash target 1,000; existing cash 800; payment 500      | “The reserve needs 200 USDC. The remaining 300 is assigned 60/40.”                                                                                                                    |
-| 0:35–0:55 | Simulate receipt; allocate                             | “Receipt is separate from investment execution. In the actual app it is verified with a finalized referenced Solana payment.”                                                         |
-| 0:55–1:25 | Fresh quotes; passing SPYx and deferred AAPLx          | “Bell checks exact amounts. The AAPLx quote exceeds the token-price limit, so its 120 USDC remains reserved.”                                                                         |
-| 1:25–1:55 | Review simulation; simulate approval/finalized receipt | “The actual app prepares a guarded transaction. The browser signs it locally; the server validates the unchanged message and signature. This walkthrough does not sign or broadcast.” |
-| 1:55–2:15 | Final receipt                                          | “Cash, completed investment, and deferred money remain separately accounted for.”                                                                                                     |
-| 2:15–2:40 | Show lifecycle test and custody evidence               | “A signature is saved before broadcast. Lost responses reconcile the same attempt. Finalized success cannot be retried.”                                                              |
-| 2:40–2:55 | Limitations                                            | “Mainnet funded execution and customer validation remain pending; equity reference data is unavailable.”                                                                              |
-
-Use the saved silent WebM as rehearsal footage, or record the app directly with narration. Preserve the simulation disclosure in every edit. For a real funded recording, use `/app/income`, actual receipts, and the participant’s explicit choice to trade; never show password, authenticator setup, phrase, or secrets. Keep pitch and demo as separate files.
+Before recording: deploy (`docs/submission/08-DEPLOY.md`), fund the Oink wallet with
+~0.02 SOL for Bell fees (Receive → *Top up from Seeker wallet*), and turn on notifications
+in Settings. Never show the password, the authenticator secret or the recovery phrase.
+Keep pitch and demo as separate files.
