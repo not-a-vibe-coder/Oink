@@ -3,6 +3,8 @@ import { useState, type FormEvent } from "react";
 import { Eye, LogOut } from "lucide-react";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { LinkedAccounts } from "@/components/oink/LinkedAccounts";
+import { Notifications } from "@/components/oink/Notifications";
+import { disablePush } from "@/lib/push/device";
 import { CodeField, PasswordField } from "@/components/oink/fields";
 import { useDeviceSessions, useLogout, useRevokeSession } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
@@ -63,6 +65,13 @@ function SettingsPage() {
 
         <section>
           <h2 className="eyebrow" style={{ marginBottom: "var(--s3)" }}>
+            Notifications
+          </h2>
+          <Notifications />
+        </section>
+
+        <section>
+          <h2 className="eyebrow" style={{ marginBottom: "var(--s3)" }}>
             Auto-lock
           </h2>
           <div className="panel">
@@ -92,7 +101,8 @@ function SettingsPage() {
           <div className="panel">
             <p className="meta">
               There are no backup codes, by design. Your 12-word phrase restores the wallet with a
-              new password and a new authenticator, and keeps your account ID, tag, address and balance.
+              new password and a new authenticator, and keeps your account ID, tag, address and
+              balance.
             </p>
             <Link
               to="/unlock/restore"
@@ -114,6 +124,8 @@ function SettingsPage() {
             disabled={logout.isPending}
             onClick={async () => {
               lock();
+              // A signed-out device should stop receiving this account's alerts.
+              await disablePush().catch(() => undefined);
               await logout.mutateAsync();
               void navigate({ to: "/unlock" });
             }}

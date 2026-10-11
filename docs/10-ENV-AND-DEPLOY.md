@@ -50,6 +50,10 @@ JUPITER_API_KEY=
 # Without it, the market-session badge still works and premium caps stay fail-closed.
 PYTH_API_KEY=
 # PYTH_HERMES_URL=https://hermes.pyth.network
+# Optional Web Push (opt-in alerts). Generate with scripts/generate-secrets.ts.
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:you@example.com
 
 # --- SECRETS. 32 random bytes, base64. Rotating these has consequences. ---
 OINK_KMS_KEY=          # seals TOTP secrets at rest. LOSING THIS LOCKS EVERY USER OUT OF 2FA

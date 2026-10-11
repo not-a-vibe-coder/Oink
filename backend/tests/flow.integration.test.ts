@@ -3,6 +3,7 @@ import { Keypair, PublicKey, Transaction, type ParsedTransactionWithMeta } from 
 import { MINT_SIZE, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import bs58 from "bs58";
 import request from "supertest";
+import webpush from "web-push";
 import { app } from "../src/app";
 import { query } from "../src/db";
 import { migrate } from "../src/db/migrate";
@@ -15,6 +16,7 @@ const other = "oink-k7p2-9xqn";
 const wallet = Keypair.generate().publicKey.toBase58();
 const mint = Keypair.generate().publicKey.toBase58();
 let balance = 1300000000n;
+let rpcDown = false;
 let cookie = "";
 let otherCookie = "";
 let sequence = 6;
@@ -64,6 +66,9 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
   beforeAll(async () => {
     process.env.FLOW_USDC_MINT = mint;
     await migrate();
+    // Rate-limit hits persist in the (disposable) test database; reruns within an hour
+    // would otherwise exhaust the confirm limit and fail for reasons unrelated to the test.
+    await query("DELETE FROM rate_limit_hits WHERE bucket LIKE 'flow_%'");
     for (const [id, key] of [
       [account, wallet],
       [other, Keypair.generate().publicKey.toBase58()],
@@ -80,31 +85,34 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
       async (signature) => evidence.get(signature) ?? null,
     );
     const balances = spyOn(connection, "getParsedTokenAccountsByOwner").mockImplementation(
-      async () => ({
-        context: { slot: 43 },
-        value: [
-          {
-            pubkey: Keypair.generate().publicKey,
-            account: {
-              executable: false,
-              owner: PublicKey.default,
-              lamports: 0,
-              rentEpoch: 0,
-              data: {
-                program: "spl-token",
-                space: 165,
-                parsed: {
-                  info: {
-                    mint,
-                    owner: wallet,
-                    tokenAmount: { decimals: 6, amount: balance.toString() },
+      async () => {
+        if (rpcDown) throw new Error("rpc down");
+        return {
+          context: { slot: 43 },
+          value: [
+            {
+              pubkey: Keypair.generate().publicKey,
+              account: {
+                executable: false,
+                owner: PublicKey.default,
+                lamports: 0,
+                rentEpoch: 0,
+                data: {
+                  program: "spl-token",
+                  space: 165,
+                  parsed: {
+                    info: {
+                      mint,
+                      owner: wallet,
+                      tokenAmount: { decimals: 6, amount: balance.toString() },
+                    },
                   },
                 },
               },
             },
-          },
-        ],
-      }),
+          ],
+        };
+      },
     );
     restore = [() => transactions.mockRestore(), () => balances.mockRestore()];
   }, 30000);
@@ -254,12 +262,9 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
     expect(other.nextAction).toBe("set_plan");
   });
   test("summary fails closed when the balance cannot be read", async () => {
-    const connection = getSolanaConnection();
-    const failing = spyOn(connection, "getParsedTokenAccountsByOwner").mockImplementation(
-      async () => {
-        throw new Error("rpc down");
-      },
-    );
+    // Flip the suite-wide balance mock rather than re-spying: restoring a nested spy would
+    // remove the outer mock and send later balance reads to a real RPC.
+    rpcDown = true;
     try {
       const summary = (
         await request(app).get("/api/v1/flow/summary").set("Cookie", cookie).expect(200)
@@ -267,7 +272,7 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
       expect(summary.reserve.status).toBe("unavailable");
       expect(summary.reserve.progressBps).toBeNull();
     } finally {
-      failing.mockRestore();
+      rpcDown = false;
     }
   });
   test("payer wallets get an unsigned referenced transfer; top-ups need a session", async () => {
@@ -351,6 +356,47 @@ suite("Flow database and HTTP integration (RPC fixtures)", () => {
         .expect(400);
     } finally {
       spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+  test("first confirmation and first allocation each notify an opted-in account once", async () => {
+    const keys = webpush.generateVAPIDKeys();
+    Object.assign(process.env, {
+      VAPID_PUBLIC_KEY: keys.publicKey,
+      VAPID_PRIVATE_KEY: keys.privateKey,
+      VAPID_SUBJECT: "mailto:ops@oink.example",
+    });
+    const sent: string[] = [];
+    const spy = spyOn(webpush, "sendNotification").mockImplementation(async (_sub, payload) => {
+      sent.push(JSON.parse(String(payload)).title);
+      return { statusCode: 201, body: "", headers: {} };
+    });
+    try {
+      await query(
+        "INSERT INTO push_subscriptions (id,account_id,endpoint,p256dh,auth) VALUES ('push_flowtest000001',$1,'https://push.example.test/flow','BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM','tBHItJI5svbpez7KI4CCXg')",
+        [account],
+      );
+      balance = 10_000_000_000n;
+      const invoice = await makeInvoice();
+      const signature = proof(invoice.reference);
+      for (let i = 0; i < 2; i++)
+        await request(app)
+          .post(`/api/v1/flow/invoices/${invoice.id}/confirm`)
+          .send({ signature })
+          .expect(200);
+      for (let i = 0; i < 2; i++) {
+        const allocated = await request(app)
+          .post(`/api/v1/flow/invoices/${invoice.id}/allocate`)
+          .set("Cookie", cookie);
+        expect(allocated.body).toMatchObject({ invoiceId: invoice.id });
+      }
+      await Bun.sleep(50);
+      expect(sent).toEqual(["Payment received", "Bell order needs review"]);
+    } finally {
+      spy.mockRestore();
+      await query("DELETE FROM push_subscriptions WHERE id = 'push_flowtest000001'");
+      delete process.env.VAPID_PUBLIC_KEY;
+      delete process.env.VAPID_PRIVATE_KEY;
+      delete process.env.VAPID_SUBJECT;
     }
   });
   test("database rejects signature reuse and non-conserving payments", async () => {

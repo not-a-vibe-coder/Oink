@@ -190,3 +190,32 @@ Passed. `bunx tsc --noEmit` and `bun run build` passed. Against the production s
 cached entries were static paths (zero non-static); an offline navigation to `/app` served
 "Oink is offline". Diff reviewed: no API, session, keystore or wallet response can enter the
 cache.
+
+## 2026-10-11 — Task 8: push notifications (passed)
+
+- Backend: `web-push@3.6.7` (pinned), the forward-only migration `011_push_subscriptions.sql`
+  (per account, unique HTTPS endpoint, revoked rather than deleted), `/api/v1/push/config`,
+  `/subscriptions` and `/subscriptions/revoke` (all session-required; subscribe is
+  rate-limited). VAPID keys come from env; without them push reports `NOT_CONFIGURED`.
+- Notifications fire after commit and only on the first verified confirmation ("Payment
+  received", deep link `/app/income#requests`) and the first allocation that creates orders
+  ("Bell order needs review", `/app/income#bell`). Replays never re-notify. Payloads are a
+  fixed title, a sentence and an `/app/` path: no amounts, addresses, signatures, IDs or keys.
+  Delivery is best effort and never fails a payment; 404/410 endpoints are revoked.
+- Client: Settings → Notifications switch (permission requested from the tap). Sign-out
+  revokes this device's subscription. The service worker shows the notification, accepts only
+  `/app/` links, and focuses or opens the app on click.
+
+### Audit result
+
+Passed. `bun run verify:flow` (now including the push suite): exit 0; main **124 passed,
+74 skipped, 0 failed**; Flow 9, Bell quotes 3, Bell execution 3, Push 4. All DB suites:
+**60 passed, 0 failed**. Tests cover the migration record, the 401/503 paths, the private key
+never appearing in responses, subscription validation, opt-in only, cross-account revoke
+refusal, unsubscribe stopping delivery, 410 auto-revoke, generic payloads (no digits), and
+exactly one notification per event across repeated confirm/allocate. The PWA check still
+passes with the push-enabled worker. Fixed while auditing: the Task 4 RPC-failure test
+re-spied the suite's balance mock (its restore removed the outer mock), and the
+DB-persisted `flow_confirm` rate limit made back-to-back reruns fail; the suite now flips
+a flag and clears its own `flow_%` rate-limit rows in the disposable DB. Not exercised:
+delivery through a real browser push service (needs deployed HTTPS and VAPID keys).

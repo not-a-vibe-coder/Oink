@@ -6,7 +6,7 @@
  * always come from the network. Cached: content-hashed build assets, icons, illustrations and
  * fonts, plus one static offline page shown when a navigation fails.
  */
-const VERSION = "oink-shell-v1";
+const VERSION = "oink-shell-v2";
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/manifest.webmanifest"];
 const STATIC = /^\/(assets|icons|illustrations|nav)\/|\.woff2$/;
 
@@ -49,5 +49,36 @@ self.addEventListener("fetch", (event) => {
           return response;
         }),
     ),
+  );
+});
+
+// Push: the server sends only a generic title, sentence and an in-app path.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const url = typeof data.url === "string" && data.url.startsWith("/app/") ? data.url : "/app";
+  event.waitUntil(
+    self.registration.showNotification(typeof data.title === "string" ? data.title.slice(0, 60) : "Oink", {
+      body: typeof data.body === "string" ? data.body.slice(0, 140) : "Open Oink to see what changed.",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/app", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((client) => client.url.startsWith(self.location.origin));
+      if (open) return open.navigate(url).then((client) => (client || open).focus());
+      return self.clients.openWindow(url);
+    }),
   );
 });

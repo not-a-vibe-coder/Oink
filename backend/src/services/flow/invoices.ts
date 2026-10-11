@@ -80,6 +80,7 @@ export function getFlowInvoice(id: string): Promise<FlowInvoice> {
 export async function confirmFlowInvoice(
   id: string,
   signature: unknown,
+  onNewlyPaid?: (accountId: string) => void,
 ): Promise<{ status: "paid"; signature: string }> {
   if (typeof signature !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{80,90}$/.test(signature))
     throw new FlowError("VALIDATION_FAILED", "Provide a valid transaction signature.");
@@ -90,7 +91,7 @@ export async function confirmFlowInvoice(
     return { status: "paid", signature };
   }
   const slot = await verifyIncome(signature, expected);
-  return inFlowTransaction(async (client) => {
+  const { result, newlyPaid } = await inFlowTransaction(async (client) => {
     const current = await invoiceRecord(client, id, true);
     if (current.signature && current.signature !== signature)
       throw new FlowError("CONFLICT", "This request already has a different payment.", 409);
@@ -98,6 +99,9 @@ export async function confirmFlowInvoice(
       "UPDATE flow_invoices SET status = 'paid', signature = $2, receipt_slot = $3, received_at = COALESCE(received_at, NOW()) WHERE id = $1",
       [id, signature, slot],
     );
-    return { status: "paid", signature };
+    return { result: { status: "paid" as const, signature }, newlyPaid: !current.signature };
   });
+  // After commit, and only for the first verification, so retries never re-notify.
+  if (newlyPaid) onNewlyPaid?.(expected.account_id);
+  return result;
 }

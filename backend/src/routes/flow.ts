@@ -19,6 +19,7 @@ import { flowSummary } from "../services/flow/summary";
 import { buildExternalPayment } from "../services/externalPayment";
 import { flowUsdcMint } from "../services/flow/chain";
 import { query } from "../db";
+import { notifyAccount } from "../services/push";
 import { createBellQuote, listBellPurchases } from "../services/bell/quotes";
 import { prepareBellPurchase } from "../services/bell/attempts";
 import { submitBellAttempt } from "../services/bell/submit";
@@ -181,14 +182,23 @@ flowRouter.post(
   "/invoices/:id/confirm",
   ipRateLimiter("flow_confirm", 30, 3600),
   endpoint(async (req, res) => {
-    res.json(await confirmFlowInvoice(String(req.params.id), req.body?.signature));
+    res.json(
+      await confirmFlowInvoice(String(req.params.id), req.body?.signature, (accountId) => {
+        void notifyAccount(accountId, "payment_received");
+      }),
+    );
   }),
 );
 flowRouter.post(
   "/invoices/:id/allocate",
   requireSession,
   endpoint(async (req, res) => {
-    res.json(await allocateFlowInvoice(req.accountId!, String(req.params.id)));
+    const accountId = req.accountId!;
+    res.json(
+      await allocateFlowInvoice(accountId, String(req.params.id), () => {
+        void notifyAccount(accountId, "bell_review");
+      }),
+    );
   }),
 );
 flowRouter.get(

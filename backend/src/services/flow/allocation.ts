@@ -69,8 +69,13 @@ export function previewFlowIncome(accountId: string, amount: unknown) {
     );
   });
 }
-export function allocateFlowInvoice(accountId: string, invoiceId: string): Promise<FlowPayment> {
-  return inFlowTransaction(async (client) => {
+export async function allocateFlowInvoice(
+  accountId: string,
+  invoiceId: string,
+  onNewOrders?: () => void,
+): Promise<FlowPayment> {
+  let created = false;
+  const payment = await inFlowTransaction(async (client) => {
     const settings = await lockSettings(client, accountId);
     const invoice = await invoiceRecord(client, invoiceId, true);
     if (invoice.account_id !== accountId)
@@ -125,8 +130,12 @@ export function allocateFlowInvoice(accountId: string, invoiceId: string): Promi
         "INSERT INTO flow_purchases (id, payment_id, symbol, amount_base) VALUES ($1,$2,$3,$4)",
         [`purchase_${nanoid(16)}`, id, purchase.symbol, purchase.amountBase],
       );
+    created = allocation.purchases.length > 0;
     return paymentResponse(client, inserted.rows[0]);
   });
+  // Only a newly committed allocation with orders notifies; a replayed allocate never does.
+  if (created) onNewOrders?.();
+  return payment;
 }
 export function listFlowPayments(accountId: string): Promise<{ payments: FlowPayment[] }> {
   return inFlowTransaction(async (client) => {
