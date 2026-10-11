@@ -16,3 +16,6 @@ fee-payer*.json
 keypair*.json
 .DS_Store
 .vercel
+*.keystore
+*.jks
+keystore.env

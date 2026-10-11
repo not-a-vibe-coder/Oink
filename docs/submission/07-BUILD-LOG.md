@@ -246,3 +246,45 @@ look-alike rejection, the balance sum across accounts, wrong decimals/owner and 
 reading as zero, the threshold boundary (1,000 SKR vs one base unit less), the higher quota
 being enforced, the shared global budget, and RPC-outage downgrade. Diff reviewed: the fee
 payer gains no new authority, and only quota numbers change.
+
+## 2026-10-11 — Task 10: Android APK as a Trusted Web Activity (passed, device test pending)
+
+- Toolchain, installed user-level with no sudo or workarounds: Eclipse Temurin JDK 17.0.20.1
+  (Adoptium checksum verified) in `~/Library/Java/JavaVirtualMachines`, and Google's Android
+  command-line tools (repository-manifest SHA-1 verified) in `~/Library/Android/sdk` with
+  platform-tools, android-35 and build-tools 35.0.0 and 36.1.0 (the latter is pinned by
+  Bubblewrap).
+- Expo/React Native was considered and rejected for this deadline: it would mean a UI
+  rewrite, Hermes lacks WebAssembly/WebCrypto for the specified Argon2id/HKDF/AES-GCM
+  custody, and it still needs the same Android toolchain. The TWA ships the tested PWA
+  unchanged, which is the path Solana Mobile documents for dApp Store PWAs.
+- `twa/` package (own lockfile) with `@bubblewrap/core@1.25.0` pinned (1.26 and 1.27 were
+  days old). `twa/build-apk.ts` is non-interactive and parameterised by `OINK_TWA_HOST`,
+  package id, version code/name and asset origin. It builds from `public/manifest.webmanifest`
+  (start `/app`, standalone, maskable icon, notification delegation), signs, verifies, and
+  writes `public/.well-known/assetlinks.json`. See `twa/README.md`.
+- Keystore: `~/.oink/android/oink-release.keystore` (PKCS12, RSA 4096, mode 600), password
+  in `~/.oink/android/keystore.env` (mode 600), both outside the repo. `.gitignore` blocks
+  `*.keystore`, `*.jks` and `keystore.env`, and the script refuses an in-repo keystore path.
+- **Security incident during the build (contained):** the first attempt used Bubblewrap's
+  `apksigner` helper, which passes passwords as command-line arguments. Its error echoed them
+  into a local build log and the session output. That keystore was brand new, had signed
+  nothing and had never left the machine. It, its password file and the log were deleted.
+  The script now hands secrets to `keytool`/`apksigner` only via `-storepass:env` /
+  `--ks-pass env:`, redacts the password from any error, and a fresh keystore was created.
+
+### Audit result
+
+Passed for the build. Verification build: `OINK_TWA_HOST=oink.example` (a reserved,
+clearly-placeholder TLD) with icons and manifest fetched from the local production server.
+Result: `twa/dist/oink-oink.example-1.0.0.apk` (1.32 MB). `apksigner verify --print-certs`
+passes v1, v2 and v3 with one signer, SHA-256 `82ae40ae…e13336`, matching `assetlinks.json`.
+`aapt2` shows package `app.oink.wallet` 1/1.0.0, targetSdk 36, launcher
+`LauncherActivity`, `DEFAULT_URL` `https://oink.example/app`, `autoVerify=true` on an
+https intent filter for the host, and a matching embedded asset statement. The APK contains
+no keystore or env files, and the build log contains the password zero times. The
+production build serves `/.well-known/assetlinks.json` as `application/json` (the worker
+does not cache it). `bun install --frozen-lockfile` in `twa/` passes.
+**Not done:** install on an emulator or device (none attached; this needs the deployed domain
+to show anything beyond the Custom Tab fallback). After deploy, the founder rebuilds with
+the real host and checks full-screen launch, sign-in, Bell signing and Seeker MWA on a phone.

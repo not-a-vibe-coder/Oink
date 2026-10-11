@@ -1,0 +1,11 @@
+{
+  "name": "@oink/twa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:apk": "bun build-apk.ts"
+  },
+  "dependencies": {
+    "@bubblewrap/core": "1.25.0"
+  }
+}

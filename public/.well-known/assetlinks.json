@@ -1,0 +1,9 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.oink.wallet",
+        "sha256_cert_fingerprints": ["82:AE:40:AE:69:09:4E:FD:81:3F:3A:26:53:03:A4:C6:EA:F2:36:4C:FD:64:2E:06:97:5A:51:0E:10:E1:33:36"]
+      }
+    }]
+
