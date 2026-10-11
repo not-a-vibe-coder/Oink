@@ -56,10 +56,8 @@
   --pill: #ffffff;
   --pill-open: rgba(255, 255, 255, 0.62);
   --pill-shadow:
-    0 22px 44px -14px rgba(20, 40, 80, 0.28),
-    0 2px 6px rgba(20, 40, 80, 0.08),
-    inset -2px -4px 4px rgba(20, 40, 80, 0.06),
-    inset 0 2px 10px rgba(255, 255, 255, 0.9);
+    0 22px 44px -14px rgba(20, 40, 80, 0.28), 0 2px 6px rgba(20, 40, 80, 0.08),
+    inset -2px -4px 4px rgba(20, 40, 80, 0.06), inset 0 2px 10px rgba(255, 255, 255, 0.9);
   --lens-edge: rgba(255, 255, 255, 0.95);
   --lens-fill: rgba(96, 146, 238, 0.1);
 
@@ -134,10 +132,8 @@ html[data-theme="dark"]:has(.app) {
   --pill: #1f2226;
   --pill-open: rgba(31, 34, 38, 0.6);
   --pill-shadow:
-    -20px 60px 120px -30px rgba(0, 0, 0, 0.9),
-    0 2px 6px rgba(0, 0, 0, 0.4),
-    inset -2px -4px 4px rgba(0, 0, 0, 0.35),
-    inset 0 2px 10px rgba(255, 255, 255, 0.08);
+    -20px 60px 120px -30px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset -2px -4px 4px rgba(0, 0, 0, 0.35), inset 0 2px 10px rgba(255, 255, 255, 0.08);
   --lens-edge: rgba(255, 255, 255, 0.34);
   --lens-fill: rgba(255, 255, 255, 0.03);
 
@@ -208,8 +204,7 @@ html[data-theme="dark"]:has(.app) body {
     linear-gradient(180deg, var(--sky-top), transparent 320px),
     radial-gradient(55vw 65vh at -8% 0%, var(--sky-cyan), transparent 70%),
     radial-gradient(45vw 70vh at 108% 38%, var(--sky-blue), transparent 70%),
-    radial-gradient(50vw 45vh at 96% 108%, var(--sky-violet), transparent 70%),
-    var(--paper);
+    radial-gradient(50vw 45vh at 96% 108%, var(--sky-violet), transparent 70%), var(--paper);
   background-attachment: fixed;
   display: flex;
   flex-direction: column;
@@ -1574,10 +1569,22 @@ textarea.input {
   color: var(--ink-3);
   text-wrap: pretty;
 }
+.illustration {
+  display: block;
+  width: min(116px, 42vw);
+  height: auto;
+  margin: 0 auto var(--s3);
+  object-fit: contain;
+}
 
 .skeleton {
   border-radius: var(--r1);
-  background: linear-gradient(90deg, var(--paper-tint) 25%, var(--shimmer) 50%, var(--paper-tint) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--paper-tint) 25%,
+    var(--shimmer) 50%,
+    var(--paper-tint) 75%
+  );
   background-size: 200% 100%;
   animation: skeleton-slide 1.4s ease-in-out infinite;
 }
@@ -1688,7 +1695,12 @@ textarea.input {
   position: absolute;
   border-radius: var(--r-pill);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.04) 46%, rgba(255, 255, 255, 0.14)),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.4),
+      rgba(255, 255, 255, 0.04) 46%,
+      rgba(255, 255, 255, 0.14)
+    ),
     var(--lens-fill);
   backdrop-filter: blur(1.5px) saturate(170%) brightness(1.06);
   -webkit-backdrop-filter: blur(1.5px) saturate(170%) brightness(1.06);
@@ -2201,8 +2213,14 @@ textarea.input {
   width: min(100% - 32px, 760px);
   margin: 100px auto 48px;
 }
-.demo-page .row { flex-wrap: wrap; }
-.demo-page .btn { min-height: 44px; }
+.demo-page .row {
+  flex-wrap: wrap;
+}
+.demo-page .btn {
+  min-height: 44px;
+}
 @media (max-width: 600px) {
-  .demo-page .figure { font-size: 36px; }
+  .demo-page .figure {
+    font-size: 36px;
+  }
 }

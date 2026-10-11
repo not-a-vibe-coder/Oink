@@ -5,6 +5,7 @@ import { getBellPurchases, quoteBellPurchase } from "@/lib/flow/server-fns";
 import { DEFAULT_BELL_POLICY, displayImpactPercent, displayTokenAmount } from "@/lib/bell/policy";
 import type { BellPurchase, BellQuote } from "@/lib/bell/types";
 import { BellExecution, BellReceiptHistory } from "./BellExecution";
+import { Illustration } from "@/components/oink/Illustration";
 export function BellQuoteBrief({ quote }: { quote: BellQuote }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -81,8 +82,11 @@ function PurchaseQuote({ purchase }: { purchase: BellPurchase }) {
     onSuccess: () => client.invalidateQueries({ queryKey: ["flow", "purchases"] }),
   });
   const quotable = ["pending", "deferred", "failed"].includes(purchase.state);
+  const stateIllustration =
+    purchase.state === "confirmed" ? "passed" : purchase.state === "deferred" ? "deferred" : null;
   return (
     <article className="panel stack">
+      {stateIllustration && <Illustration kind={stateIllustration} />}
       <div className="row">
         <h3>{purchase.symbol}</h3>
         <span className="meta">
@@ -162,7 +166,10 @@ export function BellPurchases() {
       ) : purchases.isError ? (
         <p role="alert">{purchases.error.message}</p>
       ) : !purchases.data.purchases.length ? (
-        <p className="meta">Allocate received income to create investment orders.</p>
+        <div className="empty">
+          <Illustration kind="bell" />
+          <p className="meta">Allocate received income to create investment orders.</p>
+        </div>
       ) : (
         purchases.data.purchases.map((purchase) => (
           <PurchaseQuote key={purchase.id} purchase={purchase} />

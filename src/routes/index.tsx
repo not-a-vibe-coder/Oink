@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
+import { Illustration } from "@/components/oink/Illustration";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -98,20 +99,20 @@ function LandingPage() {
             <a href="/unlock" className="alwayzz-login-btn">
               Log in
             </a>
-          <button
-            type="button"
-            className="alwayzz-menu-btn"
-            onClick={toggleDrawer}
-            aria-expanded={drawerOpen}
-            aria-controls="alwayzz-drawer"
-            aria-label={drawerOpen ? "Close navigation menu" : "Open navigation menu"}
-          >
-            <span>Menu</span>
-            <ChevronUp
-              className={`alwayzz-menu-icon ${drawerOpen ? "is-open" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
+            <button
+              type="button"
+              className="alwayzz-menu-btn"
+              onClick={toggleDrawer}
+              aria-expanded={drawerOpen}
+              aria-controls="alwayzz-drawer"
+              aria-label={drawerOpen ? "Close navigation menu" : "Open navigation menu"}
+            >
+              <span>Menu</span>
+              <ChevronUp
+                className={`alwayzz-menu-icon ${drawerOpen ? "is-open" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
           </div>
         </div>
       </nav>
@@ -209,10 +210,11 @@ function LandingPage() {
 
         {/* Subtitle */}
         <p className="alwayzz-hero-sub">
-          Hold a portfolio, not a currency. The self-custodial Solana wallet you open with a password
-          and a code instead of a seed phrase, where inbound payments settle atomically into your
-          stock mix.
+          Hold a portfolio, not a currency. The self-custodial Solana wallet you open with a
+          password and a code instead of a seed phrase, where inbound payments settle atomically
+          into your stock mix.
         </p>
+        <Illustration kind="pig" alt="Oink piggy bank" />
 
         {/* CTA Row */}
         <div className="alwayzz-cta-row">

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CopyButton } from "@/components/oink/CopyButton";
+import { Illustration } from "@/components/oink/Illustration";
 import { QrCode } from "@/components/oink/QrCode";
 import { displayUsdc } from "@/lib/flow/amounts";
 import { confirmIncomeInvoice, getIncomeInvoice } from "@/lib/flow/server-fns";
@@ -36,6 +37,9 @@ function IncomeRequest() {
           <p className="meta">
             Pay in USDC. The recipient manages their allocation separately after receipt.
           </p>
+          {invoice.data.status === "paid" && (
+            <Illustration kind="received" alt="Payment received" />
+          )}
           {invoice.data.status === "pending" && (
             <>
               <QrCode

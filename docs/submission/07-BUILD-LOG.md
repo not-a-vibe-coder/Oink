@@ -44,6 +44,23 @@ Passed. `bun test backend/tests/tokens.test.ts`: **2 passed, 0 failed (30 assert
 checks are intentionally skipped when `TEST_DATABASE_URL` is absent). Diff reviewed: no
 custody behavior, transaction guard, amount arithmetic, or claims changed.
 
+## 2026-10-11 — Task 3: mobile 3D visual pass (passed)
+
+- Added five local, lazy-loaded 512px WebP illustrations from Microsoft Fluent Emoji: landing
+  hero, Mix and Holdings empty states, payment-request empty state, payment-received state, and
+  Bell empty/deferred/confirmed states.
+- Recorded direct source URLs, MIT license, and conversion details in
+  `public/illustrations/LICENSES.md`. Assets are transparent and retain the app's light/dark
+  surface treatment.
+
+### Audit result
+
+Passed. `bunx tsc --noEmit`, targeted ESLint, and `bun run build` passed. A headless Chromium
+check at 390×844 across `/`, `/app/`, `/app/mix`, and `/app/income` found no horizontal overflow.
+Images have intrinsic dimensions and `loading="lazy"`; interactive controls remain existing
+button/link controls (no reduced tap targets). Diff reviewed: visual assets carry no product
+claims and do not change custody, signing, pricing, or payment behavior.
+
 ## 2026-10-11 — Task 2: repository hygiene (passed)
 
 - Searched all tracked product files before moving the root clutter. `prompt.md` had no

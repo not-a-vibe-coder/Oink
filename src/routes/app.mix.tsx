@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Scale, X } from "lucide-react";
 import { AllocationRail } from "@/components/oink/AllocationRail";
+import { Illustration } from "@/components/oink/Illustration";
 import { Monogram } from "@/components/oink/Monogram";
 import { Sheet } from "@/components/oink/Sheet";
 import { useAssets, useMix, useFeaturedAssets, useSaveMix } from "@/hooks/useOink";
@@ -123,8 +124,8 @@ function MixPage() {
           Your <span className="serif">mix</span>
         </h1>
         <p className="page-sub">
-          Every payment that arrives at {handle} is split this way, in one transaction, before it ever
-          sits still as cash.
+          Every payment that arrives at {handle} is split this way, in one transaction, before it
+          ever sits still as cash.
         </p>
       </header>
 
@@ -155,6 +156,7 @@ function MixPage() {
             <div className="skeleton" style={{ height: 180 }} />
           ) : working.length === 0 ? (
             <div className="empty">
+              <Illustration kind="pig" />
               <p className="empty-title">No assets elected</p>
               <p className="empty-note">
                 Pick at least one. Most people start with a stock they believe in and keep some USDC
@@ -223,9 +225,7 @@ function MixPage() {
           >
             <Plus size={14} aria-hidden="true" /> Add an asset
           </button>
-          {working.length >= 10 && (
-            <p className="hint">Ten assets is the limit for one mix.</p>
-          )}
+          {working.length >= 10 && <p className="hint">Ten assets is the limit for one mix.</p>}
         </section>
 
         {error && (

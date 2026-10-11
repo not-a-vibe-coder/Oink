@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { BellPurchases } from "@/components/bell/BellPurchases";
+import { Illustration } from "@/components/oink/Illustration";
 import { CopyButton } from "@/components/oink/CopyButton";
 import {
   useAllocateFlowInvoice,
@@ -188,7 +189,10 @@ function IncomeWorkspace({ settings }: { settings: FlowSettings }) {
         {invoices.isPending ? (
           <p className="meta">Loading requests…</p>
         ) : invoices.data?.invoices.length === 0 ? (
-          <p className="meta">Create your first income request above.</p>
+          <div className="empty">
+            <Illustration kind="received" />
+            <p className="meta">Create your first income request above.</p>
+          </div>
         ) : (
           invoices.data?.invoices.map((invoice) => (
             <div className="panel row" key={invoice.id}>

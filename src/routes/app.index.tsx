@@ -2,13 +2,21 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Fuel } from "lucide-react";
 import { AllocationRail } from "@/components/oink/AllocationRail";
+import { Illustration } from "@/components/oink/Illustration";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { ClaimTagAction } from "@/components/oink/LinkedAccounts";
 import { Monogram } from "@/components/oink/Monogram";
 import { Sheet } from "@/components/oink/Sheet";
 import { useActivity, useMix, useWallet, useWalletAddress } from "@/hooks/useOink";
 import { useWalletSession } from "@/lib/app-session";
-import { formatTokenAmount, formatUsd, shortAddress, splitUsd, timeAgo, counterparty } from "@/lib/format";
+import {
+  formatTokenAmount,
+  formatUsd,
+  shortAddress,
+  splitUsd,
+  timeAgo,
+  counterparty,
+} from "@/lib/format";
 import type { WalletHolding } from "@/types/token";
 
 export const Route = createFileRoute("/app/")({
@@ -97,6 +105,7 @@ function WalletHome() {
               <LedgerSkeleton rows={3} />
             ) : holdings.length === 0 ? (
               <div className="empty">
+                <Illustration kind="pig" />
                 <p className="empty-title">No assets yet</p>
                 <p className="empty-note">
                   Share your account ID, tag or address and the first payment will land in your mix.
@@ -300,8 +309,8 @@ function ClaimTagPrompt({ accountId }: { accountId: string }) {
     >
       <div className="stack">
         <p className="meta">
-          People can then pay you at @yourname instead of your account ID. Linking is optional —
-          you can do it later from Settings.
+          People can then pay you at @yourname instead of your account ID. Linking is optional — you
+          can do it later from Settings.
         </p>
         <ClaimTagAction onDone={dismiss} />
         <button type="button" className="btn btn-quiet btn-block" onClick={dismiss}>

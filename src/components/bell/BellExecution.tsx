@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UnlockInline } from "@/components/oink/UnlockInline";
+import { Illustration } from "@/components/oink/Illustration";
 import { useKeySession } from "@/hooks/useKeySession";
 import { useWalletSession } from "@/lib/app-session";
 import { signTransaction } from "@/lib/wallet/key-session";
@@ -100,6 +101,8 @@ export function BellExecution({ purchase }: { purchase: BellPurchase }) {
   const expired = activePlan ? now >= Date.parse(activePlan.attempt.expiresAt) : false;
   return (
     <div className="stack-tight">
+      {purchase.state === "confirmed" && <Illustration kind="passed" alt="Bell order confirmed" />}
+      {purchase.state === "deferred" && <Illustration kind="deferred" alt="Bell order deferred" />}
       {purchase.attempt && <AttemptReceipt attempt={purchase.attempt} quote={purchase.quote} />}
       {preparable && !activePlan && (
         <button
