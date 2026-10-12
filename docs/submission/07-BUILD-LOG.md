@@ -361,3 +361,20 @@ Bell execution 3, Push 4, Sponsorship 4; production build passed). All DB suites
 0 failed. A repo-wide ESLint sweep shows only pre-existing formatting issues in untouched
 files; the one edited file has the same count as at `7b76795`. The APK was built and verified
 in task 10; rebuild it against the real host after deploy. Pushed commit: see `git log origin/main -1`.
+
+## 2026-10-12 — CI and Vercel follow-up
+
+- CI (all three workflows green on `9c0a97e`): `verify:flow` now builds before `tsc`
+  (CI checkouts lack the gitignored `src/routeTree.gen.ts`). Repo-wide Prettier formatting via
+  `eslint . --fix`, 35 real lint errors fixed (`any` replaced with concrete types; justified
+  disables on the Express `Request` namespace augmentation), and generated directories added to
+  ESLint ignores. Frontend CI passed for the first time since Sep 24.
+- Vercel refused `@tanstack/react-start@1.168.32` (CVE-2026-102989, XSS). Upgraded to the
+  patched, co-released set `@tanstack/react-start@1.168.60`, `@tanstack/react-router@1.170.41`
+  and `@tanstack/router-plugin@1.168.42` (Sep 30, pinned exactly; a single copy of each is
+  installed) and adapted the root error component to `ErrorComponentProps`. No override flag
+  was used.
+- Audit: a fresh-checkout `verify:flow` on a new DB exits 0 (125 unit tests;
+  DB 9/3/3/4/4); all DB suites 64/0; lint 0 errors; production server serves `/`, `/demo`,
+  `/app`, the manifest, the worker and `assetlinks.json`; Chrome installability passes with
+  zero errors; phone layouts at 360/390/430 show no overflow.

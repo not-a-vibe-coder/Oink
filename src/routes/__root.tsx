@@ -6,6 +6,7 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouter,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import { useEffect, type ReactNode } from "react";
@@ -30,7 +31,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <main className="grid min-h-screen place-items-center p-4 text-center">
