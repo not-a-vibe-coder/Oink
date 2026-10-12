@@ -196,6 +196,9 @@ function SendPage() {
       });
 
       if (!submitted.ok) {
+        // PENDING means it was broadcast and may still land: drop the quote so a second tap
+        // cannot build and send a duplicate transfer.
+        if (submitted.code === "PENDING") setQuote(null);
         failSend(submitted.message);
         setPhase("compose");
         return;

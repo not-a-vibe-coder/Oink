@@ -393,3 +393,17 @@ in task 10; rebuild it against the real host after deploy. Pushed commit: see `g
   slides 2 and 8 use it; the service-worker cache was bumped (v3) so installs pick up the new icons.
   APK rebuilt as 1.0.1 (versionCode 2, same signing certificate `82ae40ae…e13336`, so it
   upgrades 1.0.0 in place) and published at `/downloads/oink.apk`.
+
+## 2026-10-12 — Fix: sends failing on the first try
+
+Symptom (founder, on device): an Oink send failed the first time and worked when sent again.
+Cause, in the existing transfer submit path: (1) the broadcast's preflight could see a
+fresh blockhash as "not found" on a lagging RPC node, failing a valid transaction; (2) the
+confirmation waited against a newly fetched blockhash, and a timeout surfaced as a 500 even
+when the transfer later landed, so a retry could send twice. Fix:
+`broadcastAndConfirmTransaction` re-sends the identical bytes on "Blockhash not found"
+(Solana deduplicates by signature), then polls the transaction's own status against its own
+`lastValidBlockHeight`. It reports failure only for an on-chain error or a provably expired
+window, and otherwise `PENDING` (409). On `PENDING`, the Send screen drops the quote so a second tap
+cannot build a duplicate. Tests: `backend/tests/broadcast.test.ts` (6). Audit: verify:flow exit
+0 (131 unit), DB 64/0, backend 66/0, lint 0 errors.

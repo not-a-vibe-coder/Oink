@@ -397,7 +397,18 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
     }
 
     // 2. Broadcast and wait for confirmation
-    const broadcastRes = await broadcastAndConfirmTransaction(txBytes);
+    const broadcastRes = await broadcastAndConfirmTransaction(txBytes, plan.lastValidBlockHeight);
+
+    if (broadcastRes.status === "pending") {
+      // Sent but not yet confirmed. Never report this as a failure: a retry would send twice.
+      res.status(409).json({
+        error: "PENDING",
+        message:
+          "Your transfer was sent and is still confirming. Check Activity in a minute before sending again.",
+        details: { signature: broadcastRes.signature },
+      });
+      return;
+    }
 
     if (broadcastRes.status === "failed") {
       // Record failed transfer

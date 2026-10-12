@@ -225,36 +225,58 @@ export async function getWalletBalances(
   return data;
 }
 
+/**
+ * Broadcasts a signed transaction and reports an outcome that is never wrong about money.
+ *
+ * - A fresh blockhash can be unknown to the RPC node for a moment ("Blockhash not found"), so
+ *   the identical bytes are re-sent briefly. Solana deduplicates by signature, so a re-send can
+ *   never create a second transfer.
+ * - Confirmation polls this transaction's own signature against its own blockhash window
+ *   (`lastValidBlockHeight`). "failed" is returned only for an on-chain error or once that window
+ *   has closed, after which the transaction can no longer land. A timeout is never reported as
+ *   a failure, which used to invite a second, duplicate send.
+ */
 export async function broadcastAndConfirmTransaction(
   rawSignedTx: Uint8Array,
-): Promise<{ signature: string; status: "confirmed" | "failed"; error?: string }> {
+  lastValidBlockHeight: number,
+  options: { pollMs?: number; maxWaitMs?: number } = {},
+): Promise<{ signature: string; status: "confirmed" | "failed" | "pending"; error?: string }> {
   const connection = getConnection();
+  const pollMs = options.pollMs ?? 1000;
+  const maxWaitMs = options.maxWaitMs ?? 90_000;
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const signature = await connection.sendRawTransaction(rawSignedTx, {
-    skipPreflight: false,
-    maxRetries: 3,
-  });
-
-  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
-  const confirmation = await connection.confirmTransaction(
-    {
-      signature,
-      blockhash: latestBlockhash.blockhash,
-      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-    },
-    "confirmed",
-  );
-
-  if (confirmation.value.err) {
-    return {
-      signature,
-      status: "failed",
-      error: JSON.stringify(confirmation.value.err),
-    };
+  let signature = "";
+  for (let attempt = 0; ; attempt++) {
+    try {
+      signature = await connection.sendRawTransaction(rawSignedTx, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+        maxRetries: 3,
+      });
+      break;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/blockhash not found/i.test(message) || attempt >= 5) throw error;
+      await sleep(600);
+    }
   }
 
-  return {
-    signature,
-    status: "confirmed",
-  };
+  const started = Date.now();
+  for (let tick = 0; Date.now() - started < maxWaitMs; tick++) {
+    const { value } = await connection.getSignatureStatuses([signature]);
+    const status = value[0];
+    if (status?.err) return { signature, status: "failed", error: JSON.stringify(status.err) };
+    if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized")
+      return { signature, status: "confirmed" };
+    if (!status && (await connection.getBlockHeight("confirmed")) > lastValidBlockHeight)
+      return { signature, status: "failed", error: "Transaction expired before it landed." };
+    // Re-broadcasting the same bytes helps it land and cannot duplicate it.
+    if (tick % 2 === 1)
+      await connection
+        .sendRawTransaction(rawSignedTx, { skipPreflight: true })
+        .catch(() => undefined);
+    await sleep(pollMs);
+  }
+  return { signature, status: "pending" };
 }
