@@ -378,3 +378,12 @@ in task 10; rebuild it against the real host after deploy. Pushed commit: see `g
   DB 9/3/3/4/4); all DB suites 64/0; lint 0 errors; production server serves `/`, `/demo`,
   `/app`, the manifest, the worker and `assetlinks.json`; Chrome installability passes with
   zero errors; phone layouts at 360/390/430 show no overflow.
+
+- Live: Vercel deployment of `1e9e091` succeeded; production alias
+  `https://oinkwallet.vercel.app` serves `/`, `/demo`, `/app`, the manifest, the worker
+  (`no-cache`, `Service-Worker-Allowed: /`) and `assetlinks.json`. On the live site, Chrome
+  installability reports zero errors, and phone layouts at 360/390/430 show no overflow.
+- APK rebuilt for the production host: `twa/dist/oink-oinkwallet.vercel.app-1.0.0.apk`,
+  launch URL `https://oinkwallet.vercel.app/app`, certificate SHA-256 `82ae40ae…e13336`,
+  identical to the live `assetlinks.json`. The password appears zero times in the build log. On-device test
+  still pending. The API (Render) is not deployed yet, so `/app` sign-in needs the backend.
