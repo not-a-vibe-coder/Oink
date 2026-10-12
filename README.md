@@ -25,9 +25,9 @@ wallet that lives in your browser.
 
 **Links**: the bracketed items are not done yet; the founder fills them in.
 
-- Live app: **[DEMO URL — pending deploy]** · simulated walkthrough at `/demo`
-- Android APK: **[APK link — pending; build with `twa/build-apk.ts`]**
-- Demo video: **[pending]** · Pitch video: **[pending]** · Deck: [`docs/submission/deck/oink-deck.html`](docs/submission/deck/oink-deck.html)
+- Live app: **https://oinkwallet.vercel.app** · simulated walkthrough at [/demo](https://oinkwallet.vercel.app/demo)
+- Android APK: built with `twa/build-apk.ts` for `oinkwallet.vercel.app` (package `app.oink.wallet`); **[download link — pending upload]**
+- Demo video: **[pending]** · Pitch video: **[pending]** · Deck: [PDF](docs/submission/deck/oink-deck.pdf) / [HTML](docs/submission/deck/oink-deck.html)
 - First mainnet Bell fill (Solscan): **[pending — no live fill has been made yet]**
 - [Submission draft](docs/submission/04-SUBMISSION-DRAFT.md) · [Pitch and demo scripts](docs/submission/03-PITCH-AND-DEMO.md) · [Evidence](docs/submission/06-EVIDENCE.md) · [Reuse disclosure](docs/submission/05-REUSE-DISCLOSURE.md) · [Deploy guide](docs/submission/08-DEPLOY.md) · [Build log](docs/submission/07-BUILD-LOG.md)
 

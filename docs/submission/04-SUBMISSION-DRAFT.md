@@ -69,8 +69,8 @@ can reduce it. Push and Seeker-wallet flows are implemented and unit/integration
 **[pending: verified on a real Android device after deploy]**.
 
 **Links:** Repo `https://github.com/not-a-vibe-coder/Oink` (public, MIT) · Live
-**[URL]** · APK **[link]** · Demo video **[link]** · Pitch video **[link]** · Deck
-`docs/submission/deck/oink-deck.html` → PDF **[export]** · Logo `public/icons/icon-512.png`
+**https://oinkwallet.vercel.app** (`/demo` for the labelled simulation) · APK **[link]** · Demo video **[link]** · Pitch video **[link]** · Deck
+`docs/submission/deck/oink-deck.pdf` · Logo `public/icons/icon-512.png`
 (Fluent Emoji pig, MIT: see `public/illustrations/LICENSES.md`).
 
 **Team:** **[FOUNDER: names, roles, short relevant background, location, time commitment]**
