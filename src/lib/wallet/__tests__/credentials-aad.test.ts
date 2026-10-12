@@ -9,18 +9,28 @@ const publicKey = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
 const encode = (value: string) => new TextEncoder().encode(value);
 
 test("a keystore sealed under the account ID opens", async () => {
-  const blob = await sealKeystore({ encKey, entropy, accountId, publicKey, salt: new Uint8Array(16) });
+  const blob = await sealKeystore({
+    encKey,
+    entropy,
+    accountId,
+    publicKey,
+    salt: new Uint8Array(16),
+  });
   expect(await openKeystore({ encKey, blob, accountId, publicKey })).toEqual(entropy);
 });
 
 test("a pre-account-ID keystore opens through its tag", async () => {
   const blob = await seal(encKey, entropy, encode(`oink-keystore-v1|pascal|${publicKey}`));
-  expect(await openKeystore({ encKey, blob, accountId, publicKey, tag: "pascal" })).toEqual(entropy);
+  expect(await openKeystore({ encKey, blob, accountId, publicKey, tag: "pascal" })).toEqual(
+    entropy,
+  );
 });
 
 test("the tag fallback still binds the public key", async () => {
   const blob = await seal(encKey, entropy, encode(`oink-keystore-v1|pascal|${publicKey}`));
-  expect(await openKeystore({ encKey, blob, accountId, publicKey: "SomeOtherKey1111", tag: "pascal" })).toBeNull();
+  expect(
+    await openKeystore({ encKey, blob, accountId, publicKey: "SomeOtherKey1111", tag: "pascal" }),
+  ).toBeNull();
 });
 
 test("no fallback without a tag, and a wrong tag fails closed", async () => {
@@ -32,5 +42,7 @@ test("no fallback without a tag, and a wrong tag fails closed", async () => {
 test("a wrong password fails both bindings", async () => {
   const blob = await seal(encKey, entropy, encode(`oink-keystore-v1|pascal|${publicKey}`));
   const wrong = new Uint8Array(32).fill(9);
-  expect(await openKeystore({ encKey: wrong, blob, accountId, publicKey, tag: "pascal" })).toBeNull();
+  expect(
+    await openKeystore({ encKey: wrong, blob, accountId, publicKey, tag: "pascal" }),
+  ).toBeNull();
 });

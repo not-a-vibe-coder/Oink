@@ -22,9 +22,12 @@ function useIdentityLinks() {
 
 function tagMessage(outcome: string | undefined, links: IdentityLinks): string {
   const handle = links.x ? `@${links.x.username}` : "Your X account";
-  if (outcome === "assigned") return `X linked. You're @${links.tag} now — people can pay you there.`;
-  if (outcome === "invalid") return `X linked. ${handle} can't be a tag (tags are 3–20 letters, numbers or _).`;
-  if (outcome === "reserved") return `X linked. ${handle} is a reserved name, so it can't be a tag.`;
+  if (outcome === "assigned")
+    return `X linked. You're @${links.tag} now — people can pay you there.`;
+  if (outcome === "invalid")
+    return `X linked. ${handle} can't be a tag (tags are 3–20 letters, numbers or _).`;
+  if (outcome === "reserved")
+    return `X linked. ${handle} is a reserved name, so it can't be a tag.`;
   return "X linked.";
 }
 
@@ -39,7 +42,9 @@ function useLinker(purposes: ProofPurpose[]) {
       const kind = purpose === "link-x" ? "x" : "email";
       const result = await linkIdentity({ data: { kind, identityToken } });
       if (!result.ok) {
-        console.error(`[oink:privy] API refused the ${kind} link — ${result.code}: ${result.message}`);
+        console.error(
+          `[oink:privy] API refused the ${kind} link — ${result.code}: ${result.message}`,
+        );
         setNotice({ tone: "danger", text: result.message });
         return;
       }
@@ -54,7 +59,10 @@ function useLinker(purposes: ProofPurpose[]) {
       if (waiting > 0) void queryClient.invalidateQueries({ queryKey: ["held"] });
       setNotice({
         tone: "seal",
-        text: (kind === "x" ? tagMessage(result.data.tagOutcome, result.data) : `${result.data.email} is linked.`) + claimNote,
+        text:
+          (kind === "x"
+            ? tagMessage(result.data.tagOutcome, result.data)
+            : `${result.data.email} is linked.`) + claimNote,
       });
     },
     onError: (text) => setNotice({ tone: "danger", text }),
@@ -124,11 +132,21 @@ function ConnectionsView({
         }
         action={
           links?.x ? (
-            <button type="button" className="btn btn-quiet btn-sm" disabled={unlinking !== null} onClick={() => onUnlink("x")}>
+            <button
+              type="button"
+              className="btn btn-quiet btn-sm"
+              disabled={unlinking !== null}
+              onClick={() => onUnlink("x")}
+            >
               {unlinking === "x" ? "Unlinking…" : "Unlink"}
             </button>
           ) : (
-            <button type="button" className="btn btn-outline btn-sm" disabled={disabled} onClick={() => start?.("link-x")}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={disabled}
+              onClick={() => start?.("link-x")}
+            >
               {busy ? "Waiting for X…" : "Link X"}
             </button>
           )
@@ -145,18 +163,30 @@ function ConnectionsView({
         }
         action={
           links?.email ? (
-            <button type="button" className="btn btn-quiet btn-sm" disabled={unlinking !== null} onClick={() => onUnlink("email")}>
+            <button
+              type="button"
+              className="btn btn-quiet btn-sm"
+              disabled={unlinking !== null}
+              onClick={() => onUnlink("email")}
+            >
               {unlinking === "email" ? "Unlinking…" : "Unlink"}
             </button>
           ) : (
-            <button type="button" className="btn btn-outline btn-sm" disabled={disabled} onClick={() => start?.("link-email")}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={disabled}
+              onClick={() => start?.("link-email")}
+            >
               Link email
             </button>
           )
         }
       />
       {!configured && (
-        <p className="footnote">Linking isn't switched on yet. Everything else in Oink works without it.</p>
+        <p className="footnote">
+          Linking isn't switched on yet. Everything else in Oink works without it.
+        </p>
       )}
       {notice && (
         <div className="callout" data-tone={notice.tone} role="status">

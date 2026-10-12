@@ -7,11 +7,7 @@ import { otpauthUri } from "@/lib/crypto/totp-uri";
 import { CodeField, IdentifierField, PasswordField } from "@/components/oink/fields";
 import { keypairFromEntropy } from "@/lib/crypto/derive";
 import { toEntropy, validateMnemonic } from "@/lib/crypto/mnemonic";
-import {
-  getTagProfile,
-  recoverChallenge,
-  recoverComplete,
-} from "@/lib/oink-server-fns";
+import { getTagProfile, recoverChallenge, recoverComplete } from "@/lib/oink-server-fns";
 import { deriveKeys, randomSalt, sealKeystore, zero, KDF_V1 } from "@/lib/wallet/credentials";
 import { signMessage, unlockWith } from "@/lib/wallet/key-session";
 import { startEnrollmentWithRetry } from "@/lib/enroll-start";
@@ -183,8 +179,8 @@ function RestorePage() {
             <span className="serif">{account?.tag ? `@${account.tag}` : account?.accountId}</span>
           </h1>
           <p className="page-sub">
-            Same address, same balance, same mix. Your new password and authenticator are the
-            only things that changed.
+            Same address, same balance, same mix. Your new password and authenticator are the only
+            things that changed.
           </p>
         </header>
 
@@ -239,7 +235,12 @@ function RestorePage() {
             </p>
           </header>
 
-          <IdentifierField id="restore-identifier" value={identifier} onChange={setIdentifier} autoFocus />
+          <IdentifierField
+            id="restore-identifier"
+            value={identifier}
+            onChange={setIdentifier}
+            autoFocus
+          />
 
           <div className="field">
             <span className="field-label">Your 12 words</span>

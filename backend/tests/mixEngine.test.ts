@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  formatTokenUnits,
-  parseTokenUnits,
-} from "../src/services/mixEngine";
+import { formatTokenUnits, parseTokenUnits } from "../src/services/mixEngine";
 
 describe("mixEngine", () => {
   test("parseTokenUnits converts decimal string to base atomic units", () => {
@@ -31,7 +28,7 @@ describe("mixEngine", () => {
 
     let allocatedSum = 0n;
     const allocated: bigint[] = [];
-    let largestIdx = 2;
+    const largestIdx = 2;
 
     for (let i = 0; i < legs.length; i++) {
       const legIn = (totalBig * legs[i].bps) / 10000n;

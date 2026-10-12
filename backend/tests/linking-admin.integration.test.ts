@@ -56,21 +56,36 @@ suite("linking and admin (integration)", () => {
 
   test("links a verified email, lowercased", async () => {
     const token = await fake.mint([fake.email(`Alice-${run}@Example.com`)]);
-    const res = await request(app).post("/api/v1/identity/email").set("Cookie", accounts.alice.cookie).send({ identityToken: token }).expect(200);
+    const res = await request(app)
+      .post("/api/v1/identity/email")
+      .set("Cookie", accounts.alice.cookie)
+      .send({ identityToken: token })
+      .expect(200);
     expect(res.body.email).toBe(`alice-${run}@example.com`);
-    const session = await request(app).get("/api/v1/auth/session").set("Cookie", accounts.alice.cookie).expect(200);
+    const session = await request(app)
+      .get("/api/v1/auth/session")
+      .set("Cookie", accounts.alice.cookie)
+      .expect(200);
     expect(session.body.email).toBe(`alice-${run}@example.com`);
   });
 
   test("an email already linked elsewhere is refused", async () => {
     const token = await fake.mint([fake.email(`alice-${run}@example.com`)]);
-    const res = await request(app).post("/api/v1/identity/email").set("Cookie", accounts.bob.cookie).send({ identityToken: token }).expect(409);
+    const res = await request(app)
+      .post("/api/v1/identity/email")
+      .set("Cookie", accounts.bob.cookie)
+      .send({ identityToken: token })
+      .expect(409);
     expect(res.body.error).toBe("EMAIL_TAKEN");
   });
 
   test("a forged or foreign token links nothing", async () => {
     const foreign = await fake.mint([fake.email(`x-${run}@example.com`)], { aud: "not-our-app" });
-    const res = await request(app).post("/api/v1/identity/email").set("Cookie", accounts.bob.cookie).send({ identityToken: foreign }).expect(401);
+    const res = await request(app)
+      .post("/api/v1/identity/email")
+      .set("Cookie", accounts.bob.cookie)
+      .send({ identityToken: foreign })
+      .expect(401);
     expect(res.body.error).toBe("INVALID_IDENTITY");
   });
 
@@ -80,9 +95,16 @@ suite("linking and admin (integration)", () => {
   });
 
   test("unlinking frees the email for another wallet", async () => {
-    await request(app).delete("/api/v1/identity/email").set("Cookie", accounts.alice.cookie).expect(200);
+    await request(app)
+      .delete("/api/v1/identity/email")
+      .set("Cookie", accounts.alice.cookie)
+      .expect(200);
     const token = await fake.mint([fake.email(`alice-${run}@example.com`)]);
-    const res = await request(app).post("/api/v1/identity/email").set("Cookie", accounts.bob.cookie).send({ identityToken: token }).expect(200);
+    const res = await request(app)
+      .post("/api/v1/identity/email")
+      .set("Cookie", accounts.bob.cookie)
+      .send({ identityToken: token })
+      .expect(200);
     expect(res.body.email).toBe(`alice-${run}@example.com`);
   });
 
@@ -90,34 +112,62 @@ suite("linking and admin (integration)", () => {
 
   test("linking X claims the username as the tag", async () => {
     const token = await fake.mint([fake.x(`x-alice-${run}`, `Alice${run}`)]);
-    const res = await request(app).post("/api/v1/identity/x").set("Cookie", accounts.alice.cookie).send({ identityToken: token }).expect(200);
-    expect(res.body).toMatchObject({ tag: `alice${run}`, x: { username: `Alice${run}` }, tagOutcome: "assigned" });
+    const res = await request(app)
+      .post("/api/v1/identity/x")
+      .set("Cookie", accounts.alice.cookie)
+      .send({ identityToken: token })
+      .expect(200);
+    expect(res.body).toMatchObject({
+      tag: `alice${run}`,
+      x: { username: `Alice${run}` },
+      tagOutcome: "assigned",
+    });
   });
 
   test("the X owner takes the tag from a wallet that holds it without owning the handle", async () => {
     const token = await fake.mint([fake.x(`x-izuu-${run}`, `izuu${run}`)]);
-    const res = await request(app).post("/api/v1/identity/x").set("Cookie", accounts.bob.cookie).send({ identityToken: token }).expect(200);
+    const res = await request(app)
+      .post("/api/v1/identity/x")
+      .set("Cookie", accounts.bob.cookie)
+      .send({ identityToken: token })
+      .expect(200);
     expect(res.body.tag).toBe(`izuu${run}`);
-    const squatter = await query("SELECT tag FROM wallets WHERE account_id = $1", [accounts.squatter.id]);
+    const squatter = await query("SELECT tag FROM wallets WHERE account_id = $1", [
+      accounts.squatter.id,
+    ]);
     expect(squatter.rows[0].tag).toBeNull();
-    const lost = await query("SELECT detail FROM account_events WHERE account_id = $1 AND kind = 'tag_lost'", [accounts.squatter.id]);
+    const lost = await query(
+      "SELECT detail FROM account_events WHERE account_id = $1 AND kind = 'tag_lost'",
+      [accounts.squatter.id],
+    );
     expect(lost.rows[0].detail).toMatchObject({ tag: `izuu${run}` });
   });
 
   test("one X account cannot back two wallets", async () => {
     const token = await fake.mint([fake.x(`x-alice-${run}`, `Alice${run}`)]);
-    const res = await request(app).post("/api/v1/identity/x").set("Cookie", accounts.squatter.cookie).send({ identityToken: token }).expect(409);
+    const res = await request(app)
+      .post("/api/v1/identity/x")
+      .set("Cookie", accounts.squatter.cookie)
+      .send({ identityToken: token })
+      .expect(409);
     expect(res.body.error).toBe("X_TAKEN");
   });
 
   test("a reserved or too-short handle links X but gives no tag", async () => {
     const token = await fake.mint([fake.x(`x-short-${run}`, "ab")]);
-    const res = await request(app).post("/api/v1/identity/x").set("Cookie", accounts.squatter.cookie).send({ identityToken: token }).expect(200);
+    const res = await request(app)
+      .post("/api/v1/identity/x")
+      .set("Cookie", accounts.squatter.cookie)
+      .send({ identityToken: token })
+      .expect(200);
     expect(res.body).toMatchObject({ tag: null, x: { username: "ab" }, tagOutcome: "invalid" });
   });
 
   test("unlinking X keeps the tag", async () => {
-    const res = await request(app).delete("/api/v1/identity/x").set("Cookie", accounts.alice.cookie).expect(200);
+    const res = await request(app)
+      .delete("/api/v1/identity/x")
+      .set("Cookie", accounts.alice.cookie)
+      .expect(200);
     expect(res.body).toMatchObject({ tag: `alice${run}`, x: null });
   });
 
@@ -126,12 +176,18 @@ suite("linking and admin (integration)", () => {
   let adminCookie = "";
 
   test("a wallet session is not an admin session", async () => {
-    await request(app).get("/api/v1/admin/overview").set("Cookie", accounts.alice.cookie).expect(401);
+    await request(app)
+      .get("/api/v1/admin/overview")
+      .set("Cookie", accounts.alice.cookie)
+      .expect(401);
   });
 
   test("a verified email that is not on the list is refused", async () => {
     const token = await fake.mint([fake.email(`alice-${run}@example.com`)]);
-    const res = await request(app).post("/api/v1/admin/login").send({ identityToken: token }).expect(403);
+    const res = await request(app)
+      .post("/api/v1/admin/login")
+      .send({ identityToken: token })
+      .expect(403);
     expect(res.body.error).toBe("FORBIDDEN");
     expect(res.headers["set-cookie"]).toBeUndefined();
   });
@@ -143,7 +199,10 @@ suite("linking and admin (integration)", () => {
 
   test("a listed email signs in, case-insensitively", async () => {
     const token = await fake.mint([fake.email(adminEmail.toUpperCase())]);
-    const res = await request(app).post("/api/v1/admin/login").send({ identityToken: token }).expect(200);
+    const res = await request(app)
+      .post("/api/v1/admin/login")
+      .send({ identityToken: token })
+      .expect(200);
     expect(res.body.email).toBe(adminEmail);
     const cookie = (res.headers["set-cookie"] as unknown as string[])[0];
     expect(cookie).toContain("HttpOnly");
@@ -152,48 +211,106 @@ suite("linking and admin (integration)", () => {
   });
 
   test("overview counts wallets and linked identities", async () => {
-    const res = await request(app).get("/api/v1/admin/overview").set("Cookie", adminCookie).expect(200);
+    const res = await request(app)
+      .get("/api/v1/admin/overview")
+      .set("Cookie", adminCookie)
+      .expect(200);
     expect(res.body.wallets).toBeGreaterThanOrEqual(3);
     expect(res.body.emails_linked).toBeGreaterThanOrEqual(1);
     expect(res.body.x_linked).toBeGreaterThanOrEqual(2);
   });
 
   test("the activity feed shows linking and can be reviewed and flagged", async () => {
-    const feed = await request(app).get("/api/v1/admin/activity").set("Cookie", adminCookie).query({ limit: 100 }).expect(200);
-    const lost = feed.body.items.find((i: any) => i.kind === "tag_lost" && i.account_id === accounts.squatter.id);
+    const feed = await request(app)
+      .get("/api/v1/admin/activity")
+      .set("Cookie", adminCookie)
+      .query({ limit: 100 })
+      .expect(200);
+    const lost = feed.body.items.find(
+      (i: { id: string; kind: string; account_id: string; review_note: string | null }) =>
+        i.kind === "tag_lost" && i.account_id === accounts.squatter.id,
+    );
     expect(lost).toBeDefined();
 
-    await request(app).post("/api/v1/admin/reviews").set("Cookie", adminCookie)
-      .send({ source: lost.source, sourceId: lost.id, status: "flagged", note: "check this" }).expect(200);
-    const flagged = await request(app).get("/api/v1/admin/activity").set("Cookie", adminCookie).query({ filter: "flagged" }).expect(200);
-    expect(flagged.body.items.some((i: any) => i.id === lost.id && i.review_note === "check this")).toBe(true);
+    await request(app)
+      .post("/api/v1/admin/reviews")
+      .set("Cookie", adminCookie)
+      .send({ source: lost.source, sourceId: lost.id, status: "flagged", note: "check this" })
+      .expect(200);
+    const flagged = await request(app)
+      .get("/api/v1/admin/activity")
+      .set("Cookie", adminCookie)
+      .query({ filter: "flagged" })
+      .expect(200);
+    expect(
+      flagged.body.items.some(
+        (i: { id: string; kind: string; account_id: string; review_note: string | null }) =>
+          i.id === lost.id && i.review_note === "check this",
+      ),
+    ).toBe(true);
 
-    await request(app).post("/api/v1/admin/reviews").set("Cookie", adminCookie)
-      .send({ source: lost.source, sourceId: lost.id, status: "clear" }).expect(200);
-    const after = await request(app).get("/api/v1/admin/activity").set("Cookie", adminCookie).query({ filter: "flagged" }).expect(200);
-    expect(after.body.items.some((i: any) => i.id === lost.id)).toBe(false);
+    await request(app)
+      .post("/api/v1/admin/reviews")
+      .set("Cookie", adminCookie)
+      .send({ source: lost.source, sourceId: lost.id, status: "clear" })
+      .expect(200);
+    const after = await request(app)
+      .get("/api/v1/admin/activity")
+      .set("Cookie", adminCookie)
+      .query({ filter: "flagged" })
+      .expect(200);
+    expect(
+      after.body.items.some(
+        (i: { id: string; kind: string; account_id: string; review_note: string | null }) =>
+          i.id === lost.id,
+      ),
+    ).toBe(false);
 
-    await request(app).post("/api/v1/admin/reviews").set("Cookie", adminCookie)
-      .send({ source: "wallets", sourceId: 1, status: "flagged" }).expect(400);
+    await request(app)
+      .post("/api/v1/admin/reviews")
+      .set("Cookie", adminCookie)
+      .send({ source: "wallets", sourceId: 1, status: "flagged" })
+      .expect(400);
   });
 
   test("the database viewer never returns secret columns", async () => {
-    const wallets = await request(app).get("/api/v1/admin/tables/wallets").set("Cookie", adminCookie).expect(200);
-    for (const secret of ["ciphertext", "nonce", "kdf_salt", "auth_key_hash", "totp_secret_enc", "totp_nonce"]) {
+    const wallets = await request(app)
+      .get("/api/v1/admin/tables/wallets")
+      .set("Cookie", adminCookie)
+      .expect(200);
+    for (const secret of [
+      "ciphertext",
+      "nonce",
+      "kdf_salt",
+      "auth_key_hash",
+      "totp_secret_enc",
+      "totp_nonce",
+    ]) {
       expect(wallets.body.columns).not.toContain(secret);
       expect(wallets.body.hiddenColumns).toContain(secret);
       for (const row of wallets.body.rows) expect(row).not.toHaveProperty(secret);
     }
     expect(wallets.body.columns).toContain("account_id");
 
-    const sessions = await request(app).get("/api/v1/admin/tables/sessions").set("Cookie", adminCookie).expect(200);
+    const sessions = await request(app)
+      .get("/api/v1/admin/tables/sessions")
+      .set("Cookie", adminCookie)
+      .expect(200);
     for (const row of sessions.body.rows) expect(row).not.toHaveProperty("token_hash");
 
     await request(app).get("/api/v1/admin/tables/pg_authid").set("Cookie", adminCookie).expect(404);
-    await request(app).get("/api/v1/admin/tables/wallets;DROP TABLE wallets").set("Cookie", adminCookie).expect(404);
+    await request(app)
+      .get("/api/v1/admin/tables/wallets;DROP TABLE wallets")
+      .set("Cookie", adminCookie)
+      .expect(404);
 
-    const audit = await query("SELECT action, detail FROM admin_audit WHERE admin_email = $1 AND action = 'table_read'", [adminEmail]);
-    expect(audit.rows.map((r) => r.detail.table)).toEqual(expect.arrayContaining(["wallets", "sessions"]));
+    const audit = await query(
+      "SELECT action, detail FROM admin_audit WHERE admin_email = $1 AND action = 'table_read'",
+      [adminEmail],
+    );
+    expect(audit.rows.map((r) => r.detail.table)).toEqual(
+      expect.arrayContaining(["wallets", "sessions"]),
+    );
   });
 
   test("removing an address from ADMIN_EMAILS locks its session out at once", async () => {
@@ -215,7 +332,12 @@ suite("linking and admin (integration)", () => {
     const token = await fake.mint([fake.email(`nobody-${run}@example.com`)]);
     let last = 0;
     for (let i = 0; i < 12; i++) {
-      last = (await request(app).post("/api/v1/admin/login").set("X-Forwarded-For", `198.51.100.${run.length}`).send({ identityToken: token })).status;
+      last = (
+        await request(app)
+          .post("/api/v1/admin/login")
+          .set("X-Forwarded-For", `198.51.100.${run.length}`)
+          .send({ identityToken: token })
+      ).status;
     }
     expect(last).toBe(429);
   });

@@ -149,7 +149,10 @@ export async function calculateMixQuotes(params: {
       const legInStr = legInAmount.toString();
 
       // Direct transfer leg (no swap needed)
-      if (leg.mint === inputToken.mint || (inputToken.isNative && leg.mint === "11111111111111111111111111111111")) {
+      if (
+        leg.mint === inputToken.mint ||
+        (inputToken.isNative && leg.mint === "11111111111111111111111111111111")
+      ) {
         return {
           symbol: leg.symbol,
           mint: leg.mint,
@@ -235,8 +238,10 @@ export async function calculateMixQuotes(params: {
           safeSettled: false,
           rawJupiterQuote: jupQuote,
         };
-      } catch (err: any) {
-        throw new Error(`Failed to quote leg ${leg.symbol}: ${err?.message || String(err)}`);
+      } catch (err: unknown) {
+        throw new Error(
+          `Failed to quote leg ${leg.symbol}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }),
   );

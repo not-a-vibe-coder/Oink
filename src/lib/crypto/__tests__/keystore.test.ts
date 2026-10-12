@@ -16,5 +16,7 @@ test("rejects a different encryption key", async () => {
 
 test("rejects an AAD swap", async () => {
   const blob = await seal(encKey, entropy, aad);
-  await expect(open(encKey, blob, new TextEncoder().encode("oink-keystore-v1|oink-k7p2-9xqn|public-key"))).rejects.toThrow();
+  await expect(
+    open(encKey, blob, new TextEncoder().encode("oink-keystore-v1|oink-k7p2-9xqn|public-key")),
+  ).rejects.toThrow();
 });

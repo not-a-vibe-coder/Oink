@@ -27,7 +27,11 @@ export function AccountBubble({
   const root = useRef<HTMLDivElement>(null);
   const { unlocked } = useKeySession();
   // Same key as LinkedAccounts, so linking in Settings updates the bubble without a refetch.
-  const links = useQuery({ queryKey: ["identity"], queryFn: () => getIdentityLinks(), enabled: open });
+  const links = useQuery({
+    queryKey: ["identity"],
+    queryFn: () => getIdentityLinks(),
+    enabled: open,
+  });
 
   useEffect(() => {
     if (!open) return;

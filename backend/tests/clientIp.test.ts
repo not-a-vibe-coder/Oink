@@ -11,13 +11,19 @@ afterEach(() => {
 
 test("trusts the forwarded browser IP only with the proxy secret", () => {
   process.env.OINK_PROXY_SECRET = "s3cret";
-  expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4", "x-oink-proxy-secret": "s3cret" }))).toBe("1.2.3.4");
-  expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4", "x-oink-proxy-secret": "guess" }))).toBe("10.0.0.1");
+  expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4", "x-oink-proxy-secret": "s3cret" }))).toBe(
+    "1.2.3.4",
+  );
+  expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4", "x-oink-proxy-secret": "guess" }))).toBe(
+    "10.0.0.1",
+  );
   expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4" }))).toBe("10.0.0.1");
 });
 
 test("ignores the forwarded IP when no secret is configured", () => {
-  expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4", "x-oink-proxy-secret": "" }))).toBe("10.0.0.1");
+  expect(getClientIp(req({ "x-oink-client-ip": "1.2.3.4", "x-oink-proxy-secret": "" }))).toBe(
+    "10.0.0.1",
+  );
 });
 
 test("uses the hop the platform proxy appended, not the one the caller wrote", () => {

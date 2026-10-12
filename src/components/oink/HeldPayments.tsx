@@ -51,7 +51,11 @@ function Row({ payment, incoming }: { payment: HeldPaymentRow; incoming: boolean
 }
 
 export function HeldPayments() {
-  const held = useQuery({ queryKey: ["held"], queryFn: () => getHeldPayments(), refetchInterval: 30_000 });
+  const held = useQuery({
+    queryKey: ["held"],
+    queryFn: () => getHeldPayments(),
+    refetchInterval: 30_000,
+  });
   const incoming = held.data?.incoming ?? [];
   const sent = held.data?.sent ?? [];
   if (incoming.length === 0 && sent.length === 0) return null;

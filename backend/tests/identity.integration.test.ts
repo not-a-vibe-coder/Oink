@@ -68,24 +68,41 @@ suite("identity flow (integration)", () => {
 
     const done = await request(app)
       .post("/api/v1/enroll/complete")
-      .send({ enrollmentId: res.body.enrollmentId, publicKey, keystore, authKey, totpCode: codeAt(secret, 0) })
+      .send({
+        enrollmentId: res.body.enrollmentId,
+        publicKey,
+        keystore,
+        authKey,
+        totpCode: codeAt(secret, 0),
+      })
       .expect(201);
     expect(done.body.accountId).toBe(accountId);
     expect(done.body.tag).toBeNull();
-    expect(done.body.mix).toEqual([{ symbol: "USDC", mint: USDC, basisPoints: 10000, percentage: 100 }]);
+    expect(done.body.mix).toEqual([
+      { symbol: "USDC", mint: USDC, basisPoints: 10000, percentage: 100 },
+    ]);
   });
 
   test("the same keypair cannot enroll twice", async () => {
     const start = await request(app).post("/api/v1/enroll/start").send({}).expect(201);
     const res = await request(app)
       .post("/api/v1/enroll/complete")
-      .send({ enrollmentId: start.body.enrollmentId, publicKey, keystore, authKey, totpCode: codeAt(start.body.totpSecret, 0) })
+      .send({
+        enrollmentId: start.body.enrollmentId,
+        publicKey,
+        keystore,
+        authKey,
+        totpCode: codeAt(start.body.totpSecret, 0),
+      })
       .expect(409);
     expect(res.body.error).toBe("WALLET_EXISTS");
   });
 
   test("unlocks by account ID, in any case", async () => {
-    const chl = await request(app).post("/api/v1/auth/challenge").send({ identifier: accountId.toUpperCase() }).expect(200);
+    const chl = await request(app)
+      .post("/api/v1/auth/challenge")
+      .send({ identifier: accountId.toUpperCase() })
+      .expect(200);
     expect(chl.body.accountId).toBe(accountId);
     expect(chl.body.keystore.ciphertext).toBe(keystore.ciphertext);
 
@@ -95,22 +112,38 @@ suite("identity flow (integration)", () => {
       .expect(200);
     expect(res.body).toMatchObject({ accountId, tag: null, publicKey });
 
-    const session = await request(app).get("/api/v1/auth/session").set("Cookie", cookieOf(res)).expect(200);
+    const session = await request(app)
+      .get("/api/v1/auth/session")
+      .set("Cookie", cookieOf(res))
+      .expect(200);
     expect(session.body.accountId).toBe(accountId);
   });
 
   test("a wrong authKey is INVALID_CREDENTIALS", async () => {
-    const chl = await request(app).post("/api/v1/auth/challenge").send({ identifier: accountId }).expect(200);
+    const chl = await request(app)
+      .post("/api/v1/auth/challenge")
+      .send({ identifier: accountId })
+      .expect(200);
     const res = await request(app)
       .post("/api/v1/auth/unlock")
-      .send({ challengeId: chl.body.challengeId, authKey: Buffer.alloc(32, 2).toString("base64"), totpCode: "000000" })
+      .send({
+        challengeId: chl.body.challengeId,
+        authKey: Buffer.alloc(32, 2).toString("base64"),
+        totpCode: "000000",
+      })
       .expect(401);
     expect(res.body.error).toBe("INVALID_CREDENTIALS");
   });
 
   test("an unknown identifier gets a stable decoy shaped like a real challenge", async () => {
-    const a = await request(app).post("/api/v1/auth/challenge").send({ identifier: "oink-zzzz-zzzz" }).expect(200);
-    const b = await request(app).post("/api/v1/auth/challenge").send({ identifier: "oink-zzzz-zzzz" }).expect(200);
+    const a = await request(app)
+      .post("/api/v1/auth/challenge")
+      .send({ identifier: "oink-zzzz-zzzz" })
+      .expect(200);
+    const b = await request(app)
+      .post("/api/v1/auth/challenge")
+      .send({ identifier: "oink-zzzz-zzzz" })
+      .expect(200);
     expect(a.body.accountId).toMatch(/^oink-[0-9a-hjkmnp-tv-z]{4}-[0-9a-hjkmnp-tv-z]{4}$/);
     expect(a.body.accountId).toBe(b.body.accountId);
     expect(a.body.kdfSalt).toBe(b.body.kdfSalt);
@@ -121,18 +154,26 @@ suite("identity flow (integration)", () => {
 
   test("a tag, once set, unlocks the same account", async () => {
     await query("UPDATE wallets SET tag = 'izuu_test' WHERE account_id = $1", [accountId]);
-    const chl = await request(app).post("/api/v1/auth/challenge").send({ identifier: "@Izuu_Test" }).expect(200);
+    const chl = await request(app)
+      .post("/api/v1/auth/challenge")
+      .send({ identifier: "@Izuu_Test" })
+      .expect(200);
     expect(chl.body.accountId).toBe(accountId);
     const profile = await request(app).get("/api/v1/tags/izuu_test").expect(200);
     expect(profile.body).toMatchObject({ accountId, tag: "izuu_test", publicKey });
   });
 
   test("recovery signs over the account ID and keeps it", async () => {
-    const chl = await request(app).post("/api/v1/auth/recover/challenge").send({ identifier: accountId }).expect(200);
+    const chl = await request(app)
+      .post("/api/v1/auth/recover/challenge")
+      .send({ identifier: accountId })
+      .expect(200);
     expect(chl.body.accountId).toBe(accountId);
     expect(chl.body.message).toContain(`Account: ${accountId}`);
 
-    const signature = bs58.encode(nacl.sign.detached(new TextEncoder().encode(chl.body.message), keypair.secretKey));
+    const signature = bs58.encode(
+      nacl.sign.detached(new TextEncoder().encode(chl.body.message), keypair.secretKey),
+    );
     const enr = await request(app).post("/api/v1/enroll/start").send({}).expect(201);
 
     const wrongKey = nacl.sign.keyPair();
@@ -140,7 +181,9 @@ suite("identity flow (integration)", () => {
       .post("/api/v1/auth/recover/complete")
       .send({
         challengeId: chl.body.challengeId,
-        signature: bs58.encode(nacl.sign.detached(new TextEncoder().encode(chl.body.message), wrongKey.secretKey)),
+        signature: bs58.encode(
+          nacl.sign.detached(new TextEncoder().encode(chl.body.message), wrongKey.secretKey),
+        ),
         publicKey: bs58.encode(wrongKey.publicKey),
         keystore,
         authKey,
@@ -149,8 +192,13 @@ suite("identity flow (integration)", () => {
       })
       .expect(401);
 
-    const chl2 = await request(app).post("/api/v1/auth/recover/challenge").send({ identifier: accountId }).expect(200);
-    const signature2 = bs58.encode(nacl.sign.detached(new TextEncoder().encode(chl2.body.message), keypair.secretKey));
+    const chl2 = await request(app)
+      .post("/api/v1/auth/recover/challenge")
+      .send({ identifier: accountId })
+      .expect(200);
+    const signature2 = bs58.encode(
+      nacl.sign.detached(new TextEncoder().encode(chl2.body.message), keypair.secretKey),
+    );
     expect(signature2).not.toBe(signature);
     const res = await request(app)
       .post("/api/v1/auth/recover/complete")
@@ -166,7 +214,10 @@ suite("identity flow (integration)", () => {
       .expect(200);
     expect(res.body).toMatchObject({ accountId, tag: "izuu_test", publicKey });
 
-    const left = await query("SELECT COUNT(*)::int AS n FROM sessions WHERE account_id = $1 AND revoked_at IS NULL", [accountId]);
+    const left = await query(
+      "SELECT COUNT(*)::int AS n FROM sessions WHERE account_id = $1 AND revoked_at IS NULL",
+      [accountId],
+    );
     expect(left.rows[0].n).toBe(1);
   });
 
@@ -178,13 +229,22 @@ suite("identity flow (integration)", () => {
 
     const { resolveSolanaToken } = await import("../src/lib/tokens");
     const SPYX = resolveSolanaToken("SPYx")!.mint;
-    const bad = await request(app).put("/api/v1/mix").set("Cookie", cookie).send({ mix: [{ mint: USDC, basisPoints: 5000 }] }).expect(400);
+    const bad = await request(app)
+      .put("/api/v1/mix")
+      .set("Cookie", cookie)
+      .send({ mix: [{ mint: USDC, basisPoints: 5000 }] })
+      .expect(400);
     expect(bad.body.error).toBe("MIX_INVALID");
 
     await request(app)
       .put("/api/v1/mix")
       .set("Cookie", cookie)
-      .send({ mix: [{ mint: SPYX, basisPoints: 6000 }, { mint: USDC, basisPoints: 4000 }] })
+      .send({
+        mix: [
+          { mint: SPYX, basisPoints: 6000 },
+          { mint: USDC, basisPoints: 4000 },
+        ],
+      })
       .expect(200);
 
     const byTag = await request(app).get("/api/v1/mix/izuu_test").expect(200);

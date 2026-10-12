@@ -16,7 +16,8 @@ export function MobileTabBar({ primary, more }: { primary: NavItem[]; more: NavI
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
 
-  const isActive = (item: NavItem) => (item.exact ? pathname === item.to : pathname.startsWith(item.to));
+  const isActive = (item: NavItem) =>
+    item.exact ? pathname === item.to : pathname.startsWith(item.to);
 
   // Slots: primary[0], primary[1], plus, primary[2], primary[3].
   const slots = [primary[0], primary[1], null, primary[2], primary[3]];
@@ -35,7 +36,12 @@ export function MobileTabBar({ primary, more }: { primary: NavItem[]; more: NavI
 
   return (
     <>
-      <div className="tabbar-scrim" data-open={open} aria-hidden="true" onClick={() => setOpen(false)} />
+      <div
+        className="tabbar-scrim"
+        data-open={open}
+        aria-hidden="true"
+        onClick={() => setOpen(false)}
+      />
       <nav className="tabbar" data-open={open} aria-label="Wallet sections">
         <div className="tabbar-tray" id="tabbar-more" inert={!open}>
           <div className="tabbar-tray-inner">

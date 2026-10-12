@@ -10,24 +10,42 @@ export const invoicesRouter = Router();
 
 // POST /api/v1/invoices [S]
 invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => {
-  const { amount, tokenSymbol = "USDC", memo, applyMix = true, expiresInHours = 72 } = req.body || {};
+  const {
+    amount,
+    tokenSymbol = "USDC",
+    memo,
+    applyMix = true,
+    expiresInHours = 72,
+  } = req.body || {};
   const creatorAccountId = req.accountId!;
 
   if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Valid positive amount is required.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "Valid positive amount is required.",
+      details: null,
+    });
     return;
   }
 
   const token = resolveSolanaToken(tokenSymbol);
   if (!token) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: `Unknown token: ${tokenSymbol}`, details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: `Unknown token: ${tokenSymbol}`,
+      details: null,
+    });
     return;
   }
 
   try {
-    const walletRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [creatorAccountId]);
+    const walletRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [
+      creatorAccountId,
+    ]);
     if (walletRes.rows.length === 0) {
-      res.status(404).json({ error: "NOT_FOUND", message: "Creator wallet not found.", details: null });
+      res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Creator wallet not found.", details: null });
       return;
     }
 
@@ -58,7 +76,8 @@ invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => 
     // A request that settles into the mix hands the payer's wallet an Oink-built transaction
     // (routes/pay.ts); otherwise it stays a plain Solana Pay transfer any wallet understands.
     const plainUri = `solana:${recipientWallet}?amount=${amount}&spl-token=${token.mint}&memo=${encodeURIComponent(memo || invoiceId)}`;
-    const solanaPayUri = (applyMix && payRequestUri(creatorAccountId, String(amount), token.symbol)) || plainUri;
+    const solanaPayUri =
+      (applyMix && payRequestUri(creatorAccountId, String(amount), token.symbol)) || plainUri;
 
     res.status(201).json({
       id: invoiceId,
@@ -68,7 +87,9 @@ invoicesRouter.post("/", requireSession, async (req: Request, res: Response) => 
     });
   } catch (err) {
     console.error("Create invoice error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to create invoice.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to create invoice.", details: null });
   }
 });
 
@@ -119,7 +140,7 @@ invoicesRouter.get("/:id", async (req: Request, res: Response) => {
     }
 
     // Load mix if apply_mix is true
-    let mix: any[] = [];
+    let mix: Record<string, unknown>[] = [];
     if (invoice.apply_mix) {
       const mixRes = await query(
         `SELECT asset_symbol, asset_mint, basis_points
@@ -175,14 +196,20 @@ invoicesRouter.post("/:id/cancel", requireSession, async (req: Request, res: Res
     );
 
     if (updateRes.rows.length === 0) {
-      res.status(400).json({ error: "VALIDATION_FAILED", message: "Invoice cannot be cancelled.", details: null });
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "Invoice cannot be cancelled.",
+        details: null,
+      });
       return;
     }
 
     res.status(200).json({ status: "cancelled" });
   } catch (err) {
     console.error("Cancel invoice error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to cancel invoice.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to cancel invoice.", details: null });
   }
 });
 
@@ -192,7 +219,11 @@ invoicesRouter.post("/:id/confirm", async (req: Request, res: Response) => {
   const { signature, payerWallet } = req.body || {};
 
   if (!signature || !payerWallet) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "signature and payerWallet are required.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "signature and payerWallet are required.",
+      details: null,
+    });
     return;
   }
 
@@ -209,13 +240,19 @@ invoicesRouter.post("/:id/confirm", async (req: Request, res: Response) => {
     );
 
     if (updateRes.rows.length === 0) {
-      res.status(400).json({ error: "VALIDATION_FAILED", message: "Invoice is not in pending status.", details: null });
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "Invoice is not in pending status.",
+        details: null,
+      });
       return;
     }
 
     res.status(200).json({ status: "paid", signature });
   } catch (err) {
     console.error("Confirm invoice error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to confirm invoice.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to confirm invoice.", details: null });
   }
 });

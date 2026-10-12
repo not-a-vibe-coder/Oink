@@ -41,8 +41,8 @@ function TermsPage() {
 
         <h2>Mix and market risk</h2>
         <p>
-          When a payment settles into your mix, it is swapped through Jupiter into the assets
-          you chose. Those assets are tokenized instruments whose value moves with their underlying
+          When a payment settles into your mix, it is swapped through Jupiter into the assets you
+          chose. Those assets are tokenized instruments whose value moves with their underlying
           markets, and can fall. Routing depends on available liquidity: when the price impact on an
           elected asset exceeds a safe limit, that portion is settled into USDC instead and the
           transaction says so.
@@ -58,9 +58,9 @@ function TermsPage() {
         <h2>Tags</h2>
         <p>
           Your tag is your X username, claimed by linking your X account. It belongs to that X
-          account: if someone else later proves they own that X username, the tag moves to them
-          and you keep your account ID. Reserved names can't be tags. Your account ID is
-          permanent and always works for signing in and being paid.
+          account: if someone else later proves they own that X username, the tag moves to them and
+          you keep your account ID. Reserved names can't be tags. Your account ID is permanent and
+          always works for signing in and being paid.
         </p>
 
         <h2>No warranty</h2>

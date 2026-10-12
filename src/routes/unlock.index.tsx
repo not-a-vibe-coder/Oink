@@ -28,7 +28,12 @@ function UnlockPage() {
     setProgress(0);
 
     try {
-      const result = await signIn({ identifier, password, totpCode: code, onProgress: setProgress });
+      const result = await signIn({
+        identifier,
+        password,
+        totpCode: code,
+        onProgress: setProgress,
+      });
       if (result.ok) {
         setPassword("");
         setCode("");
@@ -56,14 +61,19 @@ function UnlockPage() {
           Welcome <span className="serif">back</span>
         </h1>
         <p className="page-sub">
-          Your account ID or tag, your password and a code from your authenticator. Nothing else,
-          on any device.
+          Your account ID or tag, your password and a code from your authenticator. Nothing else, on
+          any device.
         </p>
       </header>
 
       <form className="stack" onSubmit={submit}>
         <div className="stack-tight">
-          <IdentifierField id="unlock-identifier" value={identifier} onChange={setIdentifier} autoFocus />
+          <IdentifierField
+            id="unlock-identifier"
+            value={identifier}
+            onChange={setIdentifier}
+            autoFocus
+          />
           <PasswordField
             id="unlock-password"
             label="Password"

@@ -16,7 +16,7 @@ export const pool = new Pool({
       : false,
 });
 
-export const query = async <R extends QueryResultRow = any>(
+export const query = async <R extends QueryResultRow = QueryResultRow>(
   text: string,
   params?: readonly unknown[] | unknown[],
 ): Promise<QueryResult<R>> => {
@@ -29,5 +29,5 @@ export const query = async <R extends QueryResultRow = any>(
       fields: [],
     };
   }
-  return pool.query<R>(text, params as any[]);
+  return pool.query<R>(text, params as unknown[] | undefined);
 };

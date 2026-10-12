@@ -15,53 +15,63 @@ const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 // POST /api/v1/enroll/start
 // Rate limit: 10/hour/IP
-enrollRouter.post("/start", ipRateLimiter("enroll", 10, 3600), async (req: Request, res: Response) => {
-  try {
-    const enrollmentId = `enr_${nanoid(24)}`;
-    const secretBase32 = generateTotpSecret();
+enrollRouter.post(
+  "/start",
+  ipRateLimiter("enroll", 10, 3600),
+  async (req: Request, res: Response) => {
+    try {
+      const enrollmentId = `enr_${nanoid(24)}`;
+      const secretBase32 = generateTotpSecret();
 
-    const secretBytes = Buffer.from(secretBase32, "utf8");
-    const { ciphertext, nonce } = encryptKms(secretBytes);
+      const secretBytes = Buffer.from(secretBase32, "utf8");
+      const { ciphertext, nonce } = encryptKms(secretBytes);
 
-    const ipHash = hashIp(getClientIp(req));
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes TTL
+      const ipHash = hashIp(getClientIp(req));
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes TTL
 
-    // The account ID is fixed here, before the browser seals the keystore, because the AAD
-    // binds it. 40 random bits make a clash vanishingly rare; the unique constraints turn one
-    // into a retry rather than a shared ID.
-    let accountId = "";
-    for (let attempt = 0; attempt < 5 && !accountId; attempt++) {
-      const candidate = generateAccountId();
-      const inserted = await query(
-        `INSERT INTO enrollments (id, account_id, totp_secret_enc, totp_nonce, ip_hash, expires_at, created_at)
+      // The account ID is fixed here, before the browser seals the keystore, because the AAD
+      // binds it. 40 random bits make a clash vanishingly rare; the unique constraints turn one
+      // into a retry rather than a shared ID.
+      let accountId = "";
+      for (let attempt = 0; attempt < 5 && !accountId; attempt++) {
+        const candidate = generateAccountId();
+        const inserted = await query(
+          `INSERT INTO enrollments (id, account_id, totp_secret_enc, totp_nonce, ip_hash, expires_at, created_at)
          SELECT $1, $2::varchar, $3, $4, $5, $6, NOW()
          WHERE NOT EXISTS (SELECT 1 FROM wallets WHERE account_id = $2::varchar)
          ON CONFLICT (account_id) DO NOTHING
          RETURNING account_id`,
-        [enrollmentId, candidate, ciphertext, nonce, ipHash, expiresAt],
-      );
-      if (inserted.rows.length > 0) accountId = candidate;
-    }
-    if (!accountId) throw new Error("Could not allocate an account ID");
+          [enrollmentId, candidate, ciphertext, nonce, ipHash, expiresAt],
+        );
+        if (inserted.rows.length > 0) accountId = candidate;
+      }
+      if (!accountId) throw new Error("Could not allocate an account ID");
 
-    res.status(201).json({
-      enrollmentId,
-      accountId,
-      totpSecret: secretBase32,
-      otpauthUri: formatOtpauthUri(accountId, secretBase32),
-      expiresAt: expiresAt.toISOString(),
-    });
-  } catch (err) {
-    console.error("Enroll start error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to start enrollment.", details: null });
-  }
-});
+      res.status(201).json({
+        enrollmentId,
+        accountId,
+        totpSecret: secretBase32,
+        otpauthUri: formatOtpauthUri(accountId, secretBase32),
+        expiresAt: expiresAt.toISOString(),
+      });
+    } catch (err) {
+      console.error("Enroll start error:", err);
+      res
+        .status(500)
+        .json({ error: "INTERNAL", message: "Failed to start enrollment.", details: null });
+    }
+  },
+);
 
 // POST /api/v1/enroll/verify-totp
 enrollRouter.post("/verify-totp", async (req: Request, res: Response) => {
   const { enrollmentId, totpCode } = req.body || {};
   if (!enrollmentId || !totpCode) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "enrollmentId and totpCode are required.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "enrollmentId and totpCode are required.",
+      details: null,
+    });
     return;
   }
 
@@ -78,7 +88,11 @@ enrollRouter.post("/verify-totp", async (req: Request, res: Response) => {
 
     const row = result.rows[0];
     if (row.consumed_at || new Date(row.expires_at).getTime() < Date.now()) {
-      res.status(410).json({ error: "VALIDATION_FAILED", message: "Enrollment expired or already used.", details: null });
+      res.status(410).json({
+        error: "VALIDATION_FAILED",
+        message: "Enrollment expired or already used.",
+        details: null,
+      });
       return;
     }
 
@@ -87,14 +101,20 @@ enrollRouter.post("/verify-totp", async (req: Request, res: Response) => {
 
     const check = verifyTotp(secretBase32, totpCode);
     if (!check.valid) {
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid authenticator code.", details: null });
+      res.status(401).json({
+        error: "INVALID_CREDENTIALS",
+        message: "Invalid authenticator code.",
+        details: null,
+      });
       return;
     }
 
     res.status(200).json({ valid: true });
   } catch (err) {
     console.error("Enroll verify TOTP error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to verify authenticator code.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to verify authenticator code.", details: null });
   }
 });
 
@@ -104,7 +124,11 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
   const { enrollmentId, publicKey, keystore, authKey, totpCode } = req.body || {};
 
   if (!enrollmentId || !publicKey || !keystore || !authKey || !totpCode) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Missing required enrollment fields.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "Missing required enrollment fields.",
+      details: null,
+    });
     return;
   }
 
@@ -116,7 +140,9 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
     keystore.cipher !== "AES-256-GCM" ||
     keystore.version !== 1
   ) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Malformed keystore blob.", details: null });
+    res
+      .status(400)
+      .json({ error: "VALIDATION_FAILED", message: "Malformed keystore blob.", details: null });
     return;
   }
 
@@ -139,7 +165,11 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
     const enr = enrResult.rows[0];
     if (enr.consumed_at || new Date(enr.expires_at).getTime() < Date.now()) {
       await client.query("ROLLBACK");
-      res.status(410).json({ error: "VALIDATION_FAILED", message: "Enrollment expired or already used.", details: null });
+      res.status(410).json({
+        error: "VALIDATION_FAILED",
+        message: "Enrollment expired or already used.",
+        details: null,
+      });
       return;
     }
 
@@ -150,7 +180,11 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
 
     if (!totpResult.valid) {
       await client.query("ROLLBACK");
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid authenticator code.", details: null });
+      res.status(401).json({
+        error: "INVALID_CREDENTIALS",
+        message: "Invalid authenticator code.",
+        details: null,
+      });
       return;
     }
 
@@ -158,10 +192,16 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
 
     // 3. One Oink account per keypair. An imported phrase that is already registered belongs
     // on the recovery path, not a second account.
-    const existingWallet = await client.query("SELECT 1 FROM wallets WHERE public_key = $1", [publicKey]);
+    const existingWallet = await client.query("SELECT 1 FROM wallets WHERE public_key = $1", [
+      publicKey,
+    ]);
     if (existingWallet.rows.length > 0) {
       await client.query("ROLLBACK");
-      res.status(409).json({ error: "WALLET_EXISTS", message: "That wallet is already registered. Recover it instead.", details: null });
+      res.status(409).json({
+        error: "WALLET_EXISTS",
+        message: "That wallet is already registered. Recover it instead.",
+        details: null,
+      });
       return;
     }
 
@@ -219,14 +259,20 @@ enrollRouter.post("/complete", async (req: Request, res: Response) => {
       sessionExpiresAt: expiresAt.toISOString(),
       createdAt: createdAt.toISOString(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     await client.query("ROLLBACK");
-    if (err?.code === "23505") {
-      res.status(409).json({ error: "WALLET_EXISTS", message: "That wallet is already registered. Recover it instead.", details: null });
+    if ((err as { code?: unknown } | null)?.code === "23505") {
+      res.status(409).json({
+        error: "WALLET_EXISTS",
+        message: "That wallet is already registered. Recover it instead.",
+        details: null,
+      });
       return;
     }
     console.error("Enroll complete error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to complete enrollment.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to complete enrollment.", details: null });
   } finally {
     client.release();
   }

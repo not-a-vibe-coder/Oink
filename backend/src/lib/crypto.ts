@@ -61,15 +61,36 @@ export function generateDecoyChallenge(identifier: string) {
   const accountId = `oink-${idBody.slice(0, 4)}-${idBody.slice(4)}`;
 
   // Deterministic 16-byte salt and 12-byte nonce derived from HMAC
-  const kdfSalt = crypto.createHmac("sha256", hmac).update("salt").digest().subarray(0, 16).toString("base64");
-  const nonce = crypto.createHmac("sha256", hmac).update("nonce").digest().subarray(0, 12).toString("base64");
+  const kdfSalt = crypto
+    .createHmac("sha256", hmac)
+    .update("salt")
+    .digest()
+    .subarray(0, 16)
+    .toString("base64");
+  const nonce = crypto
+    .createHmac("sha256", hmac)
+    .update("nonce")
+    .digest()
+    .subarray(0, 12)
+    .toString("base64");
   // Deterministic 32-byte ciphertext (16 bytes payload + 16 bytes tag)
-  const ciphertext = crypto.createHmac("sha256", hmac).update("ciphertext").digest().toString("base64");
+  const ciphertext = crypto
+    .createHmac("sha256", hmac)
+    .update("ciphertext")
+    .digest()
+    .toString("base64");
 
   return {
     accountId,
     kdfSalt,
-    kdfParams: { alg: "argon2id" as const, v: 19 as const, m: 65536 as const, t: 3 as const, p: 1 as const, len: 32 as const },
+    kdfParams: {
+      alg: "argon2id" as const,
+      v: 19 as const,
+      m: 65536 as const,
+      t: 3 as const,
+      p: 1 as const,
+      len: 32 as const,
+    },
     keystore: {
       ciphertext,
       nonce,

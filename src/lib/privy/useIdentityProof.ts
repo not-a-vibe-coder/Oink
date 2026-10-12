@@ -35,7 +35,8 @@ function writePending(purpose: ProofPurpose | null) {
   }
 }
 
-const methodFor = (purpose: ProofPurpose): ProofMethod => (purpose === "link-x" ? "twitter" : "email");
+const methodFor = (purpose: ProofPurpose): ProofMethod =>
+  purpose === "link-x" ? "twitter" : "email";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -79,14 +80,20 @@ export function useIdentityProof({
         if (!token) {
           // Privy only issues these when "Return user data in an identity token" is on in its
           // dashboard; without one there is nothing the API can verify.
-          console.error("[oink:privy] signed in, but Privy returned no identity token — enable identity tokens in the Privy dashboard");
-          onError?.("Sign-in worked, but Oink couldn't get proof of it from Privy. Try again shortly.");
+          console.error(
+            "[oink:privy] signed in, but Privy returned no identity token — enable identity tokens in the Privy dashboard",
+          );
+          onError?.(
+            "Sign-in worked, but Oink couldn't get proof of it from Privy. Try again shortly.",
+          );
           return;
         }
         await onProof(purpose, token);
       } catch (err) {
         // Name and message only; the token itself is never logged.
-        console.error(`[oink:privy] proof failed — ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
+        console.error(
+          `[oink:privy] proof failed — ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+        );
         onError?.("That sign-in didn't come through. Try again.");
       } finally {
         await logout().catch(() => undefined);

@@ -311,10 +311,7 @@ export const getFeaturedAssets = createServerFn({ method: "GET" }).handler(() =>
       ecosystem?: OinkToken[];
       featured: OinkToken[];
       count: number;
-    }>(
-      "/api/v1/assets",
-      { query: { featured: "true" } },
-    ),
+    }>("/api/v1/assets", { query: { featured: "true" } }),
   ),
 );
 
@@ -359,10 +356,7 @@ export const resolveTags = createServerFn({ method: "GET" })
     proxy(() =>
       oinkFetch<{
         results: Array<{ accountId: string; tag: string; displayName: string; avatarSeed: string }>;
-      }>(
-        "/api/v1/tags/resolve",
-        { query: { q: data.q }, cookie: inboundCookie() },
-      ),
+      }>("/api/v1/tags/resolve", { query: { q: data.q }, cookie: inboundCookie() }),
     ),
   );
 
@@ -577,13 +571,21 @@ export const getIdentityLinks = createServerFn({ method: "GET" }).handler(() =>
 );
 
 export const linkIdentity = createServerFn({ method: "POST" })
-  .validator(z.object({ kind: z.enum(["email", "x"]), identityToken: z.string().min(20).max(8192) }))
+  .validator(
+    z.object({ kind: z.enum(["email", "x"]), identityToken: z.string().min(20).max(8192) }),
+  )
   .handler(({ data }) =>
     guard(() =>
-      oinkFetch<IdentityLinks & { tagOutcome?: "assigned" | "kept" | "invalid" | "reserved"; claiming?: number }>(
-        `/api/v1/identity/${data.kind}`,
-        { method: "POST", body: { identityToken: data.identityToken }, cookie: inboundCookie() },
-      ),
+      oinkFetch<
+        IdentityLinks & {
+          tagOutcome?: "assigned" | "kept" | "invalid" | "reserved";
+          claiming?: number;
+        }
+      >(`/api/v1/identity/${data.kind}`, {
+        method: "POST",
+        body: { identityToken: data.identityToken },
+        cookie: inboundCookie(),
+      }),
     ),
   );
 
@@ -591,7 +593,10 @@ export const unlinkIdentity = createServerFn({ method: "POST" })
   .validator(z.object({ kind: z.enum(["email", "x"]) }))
   .handler(({ data }) =>
     guard(() =>
-      oinkFetch<IdentityLinks>(`/api/v1/identity/${data.kind}`, { method: "DELETE", cookie: inboundCookie() }),
+      oinkFetch<IdentityLinks>(`/api/v1/identity/${data.kind}`, {
+        method: "DELETE",
+        cookie: inboundCookie(),
+      }),
     ),
   );
 
@@ -637,7 +642,12 @@ const pageSchema = z.object({
 });
 
 export const adminTransfers = createServerFn({ method: "GET" })
-  .validator(pageSchema.extend({ status: z.string().trim().optional(), q: z.string().trim().max(128).optional() }))
+  .validator(
+    pageSchema.extend({
+      status: z.string().trim().optional(),
+      q: z.string().trim().max(128).optional(),
+    }),
+  )
   .handler(({ data }) =>
     proxy(() =>
       oinkFetch<AdminPage & { transfers: AdminTransfer[] }>("/api/v1/admin/transfers", {
@@ -648,7 +658,9 @@ export const adminTransfers = createServerFn({ method: "GET" })
   );
 
 export const adminActivity = createServerFn({ method: "GET" })
-  .validator(pageSchema.extend({ filter: z.enum(["all", "unreviewed", "flagged", "failures"]).optional() }))
+  .validator(
+    pageSchema.extend({ filter: z.enum(["all", "unreviewed", "flagged", "failures"]).optional() }),
+  )
   .handler(({ data }) =>
     proxy(() =>
       oinkFetch<AdminPage & { items: AdminActivityItem[] }>("/api/v1/admin/activity", {
@@ -669,7 +681,11 @@ export const adminReview = createServerFn({ method: "POST" })
   )
   .handler(({ data }) =>
     guard(() =>
-      oinkFetch<{ status: string }>("/api/v1/admin/reviews", { method: "POST", body: data, cookie: inboundCookie() }),
+      oinkFetch<{ status: string }>("/api/v1/admin/reviews", {
+        method: "POST",
+        body: data,
+        cookie: inboundCookie(),
+      }),
     ),
   );
 
@@ -696,7 +712,9 @@ export const adminTable = createServerFn({ method: "GET" })
 
 export const getHeldPayments = createServerFn({ method: "GET" }).handler(() =>
   proxy(() =>
-    oinkFetch<{ sent: HeldPaymentRow[]; incoming: HeldPaymentRow[] }>("/api/v1/held", { cookie: inboundCookie() }),
+    oinkFetch<{ sent: HeldPaymentRow[]; incoming: HeldPaymentRow[] }>("/api/v1/held", {
+      cookie: inboundCookie(),
+    }),
   ),
 );
 
@@ -707,7 +725,12 @@ export const adminHeld = createServerFn({ method: "GET" })
       oinkFetch<
         AdminPage & {
           held: AdminHeldPayment[];
-          pending: Array<{ symbol: string; payments: number; amount_base: string; decimals: number }>;
+          pending: Array<{
+            symbol: string;
+            payments: number;
+            amount_base: string;
+            decimals: number;
+          }>;
         }
       >("/api/v1/admin/held", { query: data, cookie: inboundCookie() }),
     ),

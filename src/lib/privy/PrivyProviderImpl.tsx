@@ -1,7 +1,13 @@
 import { PrivyProvider } from "@privy-io/react-auth";
 import type { ReactNode } from "react";
 
-export default function PrivyProviderImpl({ appId, children }: { appId: string; children: ReactNode }) {
+export default function PrivyProviderImpl({
+  appId,
+  children,
+}: {
+  appId: string;
+  children: ReactNode;
+}) {
   return (
     <PrivyProvider
       appId={appId}

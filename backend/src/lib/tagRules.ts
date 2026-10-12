@@ -35,7 +35,11 @@ export function normalizeTag(raw: string): string {
   return tag;
 }
 
-export function validateTag(raw: string): { valid: boolean; reason: "taken" | "reserved" | "invalid" | null; tag: string } {
+export function validateTag(raw: string): {
+  valid: boolean;
+  reason: "taken" | "reserved" | "invalid" | null;
+  tag: string;
+} {
   const tag = normalizeTag(raw);
 
   if (!/^[a-z0-9_]{3,20}$/.test(tag)) {

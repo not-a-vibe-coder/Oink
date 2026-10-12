@@ -76,7 +76,9 @@ export function getConfig(): Config {
     jupiterApiKey: optional("JUPITER_API_KEY", ""),
     kmsKey: isProduction ? requiredSecret("OINK_KMS_KEY") : process.env.OINK_KMS_KEY,
     decoyKey: isProduction ? requiredSecret("OINK_DECOY_KEY") : process.env.OINK_DECOY_KEY,
-    sessionSecret: isProduction ? requiredSecret("OINK_SESSION_SECRET") : process.env.OINK_SESSION_SECRET,
+    sessionSecret: isProduction
+      ? requiredSecret("OINK_SESSION_SECRET")
+      : process.env.OINK_SESSION_SECRET,
     argonPepper: isProduction ? requiredSecret("OINK_ARGON_PEPPER") : process.env.OINK_ARGON_PEPPER,
     feePayerSecretKey: process.env.FEE_PAYER_SECRET_KEY,
     sponsorship: {

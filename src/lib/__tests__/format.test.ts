@@ -10,7 +10,13 @@ test("base units convert exactly, with no floating point", () => {
 });
 
 test("counterparty prefers the tag, then the account ID, then the address", () => {
-  expect(counterparty("izuu", "oink-k7p2-9xqm", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")).toBe("@izuu");
-  expect(counterparty(null, "oink-k7p2-9xqm", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")).toBe("oink-k7p2-9xqm");
-  expect(counterparty(null, null, "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")).not.toContain("@");
+  expect(
+    counterparty("izuu", "oink-k7p2-9xqm", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"),
+  ).toBe("@izuu");
+  expect(counterparty(null, "oink-k7p2-9xqm", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")).toBe(
+    "oink-k7p2-9xqm",
+  );
+  expect(counterparty(null, null, "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")).not.toContain(
+    "@",
+  );
 });

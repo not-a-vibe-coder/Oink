@@ -42,7 +42,11 @@ export interface HeldWalletRow {
   allowed_destinations: string[];
 }
 
-export function identityKey(identity: HeldIdentity): { kind: "email" | "x"; value: string; display: string } {
+export function identityKey(identity: HeldIdentity): {
+  kind: "email" | "x";
+  value: string;
+  display: string;
+} {
   return identity.kind === "email"
     ? { kind: "email", value: identity.email.toLowerCase(), display: identity.email.toLowerCase() }
     : { kind: "x", value: identity.userId, display: `@${identity.username}` };
@@ -65,11 +69,23 @@ export async function ensureHoldingWallet(identity: HeldIdentity): Promise<HeldW
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (identity_kind, identity_value) DO NOTHING
      RETURNING *`,
-    [key.kind, key.value, key.display, created.privyUserId, created.walletId, created.address, created.policyId, created.ruleId],
+    [
+      key.kind,
+      key.value,
+      key.display,
+      created.privyUserId,
+      created.walletId,
+      created.address,
+      created.policyId,
+      created.ruleId,
+    ],
   );
   if (inserted.rows[0]) return inserted.rows[0];
   return (
-    await query<HeldWalletRow>("SELECT * FROM held_wallets WHERE identity_kind = $1 AND identity_value = $2", [key.kind, key.value])
+    await query<HeldWalletRow>(
+      "SELECT * FROM held_wallets WHERE identity_kind = $1 AND identity_value = $2",
+      [key.kind, key.value],
+    )
   ).rows[0];
 }
 
@@ -85,9 +101,16 @@ export async function recordHeldDeposit(input: {
   signature: string;
   note?: string | null;
   db?: Db;
-}): Promise<{ id: number; expiresAt: Date; recipientDisplay: string; recipientKind: "email" | "x" }> {
+}): Promise<{
+  id: number;
+  expiresAt: Date;
+  recipientDisplay: string;
+  recipientKind: "email" | "x";
+}> {
   const db = input.db ?? ({ query } as unknown as Db);
-  const wallet = (await db.query("SELECT * FROM held_wallets WHERE address = $1", [input.heldWalletAddress])).rows[0];
+  const wallet = (
+    await db.query("SELECT * FROM held_wallets WHERE address = $1", [input.heldWalletAddress])
+  ).rows[0];
   if (!wallet) throw new Error("Deposit into an address that is not a holding wallet");
   const hours = getConfig().heldPaymentHours;
   const row = (
@@ -117,19 +140,37 @@ export async function recordHeldDeposit(input: {
   await recordEvent(
     input.senderAccountId,
     "held_sent",
-    { to: wallet.identity_display, amount: input.amountBase.toString(), symbol: input.symbol, heldPaymentId: row.id },
+    {
+      to: wallet.identity_display,
+      amount: input.amountBase.toString(),
+      symbol: input.symbol,
+      heldPaymentId: row.id,
+    },
     null,
     db,
   );
-  return { id: Number(row.id), expiresAt: new Date(row.expires_at), recipientDisplay: wallet.identity_display, recipientKind: wallet.identity_kind };
+  return {
+    id: Number(row.id),
+    expiresAt: new Date(row.expires_at),
+    recipientDisplay: wallet.identity_display,
+    recipientKind: wallet.identity_kind,
+  };
 }
 
 async function allowDestination(wallet: HeldWalletRow, destination: string) {
-  const current: string[] = Array.isArray(wallet.allowed_destinations) ? wallet.allowed_destinations : [];
+  const current: string[] = Array.isArray(wallet.allowed_destinations)
+    ? wallet.allowed_destinations
+    : [];
   if (current.includes(destination)) return;
   const next = [...current, destination];
-  await getHoldingProvider().setAllowedDestinations({ policyId: wallet.policy_id, ruleId: wallet.policy_rule_id }, next);
-  await query("UPDATE held_wallets SET allowed_destinations = $1 WHERE id = $2", [JSON.stringify(next), wallet.id]);
+  await getHoldingProvider().setAllowedDestinations(
+    { policyId: wallet.policy_id, ruleId: wallet.policy_rule_id },
+    next,
+  );
+  await query("UPDATE held_wallets SET allowed_destinations = $1 WHERE id = $2", [
+    JSON.stringify(next),
+    wallet.id,
+  ]);
   wallet.allowed_destinations = next;
 }
 
@@ -144,18 +185,27 @@ async function finalize(paymentId: number, mode: ReleaseMode) {
       await client.query(
         `UPDATE held_payments SET status = $2, released_at = NOW(), last_error = NULL, updated_at = NOW()
          WHERE id = $1 AND status = $3 RETURNING *`,
-        [paymentId, mode === "claim" ? "claimed" : "refunded", mode === "claim" ? "claiming" : "refunding"],
+        [
+          paymentId,
+          mode === "claim" ? "claimed" : "refunded",
+          mode === "claim" ? "claiming" : "refunding",
+        ],
       )
     ).rows[0];
     if (!p) {
       await client.query("ROLLBACK");
       return;
     }
-    const wallet = (await client.query("SELECT address FROM held_wallets WHERE id = $1", [p.held_wallet_id])).rows[0];
+    const wallet = (
+      await client.query("SELECT address FROM held_wallets WHERE id = $1", [p.held_wallet_id])
+    ).rows[0];
     const recipientAccount = mode === "claim" ? p.claimant_account_id : p.sender_account_id;
     const recipientWallet =
-      (await client.query("SELECT public_key FROM wallets WHERE account_id = $1", [recipientAccount])).rows[0]?.public_key ??
-      p.sender_wallet;
+      (
+        await client.query("SELECT public_key FROM wallets WHERE account_id = $1", [
+          recipientAccount,
+        ])
+      ).rows[0]?.public_key ?? p.sender_wallet;
     await client.query(
       `INSERT INTO transfers (signature, direction, sender_account_id, sender_wallet, recipient_account_id, recipient_wallet,
          input_mint, input_symbol, input_amount, output_breakdown, mix_applied, fee_sponsored, memo, source, status, confirmed_at)
@@ -169,7 +219,9 @@ async function finalize(paymentId: number, mode: ReleaseMode) {
         p.mint,
         p.symbol,
         formatBaseUnits(p.amount_base, p.decimals),
-        mode === "claim" ? `Claimed from ${p.recipient_display}` : `Refund: ${p.recipient_display} did not claim in time`,
+        mode === "claim"
+          ? `Claimed from ${p.recipient_display}`
+          : `Refund: ${p.recipient_display} did not claim in time`,
       ],
     );
     await recordEvent(
@@ -205,7 +257,11 @@ async function giveBack(paymentId: number, error: string) {
  * Moves one payment out of its holding wallet: to the claimant (claim, only before expiry)
  * or back to the sender (refund, only after).
  */
-export async function releaseHeldPayment(paymentId: number, mode: ReleaseMode, claimantAccountId?: string): Promise<ReleaseResult> {
+export async function releaseHeldPayment(
+  paymentId: number,
+  mode: ReleaseMode,
+  claimantAccountId?: string,
+): Promise<ReleaseResult> {
   const taken = (
     await query(
       `UPDATE held_payments
@@ -213,7 +269,11 @@ export async function releaseHeldPayment(paymentId: number, mode: ReleaseMode, c
        WHERE id = $1 AND status = 'held'
          AND (($2 = 'claiming' AND expires_at > NOW()) OR ($2 = 'refunding' AND expires_at <= NOW()))
        RETURNING *`,
-      [paymentId, mode === "claim" ? "claiming" : "refunding", mode === "claim" ? claimantAccountId ?? null : null],
+      [
+        paymentId,
+        mode === "claim" ? "claiming" : "refunding",
+        mode === "claim" ? (claimantAccountId ?? null) : null,
+      ],
     )
   ).rows[0];
   if (!taken) return "skipped";
@@ -222,11 +282,14 @@ export async function releaseHeldPayment(paymentId: number, mode: ReleaseMode, c
   try {
     const destinationOwner =
       mode === "claim"
-        ? (await query("SELECT public_key FROM wallets WHERE account_id = $1", [claimantAccountId])).rows[0]?.public_key
+        ? (await query("SELECT public_key FROM wallets WHERE account_id = $1", [claimantAccountId]))
+            .rows[0]?.public_key
         : taken.sender_wallet;
     if (!destinationOwner) throw new Error("Claimant wallet not found");
 
-    const wallet = (await query<HeldWalletRow>("SELECT * FROM held_wallets WHERE id = $1", [taken.held_wallet_id])).rows[0];
+    const wallet = (
+      await query<HeldWalletRow>("SELECT * FROM held_wallets WHERE id = $1", [taken.held_wallet_id])
+    ).rows[0];
     const chain = getReleaseChain();
     const destination = await chain.ensureTokenAccount(destinationOwner, taken.mint);
     await allowDestination(wallet, destination);
@@ -253,11 +316,15 @@ export async function releaseHeldPayment(paymentId: number, mode: ReleaseMode, c
     const message = err instanceof Error ? err.message : String(err);
     if (sent) {
       // It may still land. Leave it in flight; reconcile() asks the chain before anything else.
-      await query("UPDATE held_payments SET last_error = $2, updated_at = NOW() WHERE id = $1", [paymentId, message.slice(0, 500)]);
+      await query("UPDATE held_payments SET last_error = $2, updated_at = NOW() WHERE id = $1", [
+        paymentId,
+        message.slice(0, 500),
+      ]);
       return "in_flight";
     }
     await giveBack(paymentId, message);
-    const after = (await query("SELECT status FROM held_payments WHERE id = $1", [paymentId])).rows[0];
+    const after = (await query("SELECT status FROM held_payments WHERE id = $1", [paymentId]))
+      .rows[0];
     return after?.status === "failed" ? "failed" : "retry";
   }
 }
@@ -275,9 +342,13 @@ export async function reconcileInFlight(): Promise<void> {
       await giveBack(row.id, "Interrupted before the release was built");
       continue;
     }
-    const outcome = await getReleaseChain().outcome(row.release_signature, Number(row.release_last_valid_height));
+    const outcome = await getReleaseChain().outcome(
+      row.release_signature,
+      Number(row.release_last_valid_height),
+    );
     if (outcome === "confirmed") await finalize(row.id, mode);
-    else if (outcome === "failed" || outcome === "expired") await giveBack(row.id, `Release ${outcome}`);
+    else if (outcome === "failed" || outcome === "expired")
+      await giveBack(row.id, `Release ${outcome}`);
     // pending: still in flight, look again next round
   }
 }
@@ -296,7 +367,9 @@ export async function claimableFor(accountId: string): Promise<number[]> {
   return rows.rows.map((r) => Number(r.id));
 }
 
-export async function claimForAccount(accountId: string): Promise<{ released: number; pending: number }> {
+export async function claimForAccount(
+  accountId: string,
+): Promise<{ released: number; pending: number }> {
   let released = 0;
   let pending = 0;
   for (const id of await claimableFor(accountId)) {
@@ -321,8 +394,11 @@ export async function runHeldPaymentsJob(): Promise<{ claimed: number; refunded:
   for (const row of claimants.rows) claimed += (await claimForAccount(row.account_id)).released;
 
   let refunded = 0;
-  const due = await query(`SELECT id FROM held_payments WHERE status = 'held' AND expires_at <= NOW() ORDER BY expires_at LIMIT 25`);
-  for (const row of due.rows) if ((await releaseHeldPayment(Number(row.id), "refund")) === "released") refunded += 1;
+  const due = await query(
+    `SELECT id FROM held_payments WHERE status = 'held' AND expires_at <= NOW() ORDER BY expires_at LIMIT 25`,
+  );
+  for (const row of due.rows)
+    if ((await releaseHeldPayment(Number(row.id), "refund")) === "released") refunded += 1;
 
   return { claimed, refunded };
 }

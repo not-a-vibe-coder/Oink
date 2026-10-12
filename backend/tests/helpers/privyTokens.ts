@@ -9,7 +9,13 @@ export async function installFakePrivy(appId = "test-app") {
 
   async function mint(
     linkedAccounts: unknown[],
-    overrides: { sub?: string; iss?: string; aud?: string; expSeconds?: number; key?: CryptoKey } = {},
+    overrides: {
+      sub?: string;
+      iss?: string;
+      aud?: string;
+      expSeconds?: number;
+      key?: CryptoKey;
+    } = {},
   ): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     return new SignJWT({ linked_accounts: JSON.stringify(linkedAccounts) })
@@ -23,7 +29,12 @@ export async function installFakePrivy(appId = "test-app") {
   }
 
   const email = (address: string) => ({ type: "email", address });
-  const x = (subject: string, username: string) => ({ type: "twitter_oauth", subject, username, name: username });
+  const x = (subject: string, username: string) => ({
+    type: "twitter_oauth",
+    subject,
+    username,
+    name: username,
+  });
 
   return { mint, email, x };
 }

@@ -58,10 +58,16 @@ mixRouter.put("/", requireSession, async (req: Request, res: Response) => {
   const seenMints = new Set<string>();
 
   for (const item of mix) {
-    if (!item.mint || !Number.isInteger(item.basisPoints) || item.basisPoints <= 0 || item.basisPoints > 10000) {
+    if (
+      !item.mint ||
+      !Number.isInteger(item.basisPoints) ||
+      item.basisPoints <= 0 ||
+      item.basisPoints > 10000
+    ) {
       res.status(400).json({
         error: "MIX_INVALID",
-        message: "Each asset in a mix needs a valid mint and whole basis points between 1 and 10000.",
+        message:
+          "Each asset in a mix needs a valid mint and whole basis points between 1 and 10000.",
         details: null,
       });
       return;

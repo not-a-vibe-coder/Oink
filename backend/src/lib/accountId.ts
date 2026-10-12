@@ -35,5 +35,7 @@ export function parseIdentifier(raw: unknown): Identifier | null {
 
 // SQL fragment and parameter for looking a wallet up by either form.
 export function identifierLookup(id: Identifier): { where: string; value: string } {
-  return id.kind === "account" ? { where: "account_id = $1", value: id.accountId } : { where: "tag = $1", value: id.tag };
+  return id.kind === "account"
+    ? { where: "account_id = $1", value: id.accountId }
+    : { where: "tag = $1", value: id.tag };
 }

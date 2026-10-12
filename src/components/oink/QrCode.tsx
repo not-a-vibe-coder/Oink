@@ -42,7 +42,11 @@ export function QrCode({ value, size = 244, alt }: { value: string; size?: numbe
       ) : failed ? (
         <div className="qr-failed" style={{ width: size, height: size }}>
           <p className="meta">The QR code didn't load.</p>
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setAttempt((n) => n + 1)}>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={() => setAttempt((n) => n + 1)}
+          >
             Retry
           </button>
         </div>

@@ -29,10 +29,8 @@ export async function recordEvent(
   ipHash: string | null = null,
   db: Db = { query } as unknown as Db,
 ): Promise<void> {
-  await db.query("INSERT INTO account_events (account_id, kind, detail, ip_hash) VALUES ($1, $2, $3, $4)", [
-    accountId,
-    kind,
-    JSON.stringify(detail),
-    ipHash,
-  ]);
+  await db.query(
+    "INSERT INTO account_events (account_id, kind, detail, ip_hash) VALUES ($1, $2, $3, $4)",
+    [accountId, kind, JSON.stringify(detail), ipHash],
+  );
 }

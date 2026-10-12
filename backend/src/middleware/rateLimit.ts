@@ -3,7 +3,11 @@ import type { NextFunction, Request, Response } from "express";
 import { query } from "../db";
 
 export function hashIp(ip: string): string {
-  return crypto.createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 32);
+  return crypto
+    .createHash("sha256")
+    .update(ip || "unknown")
+    .digest("hex")
+    .slice(0, 32);
 }
 
 function sameSecret(given: unknown, expected: string): boolean {
@@ -23,12 +27,20 @@ function sameSecret(given: unknown, expected: string): boolean {
 export function getClientIp(req: Request): string {
   const secret = process.env.OINK_PROXY_SECRET;
   const proxied = req.headers["x-oink-client-ip"];
-  if (secret && typeof proxied === "string" && proxied.trim() && sameSecret(req.headers["x-oink-proxy-secret"], secret)) {
+  if (
+    secret &&
+    typeof proxied === "string" &&
+    proxied.trim() &&
+    sameSecret(req.headers["x-oink-proxy-secret"], secret)
+  ) {
     return proxied.trim();
   }
   const forwarded = req.headers["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.trim()) {
-    const hops = forwarded.split(",").map((hop) => hop.trim()).filter(Boolean);
+    const hops = forwarded
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter(Boolean);
     if (hops.length > 0) return hops[hops.length - 1];
   }
   return req.socket.remoteAddress || "127.0.0.1";
@@ -50,7 +62,9 @@ export async function recordLoginAttempt(
   }
 }
 
-export async function checkAccountLockout(accountId: string): Promise<{ locked: boolean; retryAfterSeconds?: number }> {
+export async function checkAccountLockout(
+  accountId: string,
+): Promise<{ locked: boolean; retryAfterSeconds?: number }> {
   try {
     const res = await query(
       `SELECT succeeded, created_at

@@ -1,3 +1,4 @@
+import type { QueryResultRow } from "pg";
 import crypto from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { VersionedTransaction } from "@solana/web3.js";
@@ -7,8 +8,16 @@ import { parseRecipient } from "../lib/recipient";
 import { getConfig } from "../config";
 import { sendEmail, heldPaymentEmail } from "../services/email";
 import { lookupXUser } from "../services/xUsers";
-import { heldPaymentsConfigured, HeldPaymentsNotConfiguredError, type HeldIdentity } from "../services/held/provider";
-import { ensureHoldingWallet, formatBaseUnits, recordHeldDeposit } from "../services/held/heldPayments";
+import {
+  heldPaymentsConfigured,
+  HeldPaymentsNotConfiguredError,
+  type HeldIdentity,
+} from "../services/held/provider";
+import {
+  ensureHoldingWallet,
+  formatBaseUnits,
+  recordHeldDeposit,
+} from "../services/held/heldPayments";
 import { requireSession } from "../middleware/session";
 import {
   calculateMixQuotes,
@@ -56,9 +65,13 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
 
   try {
     // 1. Get sender wallet public key
-    const senderRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [senderAccountId]);
+    const senderRes = await query("SELECT public_key FROM wallets WHERE account_id = $1", [
+      senderAccountId,
+    ]);
     if (senderRes.rows.length === 0) {
-      res.status(404).json({ error: "NOT_FOUND", message: "Sender wallet not found.", details: null });
+      res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Sender wallet not found.", details: null });
       return;
     }
     const senderWallet = senderRes.rows[0].public_key;
@@ -71,13 +84,17 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
     const trimmedRecipient = String(recipient).trim();
     const parsed = parseRecipient(trimmedRecipient);
     if (!parsed) {
-      res.status(404).json({ error: "NOT_FOUND", message: `Recipient ${trimmedRecipient} not found.`, details: null });
+      res.status(404).json({
+        error: "NOT_FOUND",
+        message: `Recipient ${trimmedRecipient} not found.`,
+        details: null,
+      });
       return;
     }
 
     // An email or X account pays its linked Oink wallet if there is one (mix and all), and
     // otherwise becomes a held payment the owner can claim for 48 hours (docs/12 §5).
-    let recRes: { rows: any[] } = { rows: [] };
+    let recRes: { rows: QueryResultRow[] } = { rows: [] };
     if (parsed.kind === "identifier") {
       const lookup = identifierLookup(parsed.id);
       recRes = await query(
@@ -122,13 +139,20 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
       resolvedRecipient = {
         kind: "held",
         wallet: "", // the holding wallet is created at build, not on every re-quote
-        held: parsed.kind === "email" ? { kind: "email", email: parsed.email } : { kind: "x", username: parsed.username },
+        held:
+          parsed.kind === "email"
+            ? { kind: "email", email: parsed.email }
+            : { kind: "x", username: parsed.username },
         displayName: parsed.kind === "email" ? parsed.email : `@${parsed.username}`,
       };
       effectiveApplyMix = false; // no mix until someone owns the money
     } else {
       if (recRes.rows.length === 0) {
-        res.status(404).json({ error: "NOT_FOUND", message: `Recipient ${trimmedRecipient} not found.`, details: null });
+        res.status(404).json({
+          error: "NOT_FOUND",
+          message: `Recipient ${trimmedRecipient} not found.`,
+          details: null,
+        });
         return;
       }
 
@@ -216,9 +240,13 @@ transferRouter.post("/quote", requireSession, async (req: Request, res: Response
       quoteId: quote.quoteId,
       expiresAt: quote.expiresAt,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Transfer quote error:", err);
-    res.status(502).json({ error: "QUOTE_FAILED", message: err?.message || "Failed to generate quote.", details: null });
+    res.status(502).json({
+      error: "QUOTE_FAILED",
+      message: (err instanceof Error && err.message) || "Failed to generate quote.",
+      details: null,
+    });
   }
 });
 
@@ -228,18 +256,26 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
   const senderAccountId = req.accountId!;
 
   if (!quoteId) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "quoteId is required.", details: null });
+    res
+      .status(400)
+      .json({ error: "VALIDATION_FAILED", message: "quoteId is required.", details: null });
     return;
   }
 
   const quote = getStoredQuote(quoteId);
   if (!quote) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Quote has expired or does not exist. Please re-quote.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "Quote has expired or does not exist. Please re-quote.",
+      details: null,
+    });
     return;
   }
 
   if (quote.senderAccountId && quote.senderAccountId !== senderAccountId) {
-    res.status(403).json({ error: "FORBIDDEN", message: "Quote belongs to another account.", details: null });
+    res
+      .status(403)
+      .json({ error: "FORBIDDEN", message: "Quote belongs to another account.", details: null });
     return;
   }
 
@@ -248,7 +284,8 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
       if (quote.inputToken.isNative) {
         res.status(400).json({
           error: "VALIDATION_FAILED",
-          message: "Send a token like USDC to someone who isn't on Oink yet — SOL can't be held for them.",
+          message:
+            "Send a token like USDC to someone who isn't on Oink yet — SOL can't be held for them.",
           details: null,
         });
         return;
@@ -262,7 +299,10 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
         if (found.status !== "found") {
           res.status(found.status === "not_found" ? 404 : 503).json({
             error: found.status === "not_found" ? "NOT_FOUND" : "X_LOOKUP_UNAVAILABLE",
-            message: found.status === "not_found" ? `There's no X account called @${held.username}.` : "X couldn't be reached. Try again shortly.",
+            message:
+              found.status === "not_found"
+                ? `There's no X account called @${held.username}.`
+                : "X couldn't be reached. Try again shortly.",
             details: null,
           });
           return;
@@ -272,7 +312,7 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
       quote.recipient.wallet = (await ensureHoldingWallet(identity)).address;
     }
 
-    let shouldSponsor = sponsorFee;
+    const shouldSponsor = sponsorFee;
     if (shouldSponsor) {
       const budget = await checkSponsorshipBudget(senderAccountId);
       if (!budget.eligible) {
@@ -295,13 +335,21 @@ transferRouter.post("/build", requireSession, async (req: Request, res: Response
       lastValidBlockHeight: plan.lastValidBlockHeight,
       addressLookupTableAddresses: plan.addressLookupTableAddresses,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof HeldPaymentsNotConfiguredError) {
-      res.status(503).json({ error: "NOT_CONFIGURED", message: "Paying people who haven't joined isn't switched on yet.", details: null });
+      res.status(503).json({
+        error: "NOT_CONFIGURED",
+        message: "Paying people who haven't joined isn't switched on yet.",
+        details: null,
+      });
       return;
     }
     console.error("Transfer build error:", err);
-    res.status(500).json({ error: "INTERNAL", message: err?.message || "Failed to build transaction.", details: null });
+    res.status(500).json({
+      error: "INTERNAL",
+      message: (err instanceof Error && err.message) || "Failed to build transaction.",
+      details: null,
+    });
   }
 });
 
@@ -432,7 +480,9 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
       });
       let notified = false;
       if (deposit.recipientKind === "email") {
-        const sender = (await query("SELECT tag FROM wallets WHERE account_id = $1", [senderAccountId])).rows[0];
+        const sender = (
+          await query("SELECT tag FROM wallets WHERE account_id = $1", [senderAccountId])
+        ).rows[0];
         const senderLabel = sender?.tag
           ? `@${sender.tag}`
           : `An Oink user (${quote.senderWallet.slice(0, 4)}…${quote.senderWallet.slice(-4)})`;
@@ -446,9 +496,14 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
             appUrl: getConfig().appUrl,
           }),
         );
-        if (notified) await query("UPDATE held_payments SET notified_at = NOW() WHERE id = $1", [deposit.id]);
+        if (notified)
+          await query("UPDATE held_payments SET notified_at = NOW() WHERE id = $1", [deposit.id]);
       }
-      held = { expiresAt: deposit.expiresAt.toISOString(), recipient: deposit.recipientDisplay, notified };
+      held = {
+        expiresAt: deposit.expiresAt.toISOString(),
+        recipient: deposit.recipientDisplay,
+        notified,
+      };
     }
 
     res.status(200).json({
@@ -458,9 +513,13 @@ transferRouter.post("/submit", requireSession, async (req: Request, res: Respons
       transferId,
       held,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Transfer submit error:", err);
-    res.status(500).json({ error: "INTERNAL", message: err?.message || "Failed to submit transaction.", details: null });
+    res.status(500).json({
+      error: "INTERNAL",
+      message: (err instanceof Error && err.message) || "Failed to submit transaction.",
+      details: null,
+    });
   }
 });
 
@@ -506,7 +565,9 @@ transferRouter.get("/history", requireSession, async (req: Request, res: Respons
     });
   } catch (err) {
     console.error("Transfer history error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to fetch transfer history.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to fetch transfer history.", details: null });
   }
 });
 
@@ -522,7 +583,9 @@ transferRouter.get("/:signature", requireSession, async (req: Request, res: Resp
       [signature, req.accountId],
     );
     if (resRow.rows.length === 0) {
-      res.status(404).json({ error: "NOT_FOUND", message: "Transfer receipt not found.", details: null });
+      res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Transfer receipt not found.", details: null });
       return;
     }
 

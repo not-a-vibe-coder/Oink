@@ -1,7 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { query } from "../db";
-import { InvalidIdentityTokenError, PrivyNotConfiguredError, verifyIdentityToken } from "../lib/privy";
+import {
+  InvalidIdentityTokenError,
+  PrivyNotConfiguredError,
+  verifyIdentityToken,
+} from "../lib/privy";
 import {
   adminTokenHash,
   clearAdminCookie,
@@ -19,12 +23,10 @@ import { getConnection } from "../services/rpc";
 export const adminRouter = Router();
 
 async function audit(req: Request, action: string, detail: Record<string, unknown> = {}) {
-  await query("INSERT INTO admin_audit (admin_email, action, detail, ip_hash) VALUES ($1, $2, $3, $4)", [
-    req.adminEmail,
-    action,
-    JSON.stringify(detail),
-    hashIp(getClientIp(req)),
-  ]);
+  await query(
+    "INSERT INTO admin_audit (admin_email, action, detail, ip_hash) VALUES ($1, $2, $3, $4)",
+    [req.adminEmail, action, JSON.stringify(detail), hashIp(getClientIp(req))],
+  );
 }
 
 function page(req: Request, max = 200) {
@@ -37,37 +39,61 @@ function page(req: Request, max = 200) {
 
 // POST /api/v1/admin/login { identityToken } — a Privy email sign-in whose address is listed
 // in ADMIN_EMAILS. Any other outcome gets the same answer.
-adminRouter.post("/login", ipRateLimiter("admin_login", 10, 3600), async (req: Request, res: Response) => {
-  const ipHash = hashIp(getClientIp(req));
-  try {
-    const identity = await verifyIdentityToken(req.body?.identityToken);
-    if (!identity.email || !isAdminEmail(identity.email)) {
-      await query("INSERT INTO login_attempts (account_id, ip_hash, kind, succeeded) VALUES (NULL, $1, 'admin_login', FALSE)", [ipHash]);
-      res.status(403).json({ error: "FORBIDDEN", message: "That account doesn't have admin access.", details: null });
-      return;
+adminRouter.post(
+  "/login",
+  ipRateLimiter("admin_login", 10, 3600),
+  async (req: Request, res: Response) => {
+    const ipHash = hashIp(getClientIp(req));
+    try {
+      const identity = await verifyIdentityToken(req.body?.identityToken);
+      if (!identity.email || !isAdminEmail(identity.email)) {
+        await query(
+          "INSERT INTO login_attempts (account_id, ip_hash, kind, succeeded) VALUES (NULL, $1, 'admin_login', FALSE)",
+          [ipHash],
+        );
+        res.status(403).json({
+          error: "FORBIDDEN",
+          message: "That account doesn't have admin access.",
+          details: null,
+        });
+        return;
+      }
+      const { token, expiresAt } = await createAdminSession(
+        identity.email,
+        req.headers["user-agent"],
+        ipHash,
+      );
+      req.adminEmail = identity.email;
+      await audit(req, "login");
+      res.setHeader("Set-Cookie", serializeAdminCookie(token, expiresAt));
+      res.status(200).json({ email: identity.email, expiresAt: expiresAt.toISOString() });
+    } catch (err) {
+      if (err instanceof PrivyNotConfiguredError) {
+        res.status(503).json({
+          error: "NOT_CONFIGURED",
+          message: "Admin sign-in needs Privy to be configured.",
+          details: null,
+        });
+        return;
+      }
+      if (err instanceof InvalidIdentityTokenError) {
+        res.status(401).json({
+          error: "INVALID_IDENTITY",
+          message: "That sign-in didn't verify. Try again.",
+          details: null,
+        });
+        return;
+      }
+      console.error("Admin login error:", err);
+      res.status(500).json({ error: "INTERNAL", message: "Admin sign-in failed.", details: null });
     }
-    const { token, expiresAt } = await createAdminSession(identity.email, req.headers["user-agent"], ipHash);
-    req.adminEmail = identity.email;
-    await audit(req, "login");
-    res.setHeader("Set-Cookie", serializeAdminCookie(token, expiresAt));
-    res.status(200).json({ email: identity.email, expiresAt: expiresAt.toISOString() });
-  } catch (err) {
-    if (err instanceof PrivyNotConfiguredError) {
-      res.status(503).json({ error: "NOT_CONFIGURED", message: "Admin sign-in needs Privy to be configured.", details: null });
-      return;
-    }
-    if (err instanceof InvalidIdentityTokenError) {
-      res.status(401).json({ error: "INVALID_IDENTITY", message: "That sign-in didn't verify. Try again.", details: null });
-      return;
-    }
-    console.error("Admin login error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Admin sign-in failed.", details: null });
-  }
-});
+  },
+);
 
 adminRouter.post("/logout", async (req: Request, res: Response) => {
   const tokenHash = adminTokenHash(req);
-  if (tokenHash) await query("UPDATE admin_sessions SET revoked_at = NOW() WHERE token_hash = $1", [tokenHash]);
+  if (tokenHash)
+    await query("UPDATE admin_sessions SET revoked_at = NOW() WHERE token_hash = $1", [tokenHash]);
   res.setHeader("Set-Cookie", clearAdminCookie());
   res.status(204).end();
 });
@@ -121,7 +147,8 @@ adminRouter.get("/overview", requireAdmin, async (_req: Request, res: Response) 
 adminRouter.get("/transfers", requireAdmin, async (req: Request, res: Response) => {
   const { limit, offset } = page(req);
   const status = typeof req.query.status === "string" && req.query.status ? req.query.status : null;
-  const q = typeof req.query.q === "string" && req.query.q.trim() ? req.query.q.trim().toLowerCase() : null;
+  const q =
+    typeof req.query.q === "string" && req.query.q.trim() ? req.query.q.trim().toLowerCase() : null;
   try {
     const where = `WHERE ($1::text IS NULL OR t.status = $1)
       AND ($2::text IS NULL OR t.signature ILIKE '%' || $2 || '%' OR t.sender_wallet ILIKE '%' || $2 || '%'
@@ -130,7 +157,9 @@ adminRouter.get("/transfers", requireAdmin, async (req: Request, res: Response) 
     const joins = `LEFT JOIN wallets s ON s.account_id = t.sender_account_id
       LEFT JOIN wallets r ON r.account_id = t.recipient_account_id
       LEFT JOIN admin_reviews v ON v.source = 'transfer' AND v.source_id = t.id`;
-    const total = (await query(`SELECT COUNT(*)::int AS n FROM transfers t ${joins} ${where}`, [status, q])).rows[0].n;
+    const total = (
+      await query(`SELECT COUNT(*)::int AS n FROM transfers t ${joins} ${where}`, [status, q])
+    ).rows[0].n;
     const rows = await query(
       `SELECT t.id, t.signature, t.direction, t.source, t.status, t.input_symbol, t.input_amount, t.output_breakdown,
               t.mix_applied, t.fee_sponsored, t.sender_account_id, s.tag AS sender_tag, t.sender_wallet,
@@ -143,7 +172,9 @@ adminRouter.get("/transfers", requireAdmin, async (req: Request, res: Response) 
     res.status(200).json({ transfers: rows.rows, total, limit, offset });
   } catch (err) {
     console.error("Admin transfers error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to load transfers.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to load transfers.", details: null });
   }
 });
 
@@ -170,7 +201,8 @@ adminRouter.get("/activity", requireAdmin, async (req: Request, res: Response) =
       FROM login_attempts a
     ) x LEFT JOIN admin_reviews v ON v.source = x.source AND v.source_id = x.id
         LEFT JOIN wallets w ON w.account_id = x.account_id`;
-    const total = (await query(`SELECT COUNT(*)::int AS n FROM ${feed} WHERE ${condition}`)).rows[0].n;
+    const total = (await query(`SELECT COUNT(*)::int AS n FROM ${feed} WHERE ${condition}`)).rows[0]
+      .n;
     const rows = await query(
       `SELECT x.source, x.id, x.account_id, w.tag, x.kind, x.detail, LEFT(x.ip_hash, 8) AS ip, x.succeeded, x.created_at,
               v.status AS review_status, v.note AS review_note, v.admin_email AS reviewed_by
@@ -189,7 +221,11 @@ adminRouter.get("/activity", requireAdmin, async (req: Request, res: Response) =
 adminRouter.post("/reviews", requireAdmin, async (req: Request, res: Response) => {
   const { source, sourceId, status, note } = req.body || {};
   const id = Number(sourceId);
-  if (!["event", "login", "transfer", "held"].includes(source) || !Number.isSafeInteger(id) || !["reviewed", "flagged", "clear"].includes(status)) {
+  if (
+    !["event", "login", "transfer", "held"].includes(source) ||
+    !Number.isSafeInteger(id) ||
+    !["reviewed", "flagged", "clear"].includes(status)
+  ) {
     res.status(400).json({ error: "VALIDATION_FAILED", message: "Invalid review.", details: null });
     return;
   }
@@ -218,7 +254,12 @@ adminRouter.get("/held", requireAdmin, async (req: Request, res: Response) => {
   const { limit, offset } = page(req);
   const status = typeof req.query.status === "string" && req.query.status ? req.query.status : null;
   try {
-    const total = (await query("SELECT COUNT(*)::int AS n FROM held_payments WHERE ($1::text IS NULL OR status = $1)", [status])).rows[0].n;
+    const total = (
+      await query(
+        "SELECT COUNT(*)::int AS n FROM held_payments WHERE ($1::text IS NULL OR status = $1)",
+        [status],
+      )
+    ).rows[0].n;
     const rows = await query(
       `SELECT hp.id, hp.recipient_kind, hp.recipient_display, hp.symbol, hp.decimals, hp.amount_base::text AS amount_base,
               hp.status, hp.attempts, hp.last_error, hp.expires_at, hp.released_at, hp.created_at, hp.notified_at,
@@ -241,7 +282,9 @@ adminRouter.get("/held", requireAdmin, async (req: Request, res: Response) => {
     res.status(200).json({ held: rows.rows, pending, total, limit, offset });
   } catch (err) {
     console.error("Admin held error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to load held payments.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to load held payments.", details: null });
   }
 });
 
@@ -262,7 +305,11 @@ adminRouter.post("/held/:id/retry", requireAdmin, async (req: Request, res: Resp
       )
     ).rows[0];
     if (!row) {
-      res.status(409).json({ error: "VALIDATION_FAILED", message: "Only a failed payment can be retried.", details: null });
+      res.status(409).json({
+        error: "VALIDATION_FAILED",
+        message: "Only a failed payment can be retried.",
+        details: null,
+      });
       return;
     }
     await audit(req, "held_retry", { heldPaymentId: id });
@@ -350,10 +397,15 @@ adminRouter.get("/tables/:name", requireAdmin, async (req: Request, res: Respons
     const orderBy = columns.includes("created_at") ? `"created_at" DESC` : "1";
     const select = columns.map((column) => `"${column.replace(/"/g, '""')}"`).join(", ");
     const total = (await query(`SELECT COUNT(*)::int AS n FROM "${name}"`)).rows[0].n;
-    const rows = await query(`SELECT ${select} FROM "${name}" ORDER BY ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]);
+    const rows = await query(
+      `SELECT ${select} FROM "${name}" ORDER BY ${orderBy} LIMIT $1 OFFSET $2`,
+      [limit, offset],
+    );
 
     await audit(req, "table_read", { table: name, offset });
-    res.status(200).json({ table: name, columns, hiddenColumns: hidden, rows: rows.rows, total, limit, offset });
+    res
+      .status(200)
+      .json({ table: name, columns, hiddenColumns: hidden, rows: rows.rows, total, limit, offset });
   } catch (err) {
     console.error("Admin table read error:", err);
     res.status(500).json({ error: "INTERNAL", message: "Failed to read table.", details: null });

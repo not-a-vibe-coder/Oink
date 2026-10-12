@@ -26,7 +26,8 @@ export interface VerifiedIdentity {
 let cachedKey: { pem: string; key: CryptoKey } | null = null;
 
 async function verificationKey(pem: string): Promise<CryptoKey> {
-  if (cachedKey?.pem !== pem) cachedKey = { pem, key: (await importSPKI(pem, "ES256")) as CryptoKey };
+  if (cachedKey?.pem !== pem)
+    cachedKey = { pem, key: (await importSPKI(pem, "ES256")) as CryptoKey };
   return cachedKey.key;
 }
 
@@ -37,7 +38,8 @@ export function privyConfigured(): boolean {
 
 type LinkedAccount = Record<string, unknown> & { type?: unknown };
 
-const str = (value: unknown): string | null => (typeof value === "string" && value.trim() ? value.trim() : null);
+const str = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() ? value.trim() : null;
 
 // Privy puts linked_accounts in the token as a JSON string. Field names are read
 // defensively: the email is `address`, the X account is `subject` + `username`.
@@ -45,7 +47,8 @@ export function parseLinkedAccounts(raw: unknown): Pick<VerifiedIdentity, "email
   let accounts: LinkedAccount[] = [];
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (Array.isArray(parsed)) accounts = parsed.filter((a): a is LinkedAccount => Boolean(a) && typeof a === "object");
+    if (Array.isArray(parsed))
+      accounts = parsed.filter((a): a is LinkedAccount => Boolean(a) && typeof a === "object");
   } catch {
     throw new InvalidIdentityTokenError("linked_accounts is not valid JSON");
   }
@@ -69,7 +72,8 @@ export function parseLinkedAccounts(raw: unknown): Pick<VerifiedIdentity, "email
 export async function verifyIdentityToken(token: unknown): Promise<VerifiedIdentity> {
   const config = getConfig();
   if (!config.privyAppId || !config.privyVerificationKey) throw new PrivyNotConfiguredError();
-  if (typeof token !== "string" || token.length > 8192) throw new InvalidIdentityTokenError("missing token");
+  if (typeof token !== "string" || token.length > 8192)
+    throw new InvalidIdentityTokenError("missing token");
 
   let payload;
   try {

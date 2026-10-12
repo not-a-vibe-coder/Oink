@@ -5,7 +5,8 @@ import { QrCode } from "@/components/oink/QrCode";
 
 const STORE_LINKS = {
   appStore: "https://apps.apple.com/app/google-authenticator/id388497605",
-  googlePlay: "https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2",
+  googlePlay:
+    "https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2",
 };
 
 /**

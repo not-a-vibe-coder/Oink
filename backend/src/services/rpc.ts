@@ -94,7 +94,10 @@ export async function fetchTokenPrices(mints: string[]): Promise<Record<string, 
   return result;
 }
 
-export async function getWalletBalances(accountId: string, walletAddress: string): Promise<WalletBalances> {
+export async function getWalletBalances(
+  accountId: string,
+  walletAddress: string,
+): Promise<WalletBalances> {
   const now = Date.now();
   const cached = balanceCache.get(walletAddress);
   if (cached && now - cached.timestamp < BALANCE_CACHE_TTL_MS) {
@@ -143,7 +146,9 @@ export async function getWalletBalances(accountId: string, walletAddress: string
         name: tokenMeta.name,
         mint,
         decimals: parsedInfo.tokenAmount?.decimals ?? tokenMeta.decimals,
-        amount: parsedInfo.tokenAmount?.uiAmountString || formatTokenUnits(amountBase, tokenMeta.decimals),
+        amount:
+          parsedInfo.tokenAmount?.uiAmountString ||
+          formatTokenUnits(amountBase, tokenMeta.decimals),
         amountBase,
         valueUsd: null,
         priceUsd: null,
@@ -170,7 +175,7 @@ export async function getWalletBalances(accountId: string, walletAddress: string
   const prices = await fetchTokenPrices(mintsForPrice);
   const solPrice = parseFloat(prices["So11111111111111111111111111111111111111112"] || "0");
 
-  let totalUsd = solPrice > 0 ? (Number(solFormatted) * solPrice) : 0;
+  let totalUsd = solPrice > 0 ? Number(solFormatted) * solPrice : 0;
 
   for (const holding of holdings) {
     if (!resolveSolanaToken(holding.mint)) continue; // unlisted: shown, never valued

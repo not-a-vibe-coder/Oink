@@ -13,7 +13,10 @@ export type ParsedRecipient =
   | { kind: "x"; username: string };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const X_FORMS = [/^x:\s*@?([A-Za-z0-9_]{1,15})$/i, /^(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/@?([A-Za-z0-9_]{1,15})\/?$/i];
+const X_FORMS = [
+  /^x:\s*@?([A-Za-z0-9_]{1,15})$/i,
+  /^(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/@?([A-Za-z0-9_]{1,15})\/?$/i,
+];
 
 export function parseRecipient(raw: unknown): ParsedRecipient | null {
   if (typeof raw !== "string") return null;
@@ -29,7 +32,8 @@ export function parseRecipient(raw: unknown): ParsedRecipient | null {
     /* not an address */
   }
 
-  if (EMAIL.test(value) && value.length <= 254) return { kind: "email", email: value.toLowerCase() };
+  if (EMAIL.test(value) && value.length <= 254)
+    return { kind: "email", email: value.toLowerCase() };
 
   for (const form of X_FORMS) {
     const match = value.match(form);

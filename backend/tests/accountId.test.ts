@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { ACCOUNT_ID_PATTERN, generateAccountId, isAccountId, parseIdentifier } from "../src/lib/accountId";
+import {
+  ACCOUNT_ID_PATTERN,
+  generateAccountId,
+  isAccountId,
+  parseIdentifier,
+} from "../src/lib/accountId";
 import { validateTag } from "../src/lib/tagRules";
 
 describe("account IDs", () => {
@@ -13,7 +18,9 @@ describe("account IDs", () => {
   });
 
   test("excludes the confusable letters", () => {
-    const body = Array.from({ length: 300 }, generateAccountId).join("").replace(/oink-|-/g, "");
+    const body = Array.from({ length: 300 }, generateAccountId)
+      .join("")
+      .replace(/oink-|-/g, "");
     expect(body).not.toMatch(/[ilou]/);
   });
 
@@ -29,7 +36,10 @@ describe("account IDs", () => {
   });
 
   test("parses either identifier form", () => {
-    expect(parseIdentifier("OINK-K7P2-9XQM")).toEqual({ kind: "account", accountId: "oink-k7p2-9xqm" });
+    expect(parseIdentifier("OINK-K7P2-9XQM")).toEqual({
+      kind: "account",
+      accountId: "oink-k7p2-9xqm",
+    });
     expect(parseIdentifier("@Pascal")).toEqual({ kind: "tag", tag: "pascal" });
     expect(parseIdentifier("ab")).toBeNull();
     expect(parseIdentifier("admin")).toBeNull();

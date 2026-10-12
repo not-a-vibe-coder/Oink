@@ -11,10 +11,19 @@ const RULES: Array<[RegExp, string]> = [
     "Not enough SOL left to cover network fees. Send a little less and keep about 0.006 SOL.",
   ],
   [/insufficient funds/i, "You don't have enough of that token for this payment."],
-  [/slippage|0x1771|exceeds desired slippage/i, "The price moved while sending. Nothing was sent — try again."],
-  [/blockhash|expired|block height exceeded/i, "The payment took too long and expired. Nothing was sent — try again."],
+  [
+    /slippage|0x1771|exceeds desired slippage/i,
+    "The price moved while sending. Nothing was sent — try again.",
+  ],
+  [
+    /blockhash|expired|block height exceeded/i,
+    "The payment took too long and expired. Nothing was sent — try again.",
+  ],
   [/429|too many requests|rate.?limit/i, "Oink is busy right now. Try again in a few seconds."],
-  [/no route|could not find any route|jupiter/i, "Couldn't find a way to swap this right now. Try a different amount."],
+  [
+    /no route|could not find any route|jupiter/i,
+    "Couldn't find a way to swap this right now. Try a different amount.",
+  ],
 ];
 
 const GENERIC = "That payment couldn't go through. Nothing was sent.";

@@ -20,17 +20,24 @@ export interface JupiterQuoteResponse {
   swapMode: string;
   slippageBps: number;
   priceImpactPct: string;
-  routePlan: any[];
+  routePlan: unknown[];
   contextSlot?: number;
   timeTaken?: number;
 }
 
+/** Jupiter's serialised instruction shape (base64 data). */
+export interface JupiterInstruction {
+  programId: string;
+  accounts: { pubkey: string; isSigner: boolean; isWritable: boolean }[];
+  data: string;
+}
+
 export interface JupiterSwapInstructionResponse {
-  tokenLedgerInstruction?: any;
-  computeBudgetInstructions: any[];
-  setupInstructions: any[];
-  swapInstruction: any;
-  cleanupInstruction?: any;
+  tokenLedgerInstruction?: JupiterInstruction;
+  computeBudgetInstructions: JupiterInstruction[];
+  setupInstructions: JupiterInstruction[];
+  swapInstruction: JupiterInstruction;
+  cleanupInstruction?: JupiterInstruction;
   addressLookupTableAddresses: string[];
 }
 

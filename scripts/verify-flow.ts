@@ -5,6 +5,8 @@ async function run(cmd: string[], cwd = process.cwd(), env = checkEnvironment) {
   const child = Bun.spawn(cmd, { cwd, env, stdout: "inherit", stderr: "inherit" });
   if ((await child.exited) !== 0) throw new Error(`Verification failed: ${cmd.join(" ")}`);
 }
+// Build first: it generates src/routeTree.gen.ts (gitignored), which the type check needs.
+await run(["bun", "run", "build"]);
 await run(["bunx", "tsc", "--noEmit"]);
 await run(["bun", "run", "check"], `${process.cwd()}/backend`);
 await run([
@@ -35,4 +37,3 @@ if (process.env.TEST_DATABASE_URL) {
   }
 } else
   console.log("Database integration checks not run: configure a disposable TEST_DATABASE_URL.");
-await run(["bun", "run", "build"]);

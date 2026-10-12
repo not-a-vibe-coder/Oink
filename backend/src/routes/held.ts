@@ -32,6 +32,8 @@ heldRouter.get("/", requireSession, async (req: Request, res: Response) => {
     res.status(200).json({ sent: sent.rows, incoming: incoming.rows });
   } catch (err) {
     console.error("Held list error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to load held payments.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to load held payments.", details: null });
   }
 });

@@ -11,7 +11,13 @@ import { privyAppId as appId } from "./config";
 
 const LazyProvider = lazy(() => import("./PrivyProviderImpl"));
 
-export function PrivyGate({ children, fallback = null }: { children: ReactNode; fallback?: ReactNode }) {
+export function PrivyGate({
+  children,
+  fallback = null,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
   // The provider touches window and storage, so it mounts only after hydration.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);

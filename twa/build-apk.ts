@@ -27,7 +27,15 @@
  * https://<host>/.well-known/assetlinks.json for Chrome to drop the URL bar.
  */
 import { execFileSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { BUILD_TOOLS_VERSION } from "@bubblewrap/core/dist/lib/androidSdk/AndroidSdkTools";
@@ -62,7 +70,8 @@ if (!Number.isSafeInteger(versionCode) || versionCode < 1)
   throw new Error("OINK_TWA_VERSION_CODE must be a positive integer.");
 const versionName = process.env.OINK_TWA_VERSION_NAME ?? "1.0.0";
 const iconOrigin = (process.env.OINK_ICON_ORIGIN ?? `https://${host}`).replace(/\/+$/, "");
-const keystore = process.env.OINK_KEYSTORE ?? join(homedir(), ".oink/android/oink-release.keystore");
+const keystore =
+  process.env.OINK_KEYSTORE ?? join(homedir(), ".oink/android/oink-release.keystore");
 const alias = "oink";
 const password = required("OINK_KEYSTORE_PASSWORD");
 if (password.length < 16) throw new Error("OINK_KEYSTORE_PASSWORD must be at least 16 characters.");
@@ -91,9 +100,15 @@ const env = { ...process.env, JAVA_HOME: jdk.getJavaHome() };
 // Every secret-bearing tool reads the password from OINK_KEYSTORE_PASSWORD by name.
 function run(command: string, args: string[]): string {
   try {
-    return execFileSync(command, args, { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return execFileSync(command, args, {
+      env,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
   } catch (error) {
-    const detail = String((error as { stderr?: string }).stderr ?? "").split(password).join("[REDACTED]");
+    const detail = String((error as { stderr?: string }).stderr ?? "")
+      .split(password)
+      .join("[REDACTED]");
     throw new Error(`${command.split("/").pop()} failed: ${detail.trim().slice(0, 500)}`);
   }
 }
@@ -104,23 +119,35 @@ if (!existsSync(keystore)) {
   mkdirSync(dirname(keystore), { recursive: true, mode: 0o700 });
   run(javaBin("keytool"), [
     "-genkeypair",
-    "-keystore", keystore,
-    "-storetype", "PKCS12",
-    "-alias", alias,
-    "-keyalg", "RSA",
-    "-keysize", "4096",
-    "-validity", "10000",
-    "-dname", "CN=Oink, OU=Mobile, O=Oink, C=US",
-    "-storepass:env", "OINK_KEYSTORE_PASSWORD",
+    "-keystore",
+    keystore,
+    "-storetype",
+    "PKCS12",
+    "-alias",
+    alias,
+    "-keyalg",
+    "RSA",
+    "-keysize",
+    "4096",
+    "-validity",
+    "10000",
+    "-dname",
+    "CN=Oink, OU=Mobile, O=Oink, C=US",
+    "-storepass:env",
+    "OINK_KEYSTORE_PASSWORD",
   ]);
   chmodSync(keystore, 0o600);
   log.info(`Created keystore at ${keystore}. Back it up: losing it means a new app listing.`);
 }
 const listing = run(javaBin("keytool"), [
-  "-list", "-v",
-  "-keystore", keystore,
-  "-alias", alias,
-  "-storepass:env", "OINK_KEYSTORE_PASSWORD",
+  "-list",
+  "-v",
+  "-keystore",
+  keystore,
+  "-alias",
+  alias,
+  "-storepass:env",
+  "OINK_KEYSTORE_PASSWORD",
 ]);
 const sha256 = /SHA256:\s*([0-9A-F:]{95})/.exec(listing)?.[1];
 if (!sha256) throw new Error("Could not read the signing certificate fingerprint.");
@@ -166,10 +193,14 @@ await sdk.zipalign(unsigned, aligned);
 const apksigner = join(sdkPath, "build-tools", BUILD_TOOLS_VERSION, "apksigner");
 run(apksigner, [
   "sign",
-  "--ks", keystore,
-  "--ks-key-alias", alias,
-  "--ks-pass", "env:OINK_KEYSTORE_PASSWORD",
-  "--out", apk,
+  "--ks",
+  keystore,
+  "--ks-key-alias",
+  alias,
+  "--ks-pass",
+  "env:OINK_KEYSTORE_PASSWORD",
+  "--out",
+  apk,
   aligned,
 ]);
 run(apksigner, ["verify", apk]);

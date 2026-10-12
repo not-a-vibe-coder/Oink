@@ -10,6 +10,8 @@ export const ADMIN_COOKIE_NAME = "oink_admin";
 export const ADMIN_SESSION_SECONDS = 8 * 3600;
 
 declare global {
+  // Augmenting Express.Request requires its namespace; there is no module-syntax equivalent.
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       adminEmail?: string;
@@ -43,18 +45,28 @@ export function serializeAdminCookie(token: string, expiresAt: Date): string {
 }
 
 export function clearAdminCookie(): string {
-  return cookie.serialize(ADMIN_COOKIE_NAME, "", { httpOnly: true, sameSite: "strict", path: "/", maxAge: 0, expires: new Date(0) });
+  return cookie.serialize(ADMIN_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "strict",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
 }
 
 export function adminTokenHash(req: Request): string | null {
-  const token = req.headers.cookie ? cookie.parse(req.headers.cookie)[ADMIN_COOKIE_NAME] : undefined;
+  const token = req.headers.cookie
+    ? cookie.parse(req.headers.cookie)[ADMIN_COOKIE_NAME]
+    : undefined;
   return token ? hashSessionToken(token) : null;
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const tokenHash = adminTokenHash(req);
   if (!tokenHash) {
-    res.status(401).json({ error: "ADMIN_REQUIRED", message: "Sign in as an admin.", details: null });
+    res
+      .status(401)
+      .json({ error: "ADMIN_REQUIRED", message: "Sign in as an admin.", details: null });
     return;
   }
   try {
@@ -67,13 +79,17 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     // Re-checked on every request, so removing an address from ADMIN_EMAILS locks it out at
     // once rather than when its session expires.
     if (!row || !isAdminEmail(row.email)) {
-      res.status(401).json({ error: "ADMIN_REQUIRED", message: "Sign in as an admin.", details: null });
+      res
+        .status(401)
+        .json({ error: "ADMIN_REQUIRED", message: "Sign in as an admin.", details: null });
       return;
     }
     req.adminEmail = row.email;
     next();
   } catch (err) {
     console.error("Admin session error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to verify admin session.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to verify admin session.", details: null });
   }
 }

@@ -26,255 +26,314 @@ export const authRouter = Router();
 
 // POST /api/v1/auth/challenge
 // Rate limit: 20/hour/IP
-authRouter.post("/challenge", ipRateLimiter("challenge", 20, 3600), async (req: Request, res: Response) => {
-  const { identifier } = req.body || {};
-  if (!identifier || typeof identifier !== "string") {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "identifier is required.", details: null });
-    return;
-  }
+authRouter.post(
+  "/challenge",
+  ipRateLimiter("challenge", 20, 3600),
+  async (req: Request, res: Response) => {
+    const { identifier } = req.body || {};
+    if (!identifier || typeof identifier !== "string") {
+      res
+        .status(400)
+        .json({ error: "VALIDATION_FAILED", message: "identifier is required.", details: null });
+      return;
+    }
 
-  const parsed = parseIdentifier(identifier);
-  const ipHash = hashIp(getClientIp(req));
-  const challengeId = `chl_${nanoid(24)}`;
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min TTL
+    const parsed = parseIdentifier(identifier);
+    const ipHash = hashIp(getClientIp(req));
+    const challengeId = `chl_${nanoid(24)}`;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min TTL
 
-  try {
-    const lookup = parsed ? identifierLookup(parsed) : null;
-    const result = lookup
-      ? await query(
-          `SELECT account_id, kdf_salt, kdf_params, ciphertext, nonce, cipher, keystore_version, status
+    try {
+      const lookup = parsed ? identifierLookup(parsed) : null;
+      const result = lookup
+        ? await query(
+            `SELECT account_id, kdf_salt, kdf_params, ciphertext, nonce, cipher, keystore_version, status
            FROM wallets
            WHERE ${lookup.where}`,
-          [lookup.value],
-        )
-      : { rows: [] as any[] };
+            [lookup.value],
+          )
+        : { rows: [] as Record<string, unknown>[] };
 
-    if (result.rows.length === 0 || result.rows[0].status === "frozen") {
-      // Deterministic decoy for unknown identifiers or frozen accounts, including a stable
-      // fake account ID so the response shape matches a real wallet's.
-      const decoy = generateDecoyChallenge(identifier.trim());
+      if (result.rows.length === 0 || result.rows[0].status === "frozen") {
+        // Deterministic decoy for unknown identifiers or frozen accounts, including a stable
+        // fake account ID so the response shape matches a real wallet's.
+        const decoy = generateDecoyChallenge(identifier.trim());
+
+        await query(
+          `INSERT INTO auth_challenges (id, purpose, account_id, is_decoy, ip_hash, expires_at, created_at)
+         VALUES ($1, 'unlock', NULL, TRUE, $2, $3, NOW())`,
+          [challengeId, ipHash, expiresAt],
+        );
+
+        res.status(200).json({
+          challengeId,
+          accountId: decoy.accountId,
+          kdfSalt: decoy.kdfSalt,
+          kdfParams: decoy.kdfParams,
+          keystore: decoy.keystore,
+          requiresTotp: true,
+        });
+        return;
+      }
+
+      const wallet = result.rows[0];
 
       await query(
         `INSERT INTO auth_challenges (id, purpose, account_id, is_decoy, ip_hash, expires_at, created_at)
-         VALUES ($1, 'unlock', NULL, TRUE, $2, $3, NOW())`,
-        [challengeId, ipHash, expiresAt],
+       VALUES ($1, 'unlock', $2, FALSE, $3, $4, NOW())`,
+        [challengeId, wallet.account_id, ipHash, expiresAt],
       );
 
       res.status(200).json({
         challengeId,
-        accountId: decoy.accountId,
-        kdfSalt: decoy.kdfSalt,
-        kdfParams: decoy.kdfParams,
-        keystore: decoy.keystore,
+        accountId: wallet.account_id,
+        kdfSalt: wallet.kdf_salt,
+        kdfParams:
+          typeof wallet.kdf_params === "string" ? JSON.parse(wallet.kdf_params) : wallet.kdf_params,
+        keystore: {
+          ciphertext: wallet.ciphertext,
+          nonce: wallet.nonce,
+          cipher: wallet.cipher,
+          version: wallet.keystore_version,
+        },
         requiresTotp: true,
       });
-      return;
+    } catch (err) {
+      console.error("Auth challenge error:", err);
+      res.status(500).json({
+        error: "INTERNAL",
+        message: "Failed to create authentication challenge.",
+        details: null,
+      });
     }
-
-    const wallet = result.rows[0];
-
-    await query(
-      `INSERT INTO auth_challenges (id, purpose, account_id, is_decoy, ip_hash, expires_at, created_at)
-       VALUES ($1, 'unlock', $2, FALSE, $3, $4, NOW())`,
-      [challengeId, wallet.account_id, ipHash, expiresAt],
-    );
-
-    res.status(200).json({
-      challengeId,
-      accountId: wallet.account_id,
-      kdfSalt: wallet.kdf_salt,
-      kdfParams: typeof wallet.kdf_params === "string" ? JSON.parse(wallet.kdf_params) : wallet.kdf_params,
-      keystore: {
-        ciphertext: wallet.ciphertext,
-        nonce: wallet.nonce,
-        cipher: wallet.cipher,
-        version: wallet.keystore_version,
-      },
-      requiresTotp: true,
-    });
-  } catch (err) {
-    console.error("Auth challenge error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to create authentication challenge.", details: null });
-  }
-});
+  },
+);
 
 // POST /api/v1/auth/unlock
-authRouter.post("/unlock", ipRateLimiter("unlock", 30, 3600), async (req: Request, res: Response) => {
-  const { challengeId, authKey, totpCode } = req.body || {};
-  const ipHash = hashIp(getClientIp(req));
+authRouter.post(
+  "/unlock",
+  ipRateLimiter("unlock", 30, 3600),
+  async (req: Request, res: Response) => {
+    const { challengeId, authKey, totpCode } = req.body || {};
+    const ipHash = hashIp(getClientIp(req));
 
-  if (!challengeId || !authKey || !totpCode) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "challengeId, authKey, and totpCode are required.", details: null });
-    return;
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    // Single-use challenge consumption
-    const chalResult = await client.query(
-      `UPDATE auth_challenges
-       SET consumed_at = NOW()
-       WHERE id = $1 AND consumed_at IS NULL AND expires_at > NOW()
-       RETURNING account_id, is_decoy`,
-      [challengeId],
-    );
-
-    if (chalResult.rows.length === 0) {
-      await client.query("ROLLBACK");
-      await dummyArgonVerify(authKey);
-      await recordLoginAttempt(null, ipHash, "unlock", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
-      return;
-    }
-
-    const challenge = chalResult.rows[0];
-
-    if (challenge.is_decoy || !challenge.account_id) {
-      await client.query("COMMIT");
-      await dummyArgonVerify(authKey);
-      await recordLoginAttempt(null, ipHash, "unlock", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
-      return;
-    }
-
-    const accountId: string = challenge.account_id;
-
-    const lockout = await checkAccountLockout(accountId);
-    if (lockout.locked) {
-      await client.query("ROLLBACK");
-      await dummyArgonVerify(authKey);
-      res.setHeader("Retry-After", lockout.retryAfterSeconds?.toString() || "60");
-      res.status(429).json({
-        error: "RATE_LIMITED",
-        message: `Account is temporarily locked due to failed attempts. Try again in ${lockout.retryAfterSeconds}s.`,
+    if (!challengeId || !authKey || !totpCode) {
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "challengeId, authKey, and totpCode are required.",
         details: null,
       });
       return;
     }
 
-    // Load wallet
-    const walletRes = await client.query(
-      `SELECT account_id, tag, public_key, auth_key_hash, totp_secret_enc, totp_nonce, totp_last_step, status
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Single-use challenge consumption
+      const chalResult = await client.query(
+        `UPDATE auth_challenges
+       SET consumed_at = NOW()
+       WHERE id = $1 AND consumed_at IS NULL AND expires_at > NOW()
+       RETURNING account_id, is_decoy`,
+        [challengeId],
+      );
+
+      if (chalResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        await dummyArgonVerify(authKey);
+        await recordLoginAttempt(null, ipHash, "unlock", false);
+        res
+          .status(401)
+          .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+        return;
+      }
+
+      const challenge = chalResult.rows[0];
+
+      if (challenge.is_decoy || !challenge.account_id) {
+        await client.query("COMMIT");
+        await dummyArgonVerify(authKey);
+        await recordLoginAttempt(null, ipHash, "unlock", false);
+        res
+          .status(401)
+          .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+        return;
+      }
+
+      const accountId: string = challenge.account_id;
+
+      const lockout = await checkAccountLockout(accountId);
+      if (lockout.locked) {
+        await client.query("ROLLBACK");
+        await dummyArgonVerify(authKey);
+        res.setHeader("Retry-After", lockout.retryAfterSeconds?.toString() || "60");
+        res.status(429).json({
+          error: "RATE_LIMITED",
+          message: `Account is temporarily locked due to failed attempts. Try again in ${lockout.retryAfterSeconds}s.`,
+          details: null,
+        });
+        return;
+      }
+
+      // Load wallet
+      const walletRes = await client.query(
+        `SELECT account_id, tag, public_key, auth_key_hash, totp_secret_enc, totp_nonce, totp_last_step, status
        FROM wallets
        WHERE account_id = $1 FOR UPDATE`,
-      [accountId],
-    );
+        [accountId],
+      );
 
-    if (walletRes.rows.length === 0 || walletRes.rows[0].status !== "active") {
+      if (walletRes.rows.length === 0 || walletRes.rows[0].status !== "active") {
+        await client.query("ROLLBACK");
+        await dummyArgonVerify(authKey);
+        await recordLoginAttempt(accountId, ipHash, "unlock", false);
+        res
+          .status(401)
+          .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+        return;
+      }
+
+      const wallet = walletRes.rows[0];
+
+      // Verify authKey
+      const authValid = await verifyAuthKey(authKey, wallet.auth_key_hash);
+      if (!authValid) {
+        await client.query("ROLLBACK");
+        await recordLoginAttempt(accountId, ipHash, "unlock", false);
+        res
+          .status(401)
+          .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+        return;
+      }
+
+      // Verify TOTP
+      const secretBytes = decryptKms(wallet.totp_secret_enc, wallet.totp_nonce);
+      const secretBase32 = Buffer.from(secretBytes).toString("utf8");
+      const totpResult = verifyTotp(secretBase32, totpCode, Number(wallet.totp_last_step));
+
+      if (!totpResult.valid) {
+        await client.query("ROLLBACK");
+        await recordLoginAttempt(accountId, ipHash, "totp", false);
+        res
+          .status(401)
+          .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+        return;
+      }
+
+      // Update TOTP last step and last_seen_at
+      await client.query(
+        "UPDATE wallets SET totp_last_step = $1, last_seen_at = NOW(), updated_at = NOW() WHERE account_id = $2",
+        [totpResult.step, accountId],
+      );
+
+      await recordLoginAttempt(accountId, ipHash, "unlock", true);
+
+      const userAgent = req.headers["user-agent"];
+      const { token, expiresAt } = await createSession(accountId, userAgent, ipHash, client);
+
+      await client.query("COMMIT");
+
+      res.setHeader("Set-Cookie", serializeSessionCookie(token, expiresAt));
+      res.status(200).json({
+        accountId,
+        tag: wallet.tag,
+        publicKey: wallet.public_key,
+        sessionExpiresAt: expiresAt.toISOString(),
+      });
+    } catch (err) {
       await client.query("ROLLBACK");
-      await dummyArgonVerify(authKey);
-      await recordLoginAttempt(accountId, ipHash, "unlock", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
-      return;
+      console.error("Auth unlock error:", err);
+      res.status(500).json({ error: "INTERNAL", message: "Failed to unlock.", details: null });
+    } finally {
+      client.release();
     }
-
-    const wallet = walletRes.rows[0];
-
-    // Verify authKey
-    const authValid = await verifyAuthKey(authKey, wallet.auth_key_hash);
-    if (!authValid) {
-      await client.query("ROLLBACK");
-      await recordLoginAttempt(accountId, ipHash, "unlock", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
-      return;
-    }
-
-    // Verify TOTP
-    const secretBytes = decryptKms(wallet.totp_secret_enc, wallet.totp_nonce);
-    const secretBase32 = Buffer.from(secretBytes).toString("utf8");
-    const totpResult = verifyTotp(secretBase32, totpCode, Number(wallet.totp_last_step));
-
-    if (!totpResult.valid) {
-      await client.query("ROLLBACK");
-      await recordLoginAttempt(accountId, ipHash, "totp", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
-      return;
-    }
-
-    // Update TOTP last step and last_seen_at
-    await client.query(
-      "UPDATE wallets SET totp_last_step = $1, last_seen_at = NOW(), updated_at = NOW() WHERE account_id = $2",
-      [totpResult.step, accountId],
-    );
-
-    await recordLoginAttempt(accountId, ipHash, "unlock", true);
-
-    const userAgent = req.headers["user-agent"];
-    const { token, expiresAt } = await createSession(accountId, userAgent, ipHash, client);
-
-    await client.query("COMMIT");
-
-    res.setHeader("Set-Cookie", serializeSessionCookie(token, expiresAt));
-    res.status(200).json({
-      accountId,
-      tag: wallet.tag,
-      publicKey: wallet.public_key,
-      sessionExpiresAt: expiresAt.toISOString(),
-    });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("Auth unlock error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to unlock.", details: null });
-  } finally {
-    client.release();
-  }
-});
+  },
+);
 
 // POST /api/v1/auth/recover/challenge
 // Rate limit: 5/hour/account, 10/hour/IP
-authRouter.post("/recover/challenge", ipRateLimiter("recover", 10, 3600), async (req: Request, res: Response) => {
-  const { identifier } = req.body || {};
-  const parsed = parseIdentifier(identifier);
-  if (!parsed) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Enter your tag or account ID.", details: null });
-    return;
-  }
-
-  const ipHash = hashIp(getClientIp(req));
-  const lookup = identifierLookup(parsed);
-
-  try {
-    const walletRes = await query(`SELECT account_id, status FROM wallets WHERE ${lookup.where}`, [lookup.value]);
-    if (walletRes.rows.length === 0 || walletRes.rows[0].status === "frozen") {
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+authRouter.post(
+  "/recover/challenge",
+  ipRateLimiter("recover", 10, 3600),
+  async (req: Request, res: Response) => {
+    const { identifier } = req.body || {};
+    const parsed = parseIdentifier(identifier);
+    if (!parsed) {
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "Enter your tag or account ID.",
+        details: null,
+      });
       return;
     }
 
-    const challengeId = `rec_${nanoid(24)}`;
-    const nonce = crypto.randomBytes(16).toString("base64");
-    const issued = new Date().toISOString();
-    const accountId: string = walletRes.rows[0].account_id;
-    const message = `Oink account recovery\nAccount: ${accountId}\nNonce: ${nonce}\nIssued: ${issued}`;
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min TTL
+    const ipHash = hashIp(getClientIp(req));
+    const lookup = identifierLookup(parsed);
 
-    await query(
-      `INSERT INTO auth_challenges (id, purpose, account_id, is_decoy, sign_message, ip_hash, expires_at, created_at)
+    try {
+      const walletRes = await query(
+        `SELECT account_id, status FROM wallets WHERE ${lookup.where}`,
+        [lookup.value],
+      );
+      if (walletRes.rows.length === 0 || walletRes.rows[0].status === "frozen") {
+        res
+          .status(401)
+          .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+        return;
+      }
+
+      const challengeId = `rec_${nanoid(24)}`;
+      const nonce = crypto.randomBytes(16).toString("base64");
+      const issued = new Date().toISOString();
+      const accountId: string = walletRes.rows[0].account_id;
+      const message = `Oink account recovery\nAccount: ${accountId}\nNonce: ${nonce}\nIssued: ${issued}`;
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min TTL
+
+      await query(
+        `INSERT INTO auth_challenges (id, purpose, account_id, is_decoy, sign_message, ip_hash, expires_at, created_at)
        VALUES ($1, 'recover', $2, FALSE, $3, $4, $5, NOW())`,
-      [challengeId, accountId, message, ipHash, expiresAt],
-    );
+        [challengeId, accountId, message, ipHash, expiresAt],
+      );
 
-    // The account ID goes back because the replacement keystore's AAD binds it.
-    res.status(200).json({
-      challengeId,
-      accountId,
-      message,
-      expiresAt: expiresAt.toISOString(),
-    });
-  } catch (err) {
-    console.error("Recover challenge error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to create recovery challenge.", details: null });
-  }
-});
+      // The account ID goes back because the replacement keystore's AAD binds it.
+      res.status(200).json({
+        challengeId,
+        accountId,
+        message,
+        expiresAt: expiresAt.toISOString(),
+      });
+    } catch (err) {
+      console.error("Recover challenge error:", err);
+      res.status(500).json({
+        error: "INTERNAL",
+        message: "Failed to create recovery challenge.",
+        details: null,
+      });
+    }
+  },
+);
 
 // POST /api/v1/auth/recover/complete
 authRouter.post("/recover/complete", async (req: Request, res: Response) => {
-  const { challengeId, signature, publicKey, keystore, authKey, totpEnrollmentId, totpCode } = req.body || {};
+  const { challengeId, signature, publicKey, keystore, authKey, totpEnrollmentId, totpCode } =
+    req.body || {};
   const ipHash = hashIp(getClientIp(req));
 
-  if (!challengeId || !signature || !publicKey || !keystore || !authKey || !totpEnrollmentId || !totpCode) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Missing required recovery fields.", details: null });
+  if (
+    !challengeId ||
+    !signature ||
+    !publicKey ||
+    !keystore ||
+    !authKey ||
+    !totpEnrollmentId ||
+    !totpCode
+  ) {
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "Missing required recovery fields.",
+      details: null,
+    });
     return;
   }
 
@@ -294,7 +353,9 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
     if (chalRes.rows.length === 0) {
       await client.query("ROLLBACK");
       await recordLoginAttempt(null, ipHash, "recover", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
@@ -309,7 +370,9 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
     if (walletRes.rows.length === 0 || walletRes.rows[0].public_key !== publicKey) {
       await client.query("ROLLBACK");
       await recordLoginAttempt(accountId, ipHash, "recover", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
@@ -323,7 +386,9 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
     if (!sigValid) {
       await client.query("ROLLBACK");
       await recordLoginAttempt(accountId, ipHash, "recover", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
@@ -335,14 +400,22 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
 
     if (enrRes.rows.length === 0) {
       await client.query("ROLLBACK");
-      res.status(404).json({ error: "NOT_FOUND", message: "Authenticator enrollment not found.", details: null });
+      res.status(404).json({
+        error: "NOT_FOUND",
+        message: "Authenticator enrollment not found.",
+        details: null,
+      });
       return;
     }
 
     const enr = enrRes.rows[0];
     if (enr.consumed_at || new Date(enr.expires_at).getTime() < Date.now()) {
       await client.query("ROLLBACK");
-      res.status(410).json({ error: "VALIDATION_FAILED", message: "Authenticator enrollment expired or used.", details: null });
+      res.status(410).json({
+        error: "VALIDATION_FAILED",
+        message: "Authenticator enrollment expired or used.",
+        details: null,
+      });
       return;
     }
 
@@ -353,12 +426,16 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
     if (!totpResult.valid) {
       await client.query("ROLLBACK");
       await recordLoginAttempt(accountId, ipHash, "recover", false);
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
     // Mark enrollment consumed
-    await client.query("UPDATE enrollments SET consumed_at = NOW() WHERE id = $1", [totpEnrollmentId]);
+    await client.query("UPDATE enrollments SET consumed_at = NOW() WHERE id = $1", [
+      totpEnrollmentId,
+    ]);
 
     // 5. Update wallet credentials & reset totp_last_step
     const newAuthHash = await hashAuthKey(authKey);
@@ -409,7 +486,9 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Recover complete error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to complete recovery.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to complete recovery.", details: null });
   } finally {
     client.release();
   }
@@ -418,7 +497,9 @@ authRouter.post("/recover/complete", async (req: Request, res: Response) => {
 // POST /api/v1/auth/logout [S]
 authRouter.post("/logout", requireSession, async (req: Request, res: Response) => {
   try {
-    await query("UPDATE sessions SET revoked_at = NOW() WHERE token_hash = $1", [req.sessionTokenHash]);
+    await query("UPDATE sessions SET revoked_at = NOW() WHERE token_hash = $1", [
+      req.sessionTokenHash,
+    ]);
     res.setHeader("Set-Cookie", clearSessionCookie());
     res.status(204).end();
   } catch (err) {
@@ -439,7 +520,9 @@ authRouter.get("/session", requireSession, async (req: Request, res: Response) =
     );
 
     if (resRow.rows.length === 0) {
-      res.status(401).json({ error: "SESSION_REQUIRED", message: "Session invalid.", details: null });
+      res
+        .status(401)
+        .json({ error: "SESSION_REQUIRED", message: "Session invalid.", details: null });
       return;
     }
 
@@ -502,7 +585,9 @@ authRouter.delete("/sessions/:prefix", requireSession, async (req: Request, res:
     res.status(204).end();
   } catch (err) {
     console.error("Revoke session error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to revoke session.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to revoke session.", details: null });
   }
 });
 
@@ -510,7 +595,11 @@ authRouter.delete("/sessions/:prefix", requireSession, async (req: Request, res:
 authRouter.post("/rotate-keystore", requireSession, async (req: Request, res: Response) => {
   const { oldAuthKey, totpCode, keystore, newAuthKey } = req.body || {};
   if (!oldAuthKey || !totpCode || !keystore || !newAuthKey) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "Missing required rotate fields.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "Missing required rotate fields.",
+      details: null,
+    });
     return;
   }
 
@@ -527,7 +616,9 @@ authRouter.post("/rotate-keystore", requireSession, async (req: Request, res: Re
 
     const authValid = await verifyAuthKey(oldAuthKey, wallet.auth_key_hash);
     if (!authValid) {
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
@@ -535,7 +626,9 @@ authRouter.post("/rotate-keystore", requireSession, async (req: Request, res: Re
     const secretBase32 = Buffer.from(secretBytes).toString("utf8");
     const totpResult = verifyTotp(secretBase32, totpCode, Number(wallet.totp_last_step));
     if (!totpResult.valid) {
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
@@ -570,7 +663,9 @@ authRouter.post("/rotate-keystore", requireSession, async (req: Request, res: Re
     res.status(200).json({ rotatedAt: now.toISOString() });
   } catch (err) {
     console.error("Rotate keystore error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to rotate keystore.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to rotate keystore.", details: null });
   }
 });
 
@@ -578,7 +673,11 @@ authRouter.post("/rotate-keystore", requireSession, async (req: Request, res: Re
 authRouter.post("/reveal-keystore", requireSession, async (req: Request, res: Response) => {
   const { authKey, totpCode } = req.body || {};
   if (!authKey || !totpCode) {
-    res.status(400).json({ error: "VALIDATION_FAILED", message: "authKey and totpCode are required.", details: null });
+    res.status(400).json({
+      error: "VALIDATION_FAILED",
+      message: "authKey and totpCode are required.",
+      details: null,
+    });
     return;
   }
 
@@ -599,7 +698,9 @@ authRouter.post("/reveal-keystore", requireSession, async (req: Request, res: Re
 
     const authValid = await verifyAuthKey(authKey, wallet.auth_key_hash);
     if (!authValid) {
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
@@ -607,25 +708,33 @@ authRouter.post("/reveal-keystore", requireSession, async (req: Request, res: Re
     const secretBase32 = Buffer.from(secretBytes).toString("utf8");
     const totpResult = verifyTotp(secretBase32, totpCode, Number(wallet.totp_last_step));
     if (!totpResult.valid) {
-      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
+      res
+        .status(401)
+        .json({ error: "INVALID_CREDENTIALS", message: "Invalid credentials.", details: null });
       return;
     }
 
     // Update totp_last_step
-    await query("UPDATE wallets SET totp_last_step = $1 WHERE account_id = $2", [totpResult.step, req.accountId]);
+    await query("UPDATE wallets SET totp_last_step = $1 WHERE account_id = $2", [
+      totpResult.step,
+      req.accountId,
+    ]);
 
     res.status(200).json({
       keystore: {
         ciphertext: wallet.ciphertext,
         nonce: wallet.nonce,
         kdfSalt: wallet.kdf_salt,
-        kdfParams: typeof wallet.kdf_params === "string" ? JSON.parse(wallet.kdf_params) : wallet.kdf_params,
+        kdfParams:
+          typeof wallet.kdf_params === "string" ? JSON.parse(wallet.kdf_params) : wallet.kdf_params,
         cipher: wallet.cipher,
         version: wallet.keystore_version,
       },
     });
   } catch (err) {
     console.error("Reveal keystore error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to reveal keystore.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to reveal keystore.", details: null });
   }
 });

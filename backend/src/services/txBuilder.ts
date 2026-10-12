@@ -16,7 +16,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { getConfig } from "../config";
-import { fetchJupiterSwapInstructions } from "./jupiterService";
+import { fetchJupiterSwapInstructions, type JupiterInstruction } from "./jupiterService";
 import { getFeePayerKeypair, getFeePayerPublicKey } from "./feePayer";
 import type { StoredQuote } from "./mixEngine";
 
@@ -43,10 +43,10 @@ export async function resolveTokenProgramId(mint: PublicKey): Promise<PublicKey>
   return TOKEN_PROGRAM_ID;
 }
 
-function deserializeInstruction(instruction: any): TransactionInstruction {
+function deserializeInstruction(instruction: JupiterInstruction): TransactionInstruction {
   return new TransactionInstruction({
     programId: new PublicKey(instruction.programId),
-    keys: instruction.accounts.map((acc: any) => ({
+    keys: instruction.accounts.map((acc) => ({
       pubkey: new PublicKey(acc.pubkey),
       isSigner: acc.isSigner,
       isWritable: acc.isWritable,
@@ -55,15 +55,11 @@ function deserializeInstruction(instruction: any): TransactionInstruction {
   });
 }
 
-async function getAddressLookupTableAccounts(
-  keys: string[],
-): Promise<AddressLookupTableAccount[]> {
+async function getAddressLookupTableAccounts(keys: string[]): Promise<AddressLookupTableAccount[]> {
   if (!keys || keys.length === 0) return [];
   const connection = getSolanaConnection();
 
-  const accountInfos = await connection.getMultipleAccountsInfo(
-    keys.map((k) => new PublicKey(k)),
-  );
+  const accountInfos = await connection.getMultipleAccountsInfo(keys.map((k) => new PublicKey(k)));
 
   return accountInfos.reduce((acc, accountInfo, index) => {
     const key = keys[index];
@@ -122,8 +118,18 @@ export async function buildSettlementTransaction(params: {
       } else {
         // SPL Token transfer
         const tokenProgramId = await resolveTokenProgramId(legMint);
-        const sourceAta = getAssociatedTokenAddressSync(legMint, senderPubkey, false, tokenProgramId);
-        const destAta = getAssociatedTokenAddressSync(legMint, recipientPubkey, true, tokenProgramId);
+        const sourceAta = getAssociatedTokenAddressSync(
+          legMint,
+          senderPubkey,
+          false,
+          tokenProgramId,
+        );
+        const destAta = getAssociatedTokenAddressSync(
+          legMint,
+          recipientPubkey,
+          true,
+          tokenProgramId,
+        );
 
         // Idempotent ATA creation paid by transaction payer
         instructions.push(
@@ -152,7 +158,12 @@ export async function buildSettlementTransaction(params: {
     } else if (leg.route === "jupiter" && leg.rawJupiterQuote) {
       // Jupiter swap leg
       const tokenProgramId = await resolveTokenProgramId(legMint);
-      const recipientAta = getAssociatedTokenAddressSync(legMint, recipientPubkey, true, tokenProgramId);
+      const recipientAta = getAssociatedTokenAddressSync(
+        legMint,
+        recipientPubkey,
+        true,
+        tokenProgramId,
+      );
 
       // Prepend idempotent ATA creation for recipient so Jupiter routes directly into it
       instructions.push(

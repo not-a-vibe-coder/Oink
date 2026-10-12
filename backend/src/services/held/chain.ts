@@ -32,7 +32,10 @@ export interface ReleaseChain {
   }): Promise<{ signature: string; lastValidBlockHeight: number; raw: Uint8Array }>;
   broadcast(raw: Uint8Array, lastValidBlockHeight: number): Promise<"confirmed" | "failed">;
   /** For a release whose fate was not seen: landed, failed, still in flight, or can never land. */
-  outcome(signature: string, lastValidBlockHeight: number): Promise<"confirmed" | "failed" | "pending" | "expired">;
+  outcome(
+    signature: string,
+    lastValidBlockHeight: number,
+  ): Promise<"confirmed" | "failed" | "pending" | "expired">;
 }
 
 function feePayer() {
@@ -45,7 +48,11 @@ async function compile(instructions: TransactionInstruction[]) {
   const connection = getSolanaConnection();
   const payer = feePayer();
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  const message = new TransactionMessage({ payerKey: payer.publicKey, recentBlockhash: blockhash, instructions }).compileToV0Message();
+  const message = new TransactionMessage({
+    payerKey: payer.publicKey,
+    recentBlockhash: blockhash,
+    instructions,
+  }).compileToV0Message();
   return { tx: new VersionedTransaction(message), lastValidBlockHeight };
 }
 
@@ -60,7 +67,13 @@ const solanaReleaseChain: ReleaseChain = {
 
     const payer = feePayer();
     const { tx, lastValidBlockHeight } = await compile([
-      createAssociatedTokenAccountIdempotentInstruction(payer.publicKey, ata, ownerKey, mintKey, program),
+      createAssociatedTokenAccountIdempotentInstruction(
+        payer.publicKey,
+        ata,
+        ownerKey,
+        mintKey,
+        program,
+      ),
     ]);
     tx.sign([payer]);
     const signature = await connection.sendRawTransaction(tx.serialize(), { maxRetries: 3 });
@@ -68,7 +81,10 @@ const solanaReleaseChain: ReleaseChain = {
       { signature, blockhash: tx.message.recentBlockhash, lastValidBlockHeight },
       "confirmed",
     );
-    if (result.value.err) throw new Error(`Creating the destination token account failed: ${JSON.stringify(result.value.err)}`);
+    if (result.value.err)
+      throw new Error(
+        `Creating the destination token account failed: ${JSON.stringify(result.value.err)}`,
+      );
     return ata.toBase58();
   },
 
@@ -78,7 +94,16 @@ const solanaReleaseChain: ReleaseChain = {
     const program = await resolveTokenProgramId(mintKey);
     const source = getAssociatedTokenAddressSync(mintKey, owner, true, program);
     const { tx, lastValidBlockHeight } = await compile([
-      createTransferCheckedInstruction(source, mintKey, new PublicKey(destination), owner, amountBase, decimals, [], program),
+      createTransferCheckedInstruction(
+        source,
+        mintKey,
+        new PublicKey(destination),
+        owner,
+        amountBase,
+        decimals,
+        [],
+        program,
+      ),
     ]);
 
     // The holding wallet signs through Privy, whose enclave checks the policy; the fee payer
@@ -86,12 +111,21 @@ const solanaReleaseChain: ReleaseChain = {
     const signed = VersionedTransaction.deserialize(
       Buffer.from(await sign(Buffer.from(tx.serialize()).toString("base64")), "base64"),
     );
-    if (Buffer.compare(Buffer.from(signed.message.serialize()), Buffer.from(tx.message.serialize())) !== 0) {
+    if (
+      Buffer.compare(
+        Buffer.from(signed.message.serialize()),
+        Buffer.from(tx.message.serialize()),
+      ) !== 0
+    ) {
       throw new Error("Privy returned a different transaction than it was asked to sign");
     }
     signed.sign([feePayer()]);
     // The fee payer signs first, so its signature is the transaction's ID.
-    return { signature: bs58.encode(signed.signatures[0]), lastValidBlockHeight, raw: signed.serialize() };
+    return {
+      signature: bs58.encode(signed.signatures[0]),
+      lastValidBlockHeight,
+      raw: signed.serialize(),
+    };
   },
 
   async broadcast(raw, lastValidBlockHeight) {
@@ -107,10 +141,13 @@ const solanaReleaseChain: ReleaseChain = {
 
   async outcome(signature, lastValidBlockHeight) {
     const connection = getSolanaConnection();
-    const status = (await connection.getSignatureStatuses([signature], { searchTransactionHistory: true })).value[0];
+    const status = (
+      await connection.getSignatureStatuses([signature], { searchTransactionHistory: true })
+    ).value[0];
     if (status) {
       if (status.err) return "failed";
-      if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized") return "confirmed";
+      if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized")
+        return "confirmed";
       return "pending";
     }
     const height = await connection.getBlockHeight("confirmed");

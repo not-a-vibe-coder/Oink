@@ -79,33 +79,27 @@ payRouter.post(
     try {
       payer = new PublicKey(account);
     } catch {
-      res
-        .status(400)
-        .json({
-          error: "VALIDATION_FAILED",
-          message: "account must be a Solana public key.",
-          details: null,
-        });
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "account must be a Solana public key.",
+        details: null,
+      });
       return;
     }
     if (!AMOUNT_PATTERN.test(amount) || Number(amount) <= 0) {
-      res
-        .status(400)
-        .json({
-          error: "VALIDATION_FAILED",
-          message: "This payment link has no valid amount.",
-          details: null,
-        });
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "This payment link has no valid amount.",
+        details: null,
+      });
       return;
     }
     if (!token || token.isNative) {
-      res
-        .status(400)
-        .json({
-          error: "VALIDATION_FAILED",
-          message: "Pay with a supported token such as USDC.",
-          details: null,
-        });
+      res.status(400).json({
+        error: "VALIDATION_FAILED",
+        message: "Pay with a supported token such as USDC.",
+        details: null,
+      });
       return;
     }
 
@@ -118,13 +112,11 @@ payRouter.post(
         return;
       }
       if (recipient.public_key === payer.toBase58()) {
-        res
-          .status(400)
-          .json({
-            error: "VALIDATION_FAILED",
-            message: "That's the recipient's own wallet.",
-            details: null,
-          });
+        res.status(400).json({
+          error: "VALIDATION_FAILED",
+          message: "That's the recipient's own wallet.",
+          details: null,
+        });
         return;
       }
 
@@ -165,11 +157,13 @@ payRouter.post(
         // Not part of Solana Pay (wallets ignore it); Oink's own Seeker flow needs the chain.
         chain: walletChain(),
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Pay request build error:", err);
       res.status(502).json({
         error: "BUILD_FAILED",
-        message: err?.message || "Could not build this payment. Try again in a moment.",
+        message:
+          (err instanceof Error && err.message) ||
+          "Could not build this payment. Try again in a moment.",
         details: null,
       });
     }

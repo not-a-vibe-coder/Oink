@@ -16,8 +16,8 @@ const suite = url && url === process.env.DATABASE_URL ? describe : describe.skip
 const account = "oink-k7p2-9xqp",
   wallet = Keypair.generate().publicKey.toBase58();
 const purchase = "purchase_bellquote0000001";
-let cookie = "",
-  network = process.env.SOLANA_NETWORK;
+let cookie = "";
+const network = process.env.SOLANA_NETWORK;
 let restore = () => {};
 suite("Bell quote API (PostgreSQL with provider fixtures)", () => {
   beforeAll(async () => {

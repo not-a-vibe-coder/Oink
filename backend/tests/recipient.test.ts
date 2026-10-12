@@ -11,8 +11,14 @@ test("tells every recipient form apart", () => {
   expect(parseRecipient("x: izuu")).toEqual({ kind: "x", username: "izuu" });
   expect(parseRecipient("https://x.com/izuu")).toEqual({ kind: "x", username: "izuu" });
   expect(parseRecipient("twitter.com/@izuu/")).toEqual({ kind: "x", username: "izuu" });
-  expect(parseRecipient("@pascal")).toEqual({ kind: "identifier", id: { kind: "tag", tag: "pascal" } });
-  expect(parseRecipient("oink-k7p2-9xqm")).toEqual({ kind: "identifier", id: { kind: "account", accountId: "oink-k7p2-9xqm" } });
+  expect(parseRecipient("@pascal")).toEqual({
+    kind: "identifier",
+    id: { kind: "tag", tag: "pascal" },
+  });
+  expect(parseRecipient("oink-k7p2-9xqm")).toEqual({
+    kind: "identifier",
+    id: { kind: "account", accountId: "oink-k7p2-9xqm" },
+  });
 });
 
 test("rejects what is none of them", () => {

@@ -33,8 +33,8 @@ function PrivacyPage() {
         <ul>
           <li>Your account ID, your public Solana address and when the account was made.</li>
           <li>
-            If you link them: your email address, and your X username and X user ID, which also
-            set your tag.
+            If you link them: your email address, and your X username and X user ID, which also set
+            your tag.
           </li>
           <li>Your encrypted keystore and the parameters needed to derive its key.</li>
           <li>Your authenticator secret, encrypted with a server key, for verifying codes.</li>
@@ -47,22 +47,22 @@ function PrivacyPage() {
         <h2>What is public no matter what we do</h2>
         <p>
           Solana is a public ledger. Your address, its balances and every transaction it makes are
-          visible to anyone, including the split your mix produced. Your tag is deliberately
-          public — that is how people pay you — and it is linked to your address.
+          visible to anyone, including the split your mix produced. Your tag is deliberately public
+          — that is how people pay you — and it is linked to your address.
         </p>
 
         <h2>Linking email and X</h2>
         <p>
           Linking is optional. It is needed only to claim a tag (X) or to be paid at your email.
-          Creating, receiving, sending, setting your mix and recovering all work without it.
-          We use Privy to confirm you own the email or X account: Privy sees the email address
-          or X account you prove, never your wallet's keys or password.
+          Creating, receiving, sending, setting your mix and recovering all work without it. We use
+          Privy to confirm you own the email or X account: Privy sees the email address or X account
+          you prove, never your wallet's keys or password.
         </p>
 
         <h2>No tracking</h2>
         <p>
-          There is no advertising network in this product and no third-party analytics reading
-          your wallet.
+          There is no advertising network in this product and no third-party analytics reading your
+          wallet.
         </p>
 
         <h2>Logs</h2>

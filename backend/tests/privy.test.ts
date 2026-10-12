@@ -15,7 +15,10 @@ describe("parseLinkedAccounts", () => {
       { type: "twitter_oauth", subject: "1234", username: "@Izuu_X", name: "Izuu" },
       { type: "wallet", address: "abc" },
     ]);
-    expect(parseLinkedAccounts(raw)).toEqual({ email: "izuu@gmail.com", x: { userId: "1234", username: "Izuu_X" } });
+    expect(parseLinkedAccounts(raw)).toEqual({
+      email: "izuu@gmail.com",
+      x: { userId: "1234", username: "Izuu_X" },
+    });
   });
 
   test("ignores malformed entries", () => {
@@ -48,7 +51,11 @@ describe("verifyIdentityToken", () => {
 
   test("accepts a token Privy signed for this app", async () => {
     const token = await fake.mint([fake.email("a@b.co")], { sub: "did:privy:1" });
-    expect(await verifyIdentityToken(token)).toEqual({ privyUserId: "did:privy:1", email: "a@b.co", x: null });
+    expect(await verifyIdentityToken(token)).toEqual({
+      privyUserId: "did:privy:1",
+      email: "a@b.co",
+      x: null,
+    });
   });
 
   test("rejects another app's token", async () => {
@@ -78,7 +85,9 @@ describe("verifyIdentityToken", () => {
     const forged = Buffer.from(
       JSON.stringify({ sub: "x", iss: "privy.io", aud: "app-under-test", linked_accounts: "[]" }),
     ).toString("base64url");
-    await expect(verifyIdentityToken(`${header}.${forged}.${signature}`)).rejects.toThrow(InvalidIdentityTokenError);
+    await expect(verifyIdentityToken(`${header}.${forged}.${signature}`)).rejects.toThrow(
+      InvalidIdentityTokenError,
+    );
   });
 
   test("rejects garbage", async () => {

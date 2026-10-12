@@ -26,11 +26,19 @@ import {
   adminTables,
   adminTransfers,
 } from "@/lib/oink-server-fns";
-import { formatDateTime, formatTokenAmount, fromBaseUnits, shortAddress, timeAgo } from "@/lib/format";
+import {
+  formatDateTime,
+  formatTokenAmount,
+  fromBaseUnits,
+  shortAddress,
+  timeAgo,
+} from "@/lib/format";
 import type { AdminActivityItem, AdminHeldPayment, AdminTransfer, Json } from "@/types/api";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Oink admin" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [{ title: "Oink admin" }, { name: "robots", content: "noindex, nofollow" }],
+  }),
   component: AdminPage,
 });
 
@@ -58,12 +66,16 @@ function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
       <header className="page-head">
         <p className="eyebrow">Oink</p>
         <h1 className="page-title">Admin</h1>
-        <p className="page-sub">Sign in with an admin email. You'll get a code to prove it's yours.</p>
+        <p className="page-sub">
+          Sign in with an admin email. You'll get a code to prove it's yours.
+        </p>
       </header>
       <PrivyGate
         fallback={
           <p className="meta">
-            {privyAvailable ? "Loading sign-in…" : "Admin sign-in needs Privy, which isn't configured on this deployment yet."}
+            {privyAvailable
+              ? "Loading sign-in…"
+              : "Admin sign-in needs Privy, which isn't configured on this deployment yet."}
           </p>
         }
       >
@@ -125,7 +137,10 @@ function Dashboard({ email }: { email: string }) {
 
   return (
     <main className="shell">
-      <header className="row-between" style={{ marginBottom: "var(--s5)", flexWrap: "wrap", gap: "var(--s3)" }}>
+      <header
+        className="row-between"
+        style={{ marginBottom: "var(--s5)", flexWrap: "wrap", gap: "var(--s3)" }}
+      >
         <div>
           <p className="eyebrow">Oink admin</p>
           <p className="meta" style={{ marginTop: 4 }}>
@@ -137,7 +152,12 @@ function Dashboard({ email }: { email: string }) {
         </button>
       </header>
 
-      <div className="tabs" role="tablist" aria-label="Admin sections" style={{ marginBottom: "var(--s5)", flexWrap: "wrap" }}>
+      <div
+        className="tabs"
+        role="tablist"
+        aria-label="Admin sections"
+        style={{ marginBottom: "var(--s5)", flexWrap: "wrap" }}
+      >
         {(["overview", "transfers", "held", "activity", "database"] as const).map((name) => (
           <button
             key={name}
@@ -166,7 +186,10 @@ function Stat({ label, value, tone }: { label: string; value: ReactNode; tone?: 
   return (
     <div className="panel">
       <p className="eyebrow">{label}</p>
-      <p className="figure figure-md tnum" style={{ marginTop: 8, color: tone === "bad" ? "var(--alarm)" : undefined }}>
+      <p
+        className="figure figure-md tnum"
+        style={{ marginTop: 8, color: tone === "bad" ? "var(--alarm)" : undefined }}
+      >
         {value}
       </p>
     </div>
@@ -174,7 +197,11 @@ function Stat({ label, value, tone }: { label: string; value: ReactNode; tone?: 
 }
 
 function Overview() {
-  const overview = useQuery({ queryKey: ["admin", "overview"], queryFn: () => adminOverview(), refetchInterval: 30_000 });
+  const overview = useQuery({
+    queryKey: ["admin", "overview"],
+    queryFn: () => adminOverview(),
+    refetchInterval: 30_000,
+  });
   const data = overview.data;
   if (overview.isPending) return <div className="skeleton" style={{ height: 240 }} />;
   if (!data) return <p className="form-error">Couldn't load the overview.</p>;
@@ -182,7 +209,13 @@ function Overview() {
   const sol = data.feePayerSol === null ? null : Number(data.feePayerSol);
   return (
     <div className="stack">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "var(--s3)" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+          gap: "var(--s3)",
+        }}
+      >
         <Stat label="Wallets" value={data.wallets} />
         <Stat label="New today" value={data.wallets_24h} />
         <Stat label="With a tag" value={data.tagged} />
@@ -190,11 +223,23 @@ function Overview() {
         <Stat label="X linked" value={data.x_linked} />
         <Stat label="Transfers" value={data.transfers} />
         <Stat label="Transfers today" value={data.transfers_24h} />
-        <Stat label="Failed transfers" value={data.transfers_failed} tone={data.transfers_failed > 0 ? "bad" : undefined} />
-        <Stat label="Failed logins today" value={data.failed_logins_24h} tone={data.failed_logins_24h > 20 ? "bad" : undefined} />
+        <Stat
+          label="Failed transfers"
+          value={data.transfers_failed}
+          tone={data.transfers_failed > 0 ? "bad" : undefined}
+        />
+        <Stat
+          label="Failed logins today"
+          value={data.failed_logins_24h}
+          tone={data.failed_logins_24h > 20 ? "bad" : undefined}
+        />
         <Stat label="Flagged" value={data.flagged} tone={data.flagged > 0 ? "warn" : undefined} />
         <Stat label="Held, pending" value={data.held_pending} />
-        <Stat label="Held, stuck" value={data.held_failed} tone={data.held_failed > 0 ? "bad" : undefined} />
+        <Stat
+          label="Held, stuck"
+          value={data.held_failed}
+          tone={data.held_failed > 0 ? "bad" : undefined}
+        />
       </div>
 
       <section className="panel">
@@ -205,7 +250,10 @@ function Overview() {
               {data.feePayer ?? "not configured"}
             </p>
           </div>
-          <p className="figure figure-md tnum" style={{ color: sol !== null && sol < 0.05 ? "var(--alarm)" : undefined }}>
+          <p
+            className="figure figure-md tnum"
+            style={{ color: sol !== null && sol < 0.05 ? "var(--alarm)" : undefined }}
+          >
             {sol === null ? "—" : `${data.feePayerSol} SOL`}
           </p>
         </div>
@@ -222,8 +270,18 @@ function Overview() {
 // ── Review controls ────────────────────────────────────────────────────────
 
 function ReviewBadge({ status }: { status: "reviewed" | "flagged" | null }) {
-  if (status === "flagged") return <span className="badge" data-tone="bad">Flagged</span>;
-  if (status === "reviewed") return <span className="badge" data-tone="ok">Reviewed</span>;
+  if (status === "flagged")
+    return (
+      <span className="badge" data-tone="bad">
+        Flagged
+      </span>
+    );
+  if (status === "reviewed")
+    return (
+      <span className="badge" data-tone="ok">
+        Reviewed
+      </span>
+    );
   return null;
 }
 
@@ -250,17 +308,35 @@ function ReviewActions({
   return (
     <div className="row" style={{ gap: 6 }}>
       {status !== "reviewed" && (
-        <button type="button" className="btn btn-quiet btn-sm" disabled={busy} onClick={() => void set("reviewed")} title="Mark reviewed">
+        <button
+          type="button"
+          className="btn btn-quiet btn-sm"
+          disabled={busy}
+          onClick={() => void set("reviewed")}
+          title="Mark reviewed"
+        >
           <Check size={14} aria-hidden="true" /> OK
         </button>
       )}
       {status !== "flagged" && (
-        <button type="button" className="btn btn-quiet btn-sm" disabled={busy} onClick={() => void set("flagged")} title="Flag">
+        <button
+          type="button"
+          className="btn btn-quiet btn-sm"
+          disabled={busy}
+          onClick={() => void set("flagged")}
+          title="Flag"
+        >
           <Flag size={14} aria-hidden="true" /> Flag
         </button>
       )}
       {status && (
-        <button type="button" className="btn btn-quiet btn-sm" disabled={busy} onClick={() => void set("clear")} title="Clear verdict">
+        <button
+          type="button"
+          className="btn btn-quiet btn-sm"
+          disabled={busy}
+          onClick={() => void set("clear")}
+          title="Clear verdict"
+        >
           <RotateCcw size={14} aria-hidden="true" />
         </button>
       )}
@@ -268,18 +344,36 @@ function ReviewActions({
   );
 }
 
-function Pager({ page, total, setPage }: { page: number; total: number; setPage: (page: number) => void }) {
+function Pager({
+  page,
+  total,
+  setPage,
+}: {
+  page: number;
+  total: number;
+  setPage: (page: number) => void;
+}) {
   if (total <= PAGE_SIZE) return null;
   const last = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   return (
     <div className="row-between" style={{ marginTop: "var(--s4)" }}>
-      <button type="button" className="btn btn-outline btn-sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
+      <button
+        type="button"
+        className="btn btn-outline btn-sm"
+        disabled={page === 0}
+        onClick={() => setPage(page - 1)}
+      >
         Newer
       </button>
       <span className="meta tnum">
         {page * PAGE_SIZE + 1}–{Math.min(total, (page + 1) * PAGE_SIZE)} of {total}
       </span>
-      <button type="button" className="btn btn-outline btn-sm" disabled={page >= last} onClick={() => setPage(page + 1)}>
+      <button
+        type="button"
+        className="btn btn-outline btn-sm"
+        disabled={page >= last}
+        onClick={() => setPage(page + 1)}
+      >
         Older
       </button>
     </div>
@@ -287,7 +381,7 @@ function Pager({ page, total, setPage }: { page: number; total: number; setPage:
 }
 
 const who = (tag: string | null, accountId: string | null, wallet: string) =>
-  tag ? `@${tag}` : accountId ?? shortAddress(wallet);
+  tag ? `@${tag}` : (accountId ?? shortAddress(wallet));
 
 // ── Transactions ───────────────────────────────────────────────────────────
 
@@ -301,7 +395,14 @@ function Transfers() {
   const transfers = useQuery({
     queryKey: key,
     queryFn: () =>
-      adminTransfers({ data: { limit: PAGE_SIZE, offset: page * PAGE_SIZE, status: status || undefined, q: q || undefined } }),
+      adminTransfers({
+        data: {
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+          status: status || undefined,
+          q: q || undefined,
+        },
+      }),
   });
 
   return (
@@ -350,7 +451,11 @@ function Transfers() {
       ) : (
         <div className="ledger">
           {transfers.data!.transfers.map((t: AdminTransfer) => (
-            <div className="ledger-row" key={t.id} style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+            <div
+              className="ledger-row"
+              key={t.id}
+              style={{ flexWrap: "wrap", alignItems: "flex-start" }}
+            >
               <span className="ledger-main" style={{ minWidth: 220 }}>
                 <span className="ledger-title">
                   {who(t.sender_tag, t.sender_account_id, t.sender_wallet)} →{" "}
@@ -374,7 +479,12 @@ function Transfers() {
                     </span>
                   )}
                   <ReviewBadge status={t.review_status} />
-                  <a className="btn btn-quiet btn-sm" href={`https://solscan.io/tx/${t.signature}`} target="_blank" rel="noreferrer">
+                  <a
+                    className="btn btn-quiet btn-sm"
+                    href={`https://solscan.io/tx/${t.signature}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     <ExternalLink size={14} aria-hidden="true" />
                   </a>
                 </span>
@@ -382,7 +492,9 @@ function Transfers() {
                   source="transfer"
                   id={t.id}
                   status={t.review_status}
-                  invalidate={() => void queryClient.invalidateQueries({ queryKey: ["admin", "transfers"] })}
+                  invalidate={() =>
+                    void queryClient.invalidateQueries({ queryKey: ["admin", "transfers"] })
+                  }
                 />
               </span>
             </div>
@@ -411,7 +523,10 @@ function Held() {
   const [busy, setBusy] = useState<number | null>(null);
   const held = useQuery({
     queryKey: ["admin", "held", page, status],
-    queryFn: () => adminHeld({ data: { limit: PAGE_SIZE, offset: page * PAGE_SIZE, status: status || undefined } }),
+    queryFn: () =>
+      adminHeld({
+        data: { limit: PAGE_SIZE, offset: page * PAGE_SIZE, status: status || undefined },
+      }),
     refetchInterval: 30_000,
   });
 
@@ -427,8 +542,11 @@ function Held() {
       {(held.data?.pending.length ?? 0) > 0 && (
         <p className="meta">
           Waiting in holding wallets:{" "}
-          {held.data!.pending
-            .map((p) => `${formatTokenAmount(fromBaseUnits(p.amount_base, p.decimals))} ${p.symbol} across ${p.payments}`)
+          {held
+            .data!.pending.map(
+              (p) =>
+                `${formatTokenAmount(fromBaseUnits(p.amount_base, p.decimals))} ${p.symbol} across ${p.payments}`,
+            )
             .join(" · ")}
         </p>
       )}
@@ -458,11 +576,17 @@ function Held() {
       ) : (
         <div className="ledger">
           {held.data!.held.map((h: AdminHeldPayment) => (
-            <div className="ledger-row" key={h.id} style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+            <div
+              className="ledger-row"
+              key={h.id}
+              style={{ flexWrap: "wrap", alignItems: "flex-start" }}
+            >
               <span className="ledger-main" style={{ minWidth: 240 }}>
                 <span className="ledger-title">
-                  {h.sender_tag ? `@${h.sender_tag}` : h.sender_account_id ?? "unknown"} → {h.recipient_display}
-                  {h.claimant_account_id && ` (claimed by ${h.claimant_tag ? `@${h.claimant_tag}` : h.claimant_account_id})`}
+                  {h.sender_tag ? `@${h.sender_tag}` : (h.sender_account_id ?? "unknown")} →{" "}
+                  {h.recipient_display}
+                  {h.claimant_account_id &&
+                    ` (claimed by ${h.claimant_tag ? `@${h.claimant_tag}` : h.claimant_account_id})`}
                 </span>
                 <span className="ledger-sub">
                   {formatDateTime(h.created_at)} · expires {formatDateTime(h.expires_at)}
@@ -480,12 +604,22 @@ function Held() {
                   <span className="badge" data-tone={HELD_TONES[h.status]}>
                     {h.status}
                   </span>
-                  <a className="btn btn-quiet btn-sm" href={`https://solscan.io/tx/${h.release_signature ?? h.deposit_signature}`} target="_blank" rel="noreferrer">
+                  <a
+                    className="btn btn-quiet btn-sm"
+                    href={`https://solscan.io/tx/${h.release_signature ?? h.deposit_signature}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     <ExternalLink size={14} aria-hidden="true" />
                   </a>
                 </span>
                 {h.status === "failed" && (
-                  <button type="button" className="btn btn-outline btn-sm" disabled={busy === h.id} onClick={() => void retry(h.id)}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    disabled={busy === h.id}
+                    onClick={() => void retry(h.id)}
+                  >
                     <RotateCcw size={14} aria-hidden="true" /> Retry
                   </button>
                 )}
@@ -521,7 +655,9 @@ const KIND_LABELS: Record<string, string> = {
 };
 
 function describeDetail(detail: { [key: string]: Json }): string {
-  const parts = Object.entries(detail).map(([key, value]) => `${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`);
+  const parts = Object.entries(detail).map(
+    ([key, value]) => `${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`,
+  );
   return parts.join(" · ");
 }
 
@@ -563,16 +699,25 @@ function Activity() {
       ) : (
         <div className="ledger">
           {activity.data!.items.map((item: AdminActivityItem) => (
-            <div className="ledger-row" key={`${item.source}-${item.id}`} style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+            <div
+              className="ledger-row"
+              key={`${item.source}-${item.id}`}
+              style={{ flexWrap: "wrap", alignItems: "flex-start" }}
+            >
               <span className="ledger-main" style={{ minWidth: 220 }}>
                 <span className="ledger-title">
                   {KIND_LABELS[item.kind] ?? item.kind}
-                  {item.succeeded === false && <span style={{ color: "var(--alarm)" }}> · failed</span>}
+                  {item.succeeded === false && (
+                    <span style={{ color: "var(--alarm)" }}> · failed</span>
+                  )}
                 </span>
                 <span className="ledger-sub">
-                  {item.tag ? `@${item.tag}` : item.account_id ?? "unknown account"} · {timeAgo(item.created_at)}
+                  {item.tag ? `@${item.tag}` : (item.account_id ?? "unknown account")} ·{" "}
+                  {timeAgo(item.created_at)}
                   {item.ip ? ` · ip ${item.ip}` : ""}
-                  {Object.keys(item.detail ?? {}).length > 0 ? ` · ${describeDetail(item.detail)}` : ""}
+                  {Object.keys(item.detail ?? {}).length > 0
+                    ? ` · ${describeDetail(item.detail)}`
+                    : ""}
                   {item.review_note ? ` · “${item.review_note}”` : ""}
                 </span>
               </span>
@@ -582,7 +727,9 @@ function Activity() {
                   source={item.source}
                   id={item.id}
                   status={item.review_status}
-                  invalidate={() => void queryClient.invalidateQueries({ queryKey: ["admin", "activity"] })}
+                  invalidate={() =>
+                    void queryClient.invalidateQueries({ queryKey: ["admin", "activity"] })
+                  }
                 />
               </span>
             </div>
@@ -608,7 +755,8 @@ function Database() {
   const tables = useQuery({ queryKey: ["admin", "tables"], queryFn: () => adminTables() });
   const rows = useQuery({
     queryKey: ["admin", "table", table, page],
-    queryFn: () => adminTable({ data: { name: table, limit: PAGE_SIZE, offset: page * PAGE_SIZE } }),
+    queryFn: () =>
+      adminTable({ data: { name: table, limit: PAGE_SIZE, offset: page * PAGE_SIZE } }),
   });
 
   return (
@@ -619,7 +767,9 @@ function Database() {
             key={t.name}
             type="button"
             className="chip"
-            style={table === t.name ? { borderColor: "var(--ink)", color: "var(--ink)" } : undefined}
+            style={
+              table === t.name ? { borderColor: "var(--ink)", color: "var(--ink)" } : undefined
+            }
             onClick={() => {
               setPage(0);
               setTable(t.name);
@@ -643,14 +793,34 @@ function Database() {
           <p className="empty-title">{table} is empty</p>
         </div>
       ) : (
-        <div style={{ overflowX: "auto", border: "1px solid var(--hairline)", borderRadius: "var(--r2)" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 12, width: "max-content", minWidth: "100%" }}>
+        <div
+          style={{
+            overflowX: "auto",
+            border: "1px solid var(--hairline)",
+            borderRadius: "var(--r2)",
+          }}
+        >
+          <table
+            style={{
+              borderCollapse: "collapse",
+              fontSize: 12,
+              width: "max-content",
+              minWidth: "100%",
+            }}
+          >
             <thead>
               <tr>
                 {rows.data.columns.map((column) => (
                   <th
                     key={column}
-                    style={{ textAlign: "left", padding: "8px 10px", borderBottom: "1px solid var(--hairline)", position: "sticky", top: 0, background: "var(--paper)" }}
+                    style={{
+                      textAlign: "left",
+                      padding: "8px 10px",
+                      borderBottom: "1px solid var(--hairline)",
+                      position: "sticky",
+                      top: 0,
+                      background: "var(--paper)",
+                    }}
                   >
                     {column}
                   </th>
@@ -664,7 +834,14 @@ function Database() {
                     <td
                       key={column}
                       className="mono"
-                      style={{ padding: "6px 10px", borderBottom: "1px solid var(--hairline)", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      style={{
+                        padding: "6px 10px",
+                        borderBottom: "1px solid var(--hairline)",
+                        maxWidth: 320,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
                       title={cell(row[column] ?? null)}
                     >
                       {cell(row[column] ?? null)}

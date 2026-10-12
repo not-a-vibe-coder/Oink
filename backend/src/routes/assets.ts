@@ -83,7 +83,9 @@ assetsRouter.get("/:symbolOrMint", async (req: Request, res: Response) => {
   try {
     const prices = await fetchTokenPrices([token.mint]);
     priceUsd = prices[token.mint] || null;
-  } catch {}
+  } catch {
+    // Price is optional metadata; the asset is still returned without it.
+  }
 
   res.status(200).json({
     ...token,

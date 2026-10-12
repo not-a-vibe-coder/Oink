@@ -1,4 +1,9 @@
-import { entropyToMnemonic, generateMnemonic as scureGenerate, mnemonicToEntropy, validateMnemonic as scureValidate } from "@scure/bip39";
+import {
+  entropyToMnemonic,
+  generateMnemonic as scureGenerate,
+  mnemonicToEntropy,
+  validateMnemonic as scureValidate,
+} from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english";
 
 export function generateMnemonic(): string {

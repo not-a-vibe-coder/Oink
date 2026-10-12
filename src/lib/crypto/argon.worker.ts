@@ -29,8 +29,14 @@ self.onmessage = async (event: MessageEvent<ArgonWorkerRequest>) => {
       },
     });
     // In web worker self.postMessage accepts transferables
-    (self as any).postMessage({ id, type: "result", master }, [master.buffer]);
+    (
+      self as unknown as { postMessage(message: unknown, transfer: Transferable[]): void }
+    ).postMessage({ id, type: "result", master }, [master.buffer]);
   } catch (err: unknown) {
-    self.postMessage({ id, type: "error", error: err instanceof Error ? err.message : String(err) });
+    self.postMessage({
+      id,
+      type: "error",
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 };

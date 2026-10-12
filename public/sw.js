@@ -19,7 +19,9 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== VERSION).map((key) => caches.delete(key))))
+      .then((keys) =>
+        Promise.all(keys.filter((key) => key !== VERSION).map((key) => caches.delete(key))),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -62,12 +64,18 @@ self.addEventListener("push", (event) => {
   }
   const url = typeof data.url === "string" && data.url.startsWith("/app/") ? data.url : "/app";
   event.waitUntil(
-    self.registration.showNotification(typeof data.title === "string" ? data.title.slice(0, 60) : "Oink", {
-      body: typeof data.body === "string" ? data.body.slice(0, 140) : "Open Oink to see what changed.",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      data: { url },
-    }),
+    self.registration.showNotification(
+      typeof data.title === "string" ? data.title.slice(0, 60) : "Oink",
+      {
+        body:
+          typeof data.body === "string"
+            ? data.body.slice(0, 140)
+            : "Open Oink to see what changed.",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        data: { url },
+      },
+    ),
   );
 });
 

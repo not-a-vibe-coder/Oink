@@ -45,11 +45,24 @@ class FakeChain implements ReleaseChain {
   async ensureTokenAccount(owner: string, mint: string) {
     return `ata(${owner.slice(0, 8)},${mint.slice(0, 4)})`;
   }
-  async buildRelease(input: { holdingWallet: string; destination: string; amountBase: bigint; sign: (b: string) => Promise<string> }) {
+  async buildRelease(input: {
+    holdingWallet: string;
+    destination: string;
+    amountBase: bigint;
+    sign: (b: string) => Promise<string>;
+  }) {
     if (this.failBuild) throw new Error("simulated build failure");
     await input.sign("dW5zaWduZWQ=");
-    this.releases.push({ holdingWallet: input.holdingWallet, destination: input.destination, amountBase: input.amountBase });
-    return { signature: `sig-${Math.random().toString(36).slice(2)}`, lastValidBlockHeight: 1000, raw: new Uint8Array([1]) };
+    this.releases.push({
+      holdingWallet: input.holdingWallet,
+      destination: input.destination,
+      amountBase: input.amountBase,
+    });
+    return {
+      signature: `sig-${Math.random().toString(36).slice(2)}`,
+      lastValidBlockHeight: 1000,
+      raw: new Uint8Array([1]),
+    };
   }
   async broadcast() {
     if (this.broadcastResult === "throw") throw new Error("connection dropped");
@@ -99,7 +112,8 @@ suite("held payments (integration)", () => {
     });
   }
 
-  const statusOf = async (id: number) => (await query("SELECT * FROM held_payments WHERE id = $1", [id])).rows[0];
+  const statusOf = async (id: number) =>
+    (await query("SELECT * FROM held_payments WHERE id = $1", [id])).rows[0];
 
   async function waitFor(check: () => Promise<boolean>) {
     for (let i = 0; i < 50; i++) {
@@ -124,7 +138,10 @@ suite("held payments (integration)", () => {
     await makeWallet("pascal");
     await makeWallet("izuu");
     await makeWallet("linked");
-    await query("UPDATE wallets SET email = $1 WHERE account_id = $2", [`linked-${run}@example.com`, accounts.linked.id]);
+    await query("UPDATE wallets SET email = $1 WHERE account_id = $2", [
+      `linked-${run}@example.com`,
+      accounts.linked.id,
+    ]);
   }, 30_000);
 
   beforeEach(() => {
@@ -135,7 +152,10 @@ suite("held payments (integration)", () => {
 
   afterAll(async () => {
     const ids = Object.values(accounts).map((a) => a.id);
-    await query("DELETE FROM transfers WHERE sender_account_id = ANY($1) OR recipient_account_id = ANY($1)", [ids]);
+    await query(
+      "DELETE FROM transfers WHERE sender_account_id = ANY($1) OR recipient_account_id = ANY($1)",
+      [ids],
+    );
     await query("DELETE FROM held_payments WHERE sender_account_id = ANY($1)", [ids]);
     await query("DELETE FROM held_wallets WHERE identity_value LIKE $1", [`%-${run}@example.com`]);
     await query("DELETE FROM account_events WHERE account_id = ANY($1)", [ids]);
@@ -185,35 +205,60 @@ suite("held payments (integration)", () => {
     const rowB = await statusOf(b.id);
     expect(rowA.status).toBe("held");
     expect(rowA.held_wallet_id).toBe(rowB.held_wallet_id);
-    const hours = (new Date(rowA.expires_at).getTime() - new Date(rowA.created_at).getTime()) / 3_600_000;
+    const hours =
+      (new Date(rowA.expires_at).getTime() - new Date(rowA.created_at).getTime()) / 3_600_000;
     expect(Math.round(hours)).toBe(48);
   });
 
   test("the sender and the recipient-to-be both see it", async () => {
-    const sent = await request(app).get("/api/v1/held").set("Cookie", accounts.pascal.cookie).expect(200);
-    expect(sent.body.sent.filter((p: any) => p.recipient_display === izuuEmail)).toHaveLength(2);
-    const before = await request(app).get("/api/v1/held").set("Cookie", accounts.izuu.cookie).expect(200);
+    const sent = await request(app)
+      .get("/api/v1/held")
+      .set("Cookie", accounts.pascal.cookie)
+      .expect(200);
+    expect(
+      sent.body.sent.filter(
+        (p: { recipient_display: string }) => p.recipient_display === izuuEmail,
+      ),
+    ).toHaveLength(2);
+    const before = await request(app)
+      .get("/api/v1/held")
+      .set("Cookie", accounts.izuu.cookie)
+      .expect(200);
     expect(before.body.incoming).toHaveLength(0); // not linked yet
   });
 
   test("linking the email claims everything waiting for it, into the claimant's wallet", async () => {
     const token = await fake.mint([fake.email(izuuEmail)]);
-    const res = await request(app).post("/api/v1/identity/email").set("Cookie", accounts.izuu.cookie).send({ identityToken: token }).expect(200);
+    const res = await request(app)
+      .post("/api/v1/identity/email")
+      .set("Cookie", accounts.izuu.cookie)
+      .send({ identityToken: token })
+      .expect(200);
     expect(res.body.claiming).toBe(2);
 
     await waitFor(async () => {
-      const rows = await query("SELECT status FROM held_payments WHERE recipient_value = $1", [izuuEmail]);
+      const rows = await query("SELECT status FROM held_payments WHERE recipient_value = $1", [
+        izuuEmail,
+      ]);
       return rows.rows.every((r) => r.status === "claimed");
     });
 
     const claimantAta = await chain.ensureTokenAccount(accounts.izuu.publicKey, USDC);
     const toIzuu = chain.releases.filter((r) => r.destination === claimantAta);
-    expect(toIzuu.map((r) => r.amountBase).sort((a, b) => (a < b ? -1 : 1))).toEqual([2_500_000n, 10_000_000n]);
+    expect(toIzuu.map((r) => r.amountBase).sort((a, b) => (a < b ? -1 : 1))).toEqual([
+      2_500_000n,
+      10_000_000n,
+    ]);
     // The claimant's account was added to the holding wallet's policy before it was paid.
     expect([...provider.allowed.values()].some((list) => list.includes(claimantAta))).toBe(true);
 
-    const history = await request(app).get("/api/v1/transfer/history").set("Cookie", accounts.izuu.cookie).expect(200);
-    const amounts = history.body.transfers.filter((t: any) => t.source === "held").map((t: any) => Number(t.input_amount));
+    const history = await request(app)
+      .get("/api/v1/transfer/history")
+      .set("Cookie", accounts.izuu.cookie)
+      .expect(200);
+    const amounts = history.body.transfers
+      .filter((t: { source: string }) => t.source === "held")
+      .map((t: { input_amount: string }) => Number(t.input_amount));
     expect(amounts.sort((a: number, b: number) => a - b)).toEqual([2.5, 10]);
   });
 
@@ -222,7 +267,9 @@ suite("held payments (integration)", () => {
   test("after 48 hours an unclaimed payment goes back to the sender", async () => {
     const email = `ghost-${run}@example.com`;
     const p = await deposit(email, 7_000_000n);
-    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [p.id]);
+    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [
+      p.id,
+    ]);
 
     const result = await held.runHeldPaymentsJob();
     expect(result.refunded).toBeGreaterThanOrEqual(1);
@@ -233,7 +280,9 @@ suite("held payments (integration)", () => {
 
   test("an expired payment can no longer be claimed, and an open one cannot be refunded", async () => {
     const late = await deposit(`late-${run}@example.com`, 1_000_000n);
-    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [late.id]);
+    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [
+      late.id,
+    ]);
     expect(await held.releaseHeldPayment(late.id, "claim", accounts.izuu.id)).toBe("skipped");
 
     const open = await deposit(`open-${run}@example.com`, 1_000_000n);
@@ -243,7 +292,10 @@ suite("held payments (integration)", () => {
 
   test("a payment is released once even when claim and refund race", async () => {
     const p = await deposit(`race-${run}@example.com`, 3_000_000n);
-    await query("UPDATE wallets SET email = $1 WHERE account_id = $2", [`race-${run}@example.com`, accounts.linked.id]);
+    await query("UPDATE wallets SET email = $1 WHERE account_id = $2", [
+      `race-${run}@example.com`,
+      accounts.linked.id,
+    ]);
     const before = chain.releases.length;
     const results = await Promise.all([
       held.releaseHeldPayment(p.id, "claim", accounts.linked.id),
@@ -258,7 +310,9 @@ suite("held payments (integration)", () => {
 
   test("a release that fails before sending is retried, then parked as failed", async () => {
     const p = await deposit(`flaky-${run}@example.com`, 1_000_000n);
-    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [p.id]);
+    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [
+      p.id,
+    ]);
     chain.failBuild = true;
     for (let i = 1; i < held.MAX_RELEASE_ATTEMPTS; i++) {
       expect(await held.releaseHeldPayment(p.id, "refund")).toBe("retry");
@@ -272,7 +326,9 @@ suite("held payments (integration)", () => {
 
   test("a release whose broadcast is unseen is settled by asking the chain, not by resending", async () => {
     const p = await deposit(`unseen-${run}@example.com`, 4_000_000n);
-    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [p.id]);
+    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [
+      p.id,
+    ]);
     chain.broadcastResult = "throw";
     expect(await held.releaseHeldPayment(p.id, "refund")).toBe("in_flight");
     const inFlight = await statusOf(p.id);
@@ -280,7 +336,10 @@ suite("held payments (integration)", () => {
     expect(inFlight.release_signature).toBeTruthy();
 
     const releasesBefore = chain.releases.length;
-    await query("UPDATE held_payments SET updated_at = NOW() - INTERVAL '10 minutes' WHERE id = $1", [p.id]);
+    await query(
+      "UPDATE held_payments SET updated_at = NOW() - INTERVAL '10 minutes' WHERE id = $1",
+      [p.id],
+    );
     chain.outcomeResult = "pending";
     await held.reconcileInFlight();
     expect((await statusOf(p.id)).status).toBe("refunding");
@@ -293,10 +352,15 @@ suite("held payments (integration)", () => {
 
   test("a release that provably never landed goes back to held", async () => {
     const p = await deposit(`dropped-${run}@example.com`, 4_000_000n);
-    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [p.id]);
+    await query("UPDATE held_payments SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1", [
+      p.id,
+    ]);
     chain.broadcastResult = "throw";
     await held.releaseHeldPayment(p.id, "refund");
-    await query("UPDATE held_payments SET updated_at = NOW() - INTERVAL '10 minutes' WHERE id = $1", [p.id]);
+    await query(
+      "UPDATE held_payments SET updated_at = NOW() - INTERVAL '10 minutes' WHERE id = $1",
+      [p.id],
+    );
     chain.outcomeResult = "expired";
     await held.reconcileInFlight();
     const row = await statusOf(p.id);
@@ -314,13 +378,25 @@ suite("held payments (integration)", () => {
       .expect(200);
     const cookie = (login.headers["set-cookie"] as unknown as string[])[0].split(";")[0];
 
-    const list = await request(app).get("/api/v1/admin/held").set("Cookie", cookie).query({ status: "failed" }).expect(200);
-    const failed = list.body.held.find((h: any) => h.recipient_display === `flaky-${run}@example.com`);
+    const list = await request(app)
+      .get("/api/v1/admin/held")
+      .set("Cookie", cookie)
+      .query({ status: "failed" })
+      .expect(200);
+    const failed = list.body.held.find(
+      (h: { recipient_display: string }) => h.recipient_display === `flaky-${run}@example.com`,
+    );
     expect(failed).toBeDefined();
 
-    await request(app).post(`/api/v1/admin/held/${failed.id}/retry`).set("Cookie", cookie).expect(200);
+    await request(app)
+      .post(`/api/v1/admin/held/${failed.id}/retry`)
+      .set("Cookie", cookie)
+      .expect(200);
     expect((await statusOf(failed.id)).status).toBe("held");
-    await request(app).post(`/api/v1/admin/held/${failed.id}/retry`).set("Cookie", cookie).expect(409);
+    await request(app)
+      .post(`/api/v1/admin/held/${failed.id}/retry`)
+      .set("Cookie", cookie)
+      .expect(409);
 
     await query("DELETE FROM admin_sessions WHERE email = $1", [`boss-${run}@oink.test`]);
     await query("DELETE FROM admin_audit WHERE admin_email = $1", [`boss-${run}@oink.test`]);

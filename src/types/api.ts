@@ -234,7 +234,11 @@ export interface AdminTransfer {
   status: string;
   input_symbol: string;
   input_amount: string;
-  output_breakdown: Array<{ symbol: string; outAmountFormatted?: string; basisPoints?: number }> | null;
+  output_breakdown: Array<{
+    symbol: string;
+    outAmountFormatted?: string;
+    basisPoints?: number;
+  }> | null;
   mix_applied: boolean;
   fee_sponsored: boolean;
   sender_account_id: string | null;

@@ -29,7 +29,12 @@ export type NavItem = {
 const WALLET: NavItem = { to: "/app", label: "Wallet", icon: "/nav/wallet.png", exact: true };
 const SEND: NavItem = { to: "/app/send", label: "Send", icon: "/nav/receive.png", flip: true };
 const RECEIVE: NavItem = { to: "/app/receive", label: "Receive", icon: "/nav/receive.png" };
-const MIX: NavItem = { to: "/app/mix", label: "Mix", icon: "/nav/mix.png", animated: "/nav/mix.gif" };
+const MIX: NavItem = {
+  to: "/app/mix",
+  label: "Mix",
+  icon: "/nav/mix.png",
+  animated: "/nav/mix.gif",
+};
 const ACTIVITY: NavItem = { to: "/app/activity", label: "Activity", icon: "/nav/activity.png" };
 const REQUESTS: NavItem = { to: "/app/invoices", label: "Requests", icon: "/nav/requests.png" };
 const SETTINGS: NavItem = { to: "/app/settings", label: "Settings", icon: "/nav/settings.png" };
@@ -64,7 +69,11 @@ export function AppShell({
           <div className="topbar-end">
             <ThemeToggle />
             {accountId && address && (
-              <AccountBubble accountId={accountId} address={address} avatarSeed={avatarSeed ?? accountId} />
+              <AccountBubble
+                accountId={accountId}
+                address={address}
+                avatarSeed={avatarSeed ?? accountId}
+              />
             )}
           </div>
         </div>
@@ -83,7 +92,9 @@ export function AppShell({
             >
               <span className="dock-icon" data-flip={item.flip || undefined}>
                 <img src={item.icon} alt="" className="dock-still" draggable={false} />
-                {item.animated && <img src={item.animated} alt="" className="dock-animated" draggable={false} />}
+                {item.animated && (
+                  <img src={item.animated} alt="" className="dock-animated" draggable={false} />
+                )}
               </span>
               <span className="dock-label">{item.label}</span>
             </Link>

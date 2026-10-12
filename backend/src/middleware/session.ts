@@ -15,6 +15,8 @@ export interface SessionData {
 }
 
 declare global {
+  // Augmenting Express.Request requires its namespace; there is no module-syntax equivalent.
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       accountId?: string;
@@ -75,10 +77,16 @@ export async function createSession(
   return { token, expiresAt };
 }
 
-export async function requireSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function requireSession(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   const cookieHeader = req.headers.cookie;
   if (!cookieHeader) {
-    res.status(401).json({ error: "SESSION_REQUIRED", message: "Session required.", details: null });
+    res
+      .status(401)
+      .json({ error: "SESSION_REQUIRED", message: "Session required.", details: null });
     return;
   }
 
@@ -86,7 +94,9 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
   const token = parsedCookies[SESSION_COOKIE_NAME];
 
   if (!token) {
-    res.status(401).json({ error: "SESSION_REQUIRED", message: "Session required.", details: null });
+    res
+      .status(401)
+      .json({ error: "SESSION_REQUIRED", message: "Session required.", details: null });
     return;
   }
 
@@ -101,14 +111,18 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
     );
 
     if (result.rows.length === 0) {
-      res.status(401).json({ error: "SESSION_REQUIRED", message: "Session invalid or expired.", details: null });
+      res
+        .status(401)
+        .json({ error: "SESSION_REQUIRED", message: "Session invalid or expired.", details: null });
       return;
     }
 
     const session = result.rows[0];
 
     if (session.revoked_at) {
-      res.status(401).json({ error: "SESSION_REQUIRED", message: "Session has been revoked.", details: null });
+      res
+        .status(401)
+        .json({ error: "SESSION_REQUIRED", message: "Session has been revoked.", details: null });
       return;
     }
 
@@ -117,7 +131,9 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
     const lastUsedAt = new Date(session.last_used_at).getTime();
 
     if (now > expiresAt || now - lastUsedAt > SESSION_IDLE_TIMEOUT_SECONDS * 1000) {
-      res.status(401).json({ error: "SESSION_REQUIRED", message: "Session expired.", details: null });
+      res
+        .status(401)
+        .json({ error: "SESSION_REQUIRED", message: "Session expired.", details: null });
       return;
     }
 
@@ -129,6 +145,8 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
     next();
   } catch (err) {
     console.error("Session verification error:", err);
-    res.status(500).json({ error: "INTERNAL", message: "Failed to verify session.", details: null });
+    res
+      .status(500)
+      .json({ error: "INTERNAL", message: "Failed to verify session.", details: null });
   }
 }

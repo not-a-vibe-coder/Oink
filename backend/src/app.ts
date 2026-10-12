@@ -16,17 +16,40 @@ import { heldRouter } from "./routes/held";
 import { flowRouter } from "./routes/flow";
 import { pushRouter } from "./routes/push";
 
-const redactedKeys = new Set(["privatekey", "secret", "authkey", "totpcode", "ciphertext", "kdfsalt", "mnemonic", "secretphrase", "password", "totpsecret", "otpauthuri", "signature", "signedtransaction", "identitytoken"]);
+const redactedKeys = new Set([
+  "privatekey",
+  "secret",
+  "authkey",
+  "totpcode",
+  "ciphertext",
+  "kdfsalt",
+  "mnemonic",
+  "secretphrase",
+  "password",
+  "totpsecret",
+  "otpauthuri",
+  "signature",
+  "signedtransaction",
+  "identitytoken",
+]);
 
 function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
   if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, redactedKeys.has(key.toLowerCase()) ? "[REDACTED]" : redact(entry)]));
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        redactedKeys.has(key.toLowerCase()) ? "[REDACTED]" : redact(entry),
+      ]),
+    );
   }
   return value;
 }
 
-const allowedOrigins = [process.env.APP_URL, process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000"].filter((origin): origin is string => Boolean(origin));
+const allowedOrigins = [
+  process.env.APP_URL,
+  process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000",
+].filter((origin): origin is string => Boolean(origin));
 
 export const app = express();
 
@@ -47,9 +70,24 @@ app.use((request: Request, response: Response, next: NextFunction) => {
   response.on("finish", () => {
     // The keep-alive hits /health every minute; logging each one would bury everything else.
     if (request.path === "/health" && response.statusCode === 200) return;
-    console.info(JSON.stringify({ action: "request", method: request.method, path: request.path, status: response.statusCode, durationMs: Math.round(performance.now() - startedAt) }));
+    console.info(
+      JSON.stringify({
+        action: "request",
+        method: request.method,
+        path: request.path,
+        status: response.statusCode,
+        durationMs: Math.round(performance.now() - startedAt),
+      }),
+    );
   });
-  if (request.method !== "GET" && request.body && Object.keys(request.body).length > 0) console.info(JSON.stringify({ action: "request_payload", path: request.path, payload: redact(request.body) }));
+  if (request.method !== "GET" && request.body && Object.keys(request.body).length > 0)
+    console.info(
+      JSON.stringify({
+        action: "request_payload",
+        path: request.path,
+        payload: redact(request.body),
+      }),
+    );
   next();
 });
 
@@ -68,6 +106,8 @@ app.use("/api/v1/held", heldRouter);
 app.use("/api/v1/flow", flowRouter);
 app.use("/api/v1/push", pushRouter);
 
-app.use((_request, response) => response.status(404).json({ error: "NOT_FOUND", message: "The requested resource does not exist.", details: null }));
-
-
+app.use((_request, response) =>
+  response
+    .status(404)
+    .json({ error: "NOT_FOUND", message: "The requested resource does not exist.", details: null }),
+);

@@ -14,8 +14,7 @@ import { getConfig } from "../../config";
  */
 
 export type HeldIdentity =
-  | { kind: "email"; email: string }
-  | { kind: "x"; userId: string; username: string };
+  { kind: "email"; email: string } | { kind: "x"; userId: string; username: string };
 
 export interface CreatedHoldingWallet {
   privyUserId: string;
@@ -27,7 +26,10 @@ export interface CreatedHoldingWallet {
 
 export interface HoldingProvider {
   createHoldingWallet(identity: HeldIdentity): Promise<CreatedHoldingWallet>;
-  setAllowedDestinations(wallet: { policyId: string; ruleId: string }, destinations: string[]): Promise<void>;
+  setAllowedDestinations(
+    wallet: { policyId: string; ruleId: string },
+    destinations: string[],
+  ): Promise<void>;
   /** Signs as the holding wallet. Privy's enclave applies the policy before it signs. */
   signTransaction(walletId: string, transactionBase64: string): Promise<string>;
 }
@@ -98,11 +100,20 @@ class PrivyHoldingProvider implements HoldingProvider {
     const ruleId = policy.rules[0]?.id;
     if (!ruleId) throw new Error("Privy returned a policy without its rule");
 
-    const wallet = { chain_type: "solana" as const, policy_ids: [policy.id], additional_signers: [{ signer_id: this.signerId }] };
+    const wallet = {
+      chain_type: "solana" as const,
+      policy_ids: [policy.id],
+      additional_signers: [{ signer_id: this.signerId }],
+    };
     const linked =
       identity.kind === "email"
         ? { type: "email" as const, address: identity.email }
-        : { type: "twitter_oauth" as const, subject: identity.userId, username: identity.username, name: identity.username };
+        : {
+            type: "twitter_oauth" as const,
+            subject: identity.userId,
+            username: identity.username,
+            name: identity.username,
+          };
 
     let user;
     try {
@@ -119,19 +130,29 @@ class PrivyHoldingProvider implements HoldingProvider {
 
     // Pick the wallet that carries our policy, not merely any Solana wallet the user has.
     const candidates = user.linked_accounts.filter(
-      (account) => account.type === "wallet" && "chain_type" in account && account.chain_type === "solana",
+      (account) =>
+        account.type === "wallet" && "chain_type" in account && account.chain_type === "solana",
     ) as Array<{ id?: string | null; address: string }>;
     for (const candidate of candidates.reverse()) {
       if (!candidate.id) continue;
       const full = await this.client.wallets().get(candidate.id);
       if (full.policy_ids?.includes(policy.id)) {
-        return { privyUserId: user.id, walletId: full.id, address: full.address, policyId: policy.id, ruleId };
+        return {
+          privyUserId: user.id,
+          walletId: full.id,
+          address: full.address,
+          policyId: policy.id,
+          ruleId,
+        };
       }
     }
     throw new Error("Privy created the user but not the policy-bound Solana wallet");
   }
 
-  async setAllowedDestinations(wallet: { policyId: string; ruleId: string }, destinations: string[]) {
+  async setAllowedDestinations(
+    wallet: { policyId: string; ruleId: string },
+    destinations: string[],
+  ) {
     await this.client.policies().updateRule(wallet.ruleId, {
       policy_id: wallet.policyId,
       ...rule(destinations),

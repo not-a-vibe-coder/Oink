@@ -4,7 +4,13 @@ import { ArrowUpRight } from "lucide-react";
 import { HeldPayments } from "@/components/oink/HeldPayments";
 import { Sheet } from "@/components/oink/Sheet";
 import { useActivity } from "@/hooks/useOink";
-import { formatDateTime, formatTokenAmount, shortAddress, timeAgo, counterparty } from "@/lib/format";
+import {
+  formatDateTime,
+  formatTokenAmount,
+  shortAddress,
+  timeAgo,
+  counterparty,
+} from "@/lib/format";
 import type { TransferRow } from "@/types/api";
 
 export const Route = createFileRoute("/app/activity")({
