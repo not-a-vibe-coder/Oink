@@ -8,8 +8,8 @@ All illustrations are from [Microsoft Fluent Emoji](https://github.com/microsoft
 - `check_mark_button_3d.webp` — https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Check%20mark%20button/3D/check_mark_button_3d.png
 - `hourglass_done_3d.webp` — https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Hourglass%20done/3D/hourglass_done_3d.png
 
-## App icons
+## App icons and logo
 
-`public/icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` and `apple-touch-icon.png`
-are rendered from the same Fluent Emoji pig (https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Pig/3D/pig_3d.png, MIT)
-centred on Oink's `#f2f6fc` paper tint; the maskable variant keeps the pig inside the 80% safe zone.
+`public/icons/*` (app icons, maskable icon, favicon, apple-touch icon, `logo-1024.png`) are
+rendered from the founder-supplied Oink logo (`oink-wallet-logo.png`, owned by the Oink
+project). They are not Fluent Emoji assets.

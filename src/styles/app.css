@@ -238,6 +238,18 @@ html[data-theme="dark"]:has(.app) body {
   line-height: 1;
 }
 
+/* The Oink mark sits beside every wordmark, so headers need no extra markup. */
+.brand::before {
+  content: "";
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  vertical-align: -6px;
+  border-radius: 8px;
+  background: #000 url("/icons/icon-192.png") center / cover no-repeat;
+}
+
 .topbar-rail {
   max-width: 1120px;
   margin: 0 auto;

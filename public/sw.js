@@ -6,7 +6,7 @@
  * always come from the network. Cached: content-hashed build assets, icons, illustrations and
  * fonts, plus one static offline page shown when a navigation fails.
  */
-const VERSION = "oink-shell-v2";
+const VERSION = "oink-shell-v3";
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/manifest.webmanifest"];
 const STATIC = /^\/(assets|icons|illustrations|nav)\/|\.woff2$/;
 

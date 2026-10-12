@@ -387,3 +387,9 @@ in task 10; rebuild it against the real host after deploy. Pushed commit: see `g
   launch URL `https://oinkwallet.vercel.app/app`, certificate SHA-256 `82ae40ae…e13336`,
   identical to the live `assetlinks.json`. The password appears zero times in the build log. On-device test
   still pending. The API (Render) is not deployed yet, so `/app` sign-in needs the backend.
+
+- Branding: app icons, maskable icon, favicon, apple-touch icon and `logo-1024.png` now come
+  from the founder's Oink logo; the header shows the mark beside the wordmark everywhere; deck
+  slides 2 and 8 use it; the service-worker cache was bumped (v3) so installs pick up the new icons.
+  APK rebuilt as 1.0.1 (versionCode 2, same signing certificate `82ae40ae…e13336`, so it
+  upgrades 1.0.0 in place) and published at `/downloads/oink.apk`.

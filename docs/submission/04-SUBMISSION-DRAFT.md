@@ -70,8 +70,7 @@ can reduce it. Push and Seeker-wallet flows are implemented and unit/integration
 
 **Links:** Repo `https://github.com/not-a-vibe-coder/Oink` (public, MIT) · Live
 **https://oinkwallet.vercel.app** (`/demo` for the labelled simulation) · APK **[link]** · Demo video **[link]** · Pitch video **[link]** · Deck
-`docs/submission/deck/oink-deck.pdf` · Logo `public/icons/icon-512.png`
-(Fluent Emoji pig, MIT: see `public/illustrations/LICENSES.md`).
+`docs/submission/deck/oink-deck.pdf` · Logo `public/icons/logo-1024.png` (the Oink logo, owned by the project).
 
 **Team:** **[FOUNDER: names, roles, short relevant background, location, time commitment]**
 · **[Every teammate registered on colosseum.com: yes/no]**
