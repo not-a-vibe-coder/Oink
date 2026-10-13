@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mwaSupported, transactionRequestLink } from "../mwa";
+import { isMobileBrowser, isPaymentWallet, mwaSupported, transactionRequestLink } from "../mwa";
 
 const ANDROID_CHROME =
   "Mozilla/5.0 (Linux; Android 14; Seeker) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36";
@@ -37,5 +37,39 @@ describe("Solana Pay transaction-request links", () => {
       transactionRequestLink(`solana:${encodeURIComponent("http://evil.example/x")}`),
     ).toBeNull();
     expect(transactionRequestLink("https://example.com")).toBeNull();
+  });
+});
+
+describe("payment wallet detection", () => {
+  const wallet = (name: string, features: string[], chains = ["solana:mainnet"]) =>
+    ({
+      name,
+      chains,
+      features: Object.fromEntries(features.map((f) => [f, {}])),
+    }) as unknown as import("@wallet-standard/base").Wallet;
+  test("extension wallets that can connect and sign-and-send on Solana qualify", () => {
+    expect(
+      isPaymentWallet(wallet("Phantom", ["standard:connect", "solana:signAndSendTransaction"])),
+    ).toBe(true);
+  });
+  test("MWA, sign-only, and non-Solana wallets do not", () => {
+    expect(
+      isPaymentWallet(
+        wallet("Mobile Wallet Adapter", ["standard:connect", "solana:signAndSendTransaction"]),
+      ),
+    ).toBe(false);
+    expect(
+      isPaymentWallet(wallet("SignOnly", ["standard:connect", "solana:signTransaction"])),
+    ).toBe(false);
+    expect(
+      isPaymentWallet(
+        wallet("EvmOnly", ["standard:connect", "solana:signAndSendTransaction"], ["eip155:1"]),
+      ),
+    ).toBe(false);
+  });
+  test("mobile browser detection", () => {
+    expect(isMobileBrowser(ANDROID_CHROME)).toBe(true);
+    expect(isMobileBrowser("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe(true);
+    expect(isMobileBrowser("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Chrome/129")).toBe(false);
   });
 });

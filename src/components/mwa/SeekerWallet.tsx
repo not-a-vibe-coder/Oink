@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Smartphone } from "lucide-react";
+import type { Wallet } from "@wallet-standard/base";
 import {
   connectMobileWallet,
+  connectWallet,
   signAndSendWithMobileWallet,
   transactionRequestLink,
   type MobileSession,
 } from "@/lib/mwa/mwa";
 import { useMobileWalletAvailable } from "@/hooks/useMobileWallet";
+import { useBrowserWallets } from "@/hooks/useBrowserWallets";
 import {
   buildIncomePayerTransaction,
   buildTopUpTransaction,
@@ -22,6 +25,101 @@ function explorer(signature: string, chain: string) {
 
 function message(caught: unknown, fallback: string) {
   return caught instanceof Error && caught.message ? caught.message : fallback;
+}
+
+/**
+ * Finalization takes a few seconds; keep asking the unchanged verifier (finalized, referenced,
+ * exact amount) until it accepts, for up to two minutes.
+ */
+async function waitForVerification(invoiceId: string, signature: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 24; attempt++) {
+    try {
+      await confirmIncomeInvoice({ data: { id: invoiceId, signature } });
+      return true;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+  return false;
+}
+
+/**
+ * Pay a Flow income request from a desktop browser-extension wallet (Phantom, Solflare,
+ * Backpack…). One click: connect, build the referenced transfer, approve in the extension.
+ * The payer's wallet is the only signer; receipt uses the same verification as every path.
+ */
+export function BrowserWalletPayIncome({
+  invoiceId,
+  amountBase,
+  onPaid,
+}: {
+  invoiceId: string;
+  amountBase: string;
+  onPaid: () => void;
+}) {
+  const wallets = useBrowserWallets();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [sent, setSent] = useState<{ signature: string; chain: string } | null>(null);
+  const [error, setError] = useState("");
+  if (!wallets.length) return null;
+
+  async function pay(wallet: Wallet) {
+    setError("");
+    setBusy(wallet.name);
+    try {
+      const session = await connectWallet(wallet);
+      const prepared = await buildIncomePayerTransaction({
+        data: { id: invoiceId, account: session.account.address },
+      });
+      const signature = await signAndSendWithMobileWallet(
+        session,
+        prepared.transaction,
+        prepared.chain,
+      );
+      setSent({ signature, chain: prepared.chain });
+      setVerifying(true);
+      if (await waitForVerification(invoiceId, signature)) onPaid();
+      else setError("Sent, but not yet verified. Use “Verify payment” below in a minute.");
+    } catch (caught) {
+      setError(message(caught, "The wallet did not send the payment."));
+    } finally {
+      setBusy(null);
+      setVerifying(false);
+    }
+  }
+
+  return (
+    <div className="panel stack-tight">
+      <p className="eyebrow">Pay with a browser wallet</p>
+      {wallets.map((wallet) => (
+        <button
+          key={wallet.name}
+          className="btn btn-primary btn-block"
+          disabled={busy !== null}
+          onClick={() => void pay(wallet)}
+        >
+          <img src={wallet.icon} alt="" width={20} height={20} style={{ borderRadius: 4 }} />{" "}
+          {busy === wallet.name
+            ? verifying
+              ? "Verifying payment…"
+              : "Approve in your wallet…"
+            : `Pay ${displayUsdc(amountBase)} USDC with ${wallet.name}`}
+        </button>
+      ))}
+      {sent && (
+        <a
+          className="link footnote"
+          href={explorer(sent.signature, sent.chain)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          View transaction on Solscan
+        </a>
+      )}
+      {error && <p role="alert">{error}</p>}
+    </div>
+  );
 }
 
 /**
@@ -81,16 +179,10 @@ export function SeekerPayIncome({
       return;
     }
     setState("verifying");
-    // Finalization takes a few seconds; keep asking the verifier until it accepts or we stop.
-    for (let attempt = 0; attempt < 24; attempt++) {
-      try {
-        await confirmIncomeInvoice({ data: { id: invoiceId, signature: sent } });
-        setState("done");
-        onPaid();
-        return;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      }
+    if (await waitForVerification(invoiceId, sent)) {
+      setState("done");
+      onPaid();
+      return;
     }
     setState("idle");
     setError("Sent, but not yet verified. Use “Verify payment” below in a minute.");

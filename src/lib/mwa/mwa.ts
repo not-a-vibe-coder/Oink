@@ -72,7 +72,29 @@ export interface MobileSession {
 
 /** Call from a tap handler. Opens the wallet app for authorization. */
 export async function connectMobileWallet(): Promise<MobileSession> {
-  const wallet = await mobileWallet();
+  return connectWallet(await mobileWallet());
+}
+
+/** Any wallet-standard wallet (Phantom/Solflare/Backpack extensions, or MWA) that can pay. */
+export function isPaymentWallet(wallet: Wallet): boolean {
+  const features = wallet.features as Record<string, unknown>;
+  return (
+    !wallet.name.includes(MWA_WALLET_NAME) &&
+    "standard:connect" in features &&
+    "solana:signAndSendTransaction" in features &&
+    wallet.chains.some((chain) => chain.startsWith("solana:"))
+  );
+}
+
+/** Phones handle `solana:` payment links natively; desktop browsers do not. */
+export function isMobileBrowser(
+  userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent,
+): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(userAgent);
+}
+
+/** Connects a wallet chosen by the user. Call from a click or tap handler. */
+export async function connectWallet(wallet: Wallet): Promise<MobileSession> {
   const connect = (wallet.features as Partial<ConnectFeature>)["standard:connect"];
   if (!connect) throw new Error("This wallet cannot connect.");
   const { accounts } = await connect.connect();

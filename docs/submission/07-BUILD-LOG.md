@@ -407,3 +407,12 @@ when the transfer later landed, so a retry could send twice. Fix:
 window, and otherwise `PENDING` (409). On `PENDING`, the Send screen drops the quote so a second tap
 cannot build a duplicate. Tests: `backend/tests/broadcast.test.ts` (6). Audit: verify:flow exit
 0 (131 unit), DB 64/0, backend 66/0, lint 0 errors.
+
+## 2026-10-13 — Fix: "Open in wallet" did nothing on desktop
+
+`solana:` payment links only open on phones, and no desktop browser (or the Phantom extension)
+handles them. Payment pages now show that button only on mobile. On desktop they show a
+"Pay with <wallet>" button for each Wallet Standard browser wallet (Phantom, Solflare,
+Backpack…). It uses the same server-built referenced transfer as the Seeker flow (the payer
+is the only signer) and verifies automatically through the unchanged finalized,
+exact-amount check. Tests cover wallet qualification and mobile detection. verify:flow exit 0.

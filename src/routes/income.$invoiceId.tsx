@@ -1,16 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { Illustration } from "@/components/oink/Illustration";
 import { QrCode } from "@/components/oink/QrCode";
-import { SeekerPayIncome } from "@/components/mwa/SeekerWallet";
+import { BrowserWalletPayIncome, SeekerPayIncome } from "@/components/mwa/SeekerWallet";
+import { isMobileBrowser } from "@/lib/mwa/mwa";
 import { displayUsdc } from "@/lib/flow/amounts";
 import { confirmIncomeInvoice, getIncomeInvoice } from "@/lib/flow/server-fns";
 export const Route = createFileRoute("/income/$invoiceId")({ component: IncomeRequest });
 function IncomeRequest() {
   const { invoiceId } = Route.useParams();
   const [signature, setSignature] = useState("");
+  // `solana:` links only open on phones; decided after mount so SSR markup stays stable.
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => setMobile(isMobileBrowser()), []);
   const invoice = useQuery({
     queryKey: ["flowInvoice", invoiceId],
     queryFn: () => getIncomeInvoice({ data: { id: invoiceId } }),
@@ -48,14 +52,26 @@ function IncomeRequest() {
                 amountBase={invoice.data.amountBase}
                 onPaid={() => void invoice.refetch()}
               />
+              <BrowserWalletPayIncome
+                invoiceId={invoiceId}
+                amountBase={invoice.data.amountBase}
+                onPaid={() => void invoice.refetch()}
+              />
               <QrCode
                 value={invoice.data.solanaPayUri}
                 size={220}
                 alt="USDC income payment request"
               />
-              <a className="btn btn-primary" href={invoice.data.solanaPayUri}>
-                Open in wallet
-              </a>
+              {mobile ? (
+                <a className="btn btn-primary" href={invoice.data.solanaPayUri}>
+                  Open in wallet
+                </a>
+              ) : (
+                <p className="meta">
+                  On a computer, scan this QR code with your phone wallet, or pay with a browser
+                  wallet above.
+                </p>
+              )}
               <CopyButton value={invoice.data.solanaPayUri} label="Copy payment request" />
               <p className="footnote">
                 Use the payment request so your wallet includes its unique reference. Sending to the

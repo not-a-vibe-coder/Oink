@@ -1,4 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { isMobileBrowser } from "@/lib/mwa/mwa";
 import { AllocationRail } from "@/components/oink/AllocationRail";
 import { CopyButton } from "@/components/oink/CopyButton";
 import { PigAvatar } from "@/components/oink/PigAvatar";
@@ -18,6 +20,9 @@ export const Route = createFileRoute("/pay/$invoiceId")({
 function PayPage() {
   const { invoiceId } = Route.useParams();
   const invoice = useInvoice(invoiceId);
+  // `solana:` links only open on phones; decided after mount so SSR markup stays stable.
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => setMobile(isMobileBrowser()), []);
 
   if (invoice.isPending) {
     return (
@@ -151,9 +156,11 @@ function PayPage() {
             >
               Pay with Oink
             </Link>
-            <a className="btn btn-outline" href={solanaPayUri}>
-              Open in a wallet
-            </a>
+            {mobile && (
+              <a className="btn btn-outline" href={solanaPayUri}>
+                Open in a wallet
+              </a>
+            )}
           </div>
 
           <p className="footnote">
